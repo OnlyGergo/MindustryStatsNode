@@ -1,6 +1,4 @@
 /node_modules/
-/dist/
+/backend/dist/
 /.idea/
-/data/
-/src/data/
-/.env
+/backend/.env
