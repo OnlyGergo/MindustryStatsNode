@@ -57,6 +57,8 @@ export async function initDataStorage(): Promise<void> {
     // Get cache history for each server
     serverDataCache = await serverRepository.getAllServers();
 
+    // todo populate history
+
   } catch (err) {
     console.error('Failed to initialize data storage:', err);
     serverDataCache = [];

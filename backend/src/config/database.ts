@@ -10,7 +10,9 @@ dotenv.config();
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
-  database: process.env.DB_NAME || 'mindustry_stats',
+  // Use dev database if dev mode (default) else use prod database
+  database: ((process.env.NODE_ENV || 'development') == "development") ?
+      (process.env.DEV_DB_NAME || 'mindustry_stats_dev') : (process.env.DB_NAME || 'mindustry_stats'),
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   max: 20, // Maximum number of clients in the pool
@@ -25,7 +27,7 @@ const pool = new Pool(dbConfig);
 export async function initDatabase(): Promise<void> {
   try {
     const client = await pool.connect();
-    console.log('Connected to database successfully');
+    console.log('Connected to database ' + dbConfig.database + ' successfully');
     
     // Check if TimescaleDB extension exists
     const result = await client.query(

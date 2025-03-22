@@ -149,8 +149,6 @@ export async function getAllServers(hoursBack: number = 24): Promise<ServerWithH
         ping,
         online
       FROM server_stats
-      WHERE server_id = $1
-        AND timestamp > NOW() - interval '${hoursBack} hours'
       ORDER BY server_id, timestamp DESC
     ),
     latest_motds AS (
