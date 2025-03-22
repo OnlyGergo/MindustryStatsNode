@@ -1,0 +1,60 @@
+/* Additional custom styles */
+
+/* Optimize chart rendering */
+canvas {
+    image-rendering: optimizeSpeed;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: optimize-contrast;
+    image-rendering: pixelated;
+  }
+  
+  /* Smooth transitions */
+  .server-group {
+    transition: transform 0.2s ease;
+  }
+  
+  .server-group:hover {
+    transform: translateY(-1px);
+  }
+  
+  /* Optimize for performance */
+  .server-content {
+    contain: content;
+  }
+  
+  /* Improved loading indicator */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  
+  .pulse {
+    animation: pulse 1.5s ease infinite;
+  }
+  
+  /* Force hardware acceleration for smoother animations */
+  .hardware-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+  
+  /* Better mobile experience */
+  @media (max-width: 640px) {
+    .server-group {
+      margin-bottom: 0.5rem;
+    }
+    
+    .stats-card {
+      padding: 0.5rem;
+    }
+  }
+  
+  /* Optimize for different screen sizes */
+  @media (min-width: 1280px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }

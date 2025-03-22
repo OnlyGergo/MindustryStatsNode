@@ -1,0 +1,22 @@
+{
+  "name": "mindustry-stats",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "GergoEB",
+  "main": "src/main.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bytebuffer": "^5.0.1",
+    "express": "^4.21.2",
+    "ts-node": "^10.9.2",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/ws": "^8.18.0",
+    "typescript": "^5.8.2"
+  }
+}

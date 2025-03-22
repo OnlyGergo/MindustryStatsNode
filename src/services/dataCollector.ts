@@ -1,0 +1,195 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { ServerConfig, ServerWithHistory } from '../models/serverData';
+import { queryServer } from './mindustryService';
+import { getServerKey } from '../utils/buffer';
+import os from 'os';
+
+const DATA_FILE = path.join(process.cwd(), 'data', 'history.json');
+const MAX_HISTORY_POINTS = 288; // Store 24 hours of data at 5-minute intervals
+const MAX_CONCURRENT_QUERIES = Math.max(4, Math.floor(os.cpus().length * 1.5)); // 1.5x CPU cores, at least 4
+
+// In-memory cache of the latest data
+let serverDataCache: ServerWithHistory[] = [];
+let wsClients: Set<any> = new Set();
+
+// Server status update listeners
+const updateListeners: Array<(servers: ServerWithHistory[]) => void> = [];
+
+export function registerWebSocketClient(client: any) {
+  wsClients.add(client);
+  
+  // Send initial data as welcome message
+  client.send(JSON.stringify({
+    type: 'init',
+    data: serverDataCache
+  }));
+  
+  // Remove client when they disconnect
+  client.on('close', () => {
+    wsClients.delete(client);
+  });
+}
+
+export function broadcastUpdate(data: any) {
+  const message = JSON.stringify(data);
+  for (const client of wsClients) {
+    if (client.readyState === 1) { // OPEN
+      client.send(message);
+    }
+  }
+}
+
+export function onServerUpdate(callback: (servers: ServerWithHistory[]) => void) {
+  updateListeners.push(callback);
+}
+
+export async function initDataStorage(): Promise<void> {
+  try {
+    await fs.mkdir(path.join(process.cwd(), 'data'), { recursive: true });
+    
+    try {
+      const data = await fs.readFile(DATA_FILE, 'utf8');
+      serverDataCache = JSON.parse(data);
+      
+      // Mark all servers as offline initially
+      serverDataCache.forEach(server => {
+        server.online = false;
+        if (server.currentData) {
+          server.currentData.online = false;
+        }
+      });
+      
+    } catch (err) {
+      // File doesn't exist yet, create it
+      serverDataCache = [];
+      await saveData();
+    }
+  } catch (err) {
+    console.error('Failed to initialize data storage:', err);
+  }
+}
+
+async function saveData(): Promise<void> {
+  try {
+    await fs.writeFile(DATA_FILE, JSON.stringify(serverDataCache, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Failed to save data:', err);
+  }
+}
+
+// Process a batch of servers concurrently
+async function processBatch(batch: Array<{ config: ServerConfig, address: string }>) {
+  const promises = batch.map(async ({ config, address }) => {
+    try {
+      const [host, portStr] = address.split(':');
+      const port = parseInt(portStr, 10);
+      
+      if (!host || isNaN(port)) {
+        return;
+      }
+      
+      const serverData = await queryServer(address);
+      const timestamp = Date.now();
+
+      // Find or create server entry in cache
+      let serverEntry = serverDataCache.find(
+        s => s.host === host && s.port === port
+      );
+      
+      if (!serverEntry) {
+        serverEntry = {
+          name: config.name,
+          host,
+          port,
+          history: [],
+          lastUpdated: timestamp,
+          online: false,
+          consecutiveFailures: 0
+        };
+        serverDataCache.push(serverEntry);
+      }
+      
+      if (serverData) {
+        // Update current data
+        serverEntry.currentData = serverData;
+        serverEntry.lastUpdated = timestamp;
+        serverEntry.online = true;
+        serverEntry.consecutiveFailures = 0;
+        
+        // Add to history only if we have new data
+        serverEntry.history.push({
+          timestamp,
+          players: serverData.players
+        });
+        
+        // Trim history if too long
+        if (serverEntry.history.length > MAX_HISTORY_POINTS) {
+          serverEntry.history = serverEntry.history.slice(-MAX_HISTORY_POINTS);
+        }
+      } else {
+        // Server is offline or unreachable
+        serverEntry.online = false;
+        serverEntry.lastUpdated = timestamp;
+        serverEntry.consecutiveFailures = (serverEntry.consecutiveFailures || 0) + 1;
+        
+        if (serverEntry.currentData) {
+          serverEntry.currentData.online = false;
+        }
+      }
+    } catch (err) {
+      // Error already logged in queryServer
+    }
+  });
+  
+  await Promise.all(promises);
+}
+
+export async function collectServerData(servers: ServerConfig[]): Promise<void> {
+  console.time('Server data collection');
+  
+  // Create flattened list of all servers
+  const allServers: Array<{ config: ServerConfig, address: string }> = [];
+  
+  for (const server of servers) {
+    for (const address of server.address) {
+      allServers.push({ config: server, address });
+    }
+  }
+  
+  // Process in batches to limit concurrency
+  const batches: Array<Array<{ config: ServerConfig, address: string }>> = [];
+  
+  for (let i = 0; i < allServers.length; i += MAX_CONCURRENT_QUERIES) {
+    batches.push(allServers.slice(i, i + MAX_CONCURRENT_QUERIES));
+  }
+  
+  for (const batch of batches) {
+    await processBatch(batch);
+  }
+  
+  // Save data after all processing is complete
+  await saveData();
+  
+  // Notify listeners
+  for (const listener of updateListeners) {
+    listener(serverDataCache);
+  }
+  
+  // Broadcast update to WebSocket clients
+  broadcastUpdate({
+    type: 'update',
+    data: serverDataCache,
+    timestamp: Date.now()
+  });
+  
+  console.timeEnd('Server data collection');
+}
+
+export function getServerData(): ServerWithHistory[] {
+  return serverDataCache;
+}
+
+export function getServerByAddress(host: string, port: number): ServerWithHistory | undefined {
+  return serverDataCache.find(s => s.host === host && s.port === port);
+}
