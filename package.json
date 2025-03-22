@@ -6,16 +6,23 @@
   "author": "GergoEB",
   "main": "src/main.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "migrate": "set MIGRATE_DATA=true && ts-node src/index.ts"
   },
   "dependencies": {
     "bytebuffer": "^5.0.1",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "pg": "^8.14.1",
     "ts-node": "^10.9.2",
     "ws": "^8.18.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
+    "@types/pg": "^8.11.11",
     "@types/ws": "^8.18.0",
     "typescript": "^5.8.2"
   }

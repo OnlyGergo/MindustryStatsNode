@@ -10,6 +10,7 @@ import {
   onServerUpdate
 } from './services/dataCollector';
 import apiRoutes from './routes/api';
+import { initDatabase } from './config/database';
 
 export async function createServer() {
   const app = express();
@@ -27,6 +28,9 @@ export async function createServer() {
     console.log('WebSocket client connected');
     registerWebSocketClient(ws);
   });
+  
+  // Initialize database connection
+  await initDatabase();
 
   // Initialize data storage
   await initDataStorage();
@@ -52,7 +56,6 @@ export async function createServer() {
 
     // Setup update handler
     onServerUpdate((servers) => {
-      // We can add additional processing here if needed
       console.log(`Updated ${servers.length} servers`);
     });
   } catch (err) {
