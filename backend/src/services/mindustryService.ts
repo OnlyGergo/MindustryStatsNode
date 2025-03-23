@@ -42,8 +42,13 @@ export async function getServerData(host: string, port: number): Promise<ServerD
 
         // Only log if it's the first failure
         if (!failedServersCache.has(serverKey)) {
-          console.warn(`Error connecting to ${serverKey}: ${err.message}`);
+          if (err.message.startsWith("getaddrinfo ENOTFOUND")) {
+            console.warn(`Unable to resolve domain (getaddrinfo ENOTFOUND) for ${serverKey}`);
+            resolve(null);
+          }
+
           failedServersCache.add(serverKey);
+          console.warn(`Error connecting to ${serverKey}: ${err.message}`);
         }
 
         reject(err);
@@ -124,7 +129,6 @@ export async function queryServer(host: string, port: number): Promise<ServerDat
     return await getServerData(host, port);
   } catch (err) {
     // We already handle logging in getServerData, so we just return null here
-    console.error("queryServer: " , err)
     return null;
   }
 }

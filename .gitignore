@@ -2,3 +2,4 @@
 /backend/dist/
 /.idea/
 /backend/.env
+/build/
