@@ -1,4 +1,4 @@
-import { ServerConfig, ServerWithHistory } from '../../../common/models/serverData';
+import {GameMode, ServerConfig, ServerWithHistory} from '../../../common/models/serverData';
 import { queryServer } from './mindustryService';
 import * as serverRepository from '../repositories/serverRepository';
 import os from 'os';
@@ -44,7 +44,7 @@ export function onServerUpdate(callback: (servers: ServerWithHistory[]) => void)
 export async function initDataStorage(): Promise<void> {
   try {
     // Load servers from database
-    serverDataCache = await serverRepository.getAllServers();
+    serverDataCache = await serverRepository.getAllServersWithHistory(36);
     
     // Mark all servers as offline initially
     serverDataCache.forEach(server => {
@@ -54,10 +54,9 @@ export async function initDataStorage(): Promise<void> {
       }
     });
 
-    // Get cache history for each server
-    serverDataCache = await serverRepository.getAllServers();
-
-    // todo populate history
+    for (const server of serverDataCache) {
+      server.history.concat(await serverRepository.getServerHistory(server.id, 36))
+    }
 
   } catch (err) {
     console.error('Failed to initialize data storage:', err);
@@ -73,7 +72,7 @@ async function processBatch(batch: Array<{ config: ServerConfig, address: string
       const port = parseInt(portStr, 10);
       
       if (!host || isNaN(port)) {
-        return;
+        return;  // Don't use default port - this could be a lobby server (Add something to handle this in future)
       }
       
       const serverData = await queryServer(address);
@@ -93,7 +92,8 @@ async function processBatch(batch: Array<{ config: ServerConfig, address: string
       
       if (!serverEntry) {
         serverEntry = {
-          name: config.name,
+          id: server.id,
+          name: server.name,
           host,
           port,
           history: [],
@@ -119,7 +119,7 @@ async function processBatch(batch: Array<{ config: ServerConfig, address: string
         // Add to history only since we have new data
         serverEntry.history.push({
           timestamp,
-          players: serverData.players
+          players: serverData.players!
         });
 
         // Trim history if too long
@@ -132,16 +132,24 @@ async function processBatch(batch: Array<{ config: ServerConfig, address: string
         serverEntry.online = false;
         serverEntry.lastUpdated = timestamp;
         serverEntry.consecutiveFailures = (serverEntry.consecutiveFailures || 0) + 1;
-        
-        if (serverEntry.currentData) {
-          serverEntry.currentData.online = false;
-          
-          // Save offline status to DB
-          await serverRepository.saveServerStats(server.id, {
-            ...serverEntry.currentData,
-            online: false
-          });
-        }
+
+        // Save offline status to DB
+        await serverRepository.saveServerStats(server.id, {
+          ping: null,
+          host: host,
+          port: port,
+          serverName: null,
+          mapName: null,
+          players: null,
+          wave: null,
+          version: null,
+          versionType: null,
+          mode: null,
+          playerLimit: null,
+          description: null,
+          modeName: null,
+          online: false,
+        });
       }
     } catch (err) {
       // Error already logged in queryServer

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ServerWithHistory } from '../../../common/models/serverData';
 import ServerItem from './ServerItem';
+import {isHub} from "../util/mindustry.ts";
 
 interface ServerGroupProps {
     name: string;
@@ -11,7 +12,7 @@ interface ServerGroupProps {
 
 const ServerGroup: React.FC<ServerGroupProps> = ({ name, servers, expanded, onToggleExpand }) => {
     const onlineServersCount = servers.filter(s => s.online).length;
-    const totalPlayers = servers.reduce((sum, server) => sum + (server.currentData?.players || 0), 0);
+    const totalPlayers = servers.reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
 
     return (
         <div className={`bg-white rounded-lg shadow overflow-hidden server-group ${expanded ? '' : 'collapsed'}`}>
@@ -42,14 +43,16 @@ const ServerGroup: React.FC<ServerGroupProps> = ({ name, servers, expanded, onTo
                     </svg>
                 </div>
             </div>
-            <div className={`server-content divide-y ${expanded ? '' : 'hidden'}`}>
-                {servers.map(server => (
-                    <ServerItem
-                        key={`${server.host}-${server.port}`}
-                        server={server}
-                    />
-                ))}
-            </div>
+            {expanded && (
+                <div className="server-content divide-y">
+                    {servers.map(server => (
+                        <ServerItem
+                            key={`${server.host}-${server.port}`}
+                            server={server}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

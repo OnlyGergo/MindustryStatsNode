@@ -12,19 +12,19 @@ export interface HistoryPoint {
 }
 
 export interface ServerData {
-  ping: number;
+  ping: number | null;
   host: string;
   port: number;
-  serverName: string;
-  mapName: string;
-  players: number;
-  wave: number;
-  version: number;
-  versionType: string;
-  mode: GameMode;
-  playerLimit: number;
-  description: string;
-  modeName: string;
+  serverName: string | null;
+  mapName: string | null;
+  players: number | null;
+  wave: number | null;
+  version: number | null;
+  versionType: string | null;
+  mode: GameMode | null;
+  playerLimit: number | null;
+  description: string | null;
+  modeName: string | null;
   online: boolean;
 }
 
@@ -39,6 +39,7 @@ export interface ServerHistory {
 }
 
 export interface ServerWithHistory {
+  id: number;
   name: string;
   host: string;
   port: number;
@@ -47,4 +48,19 @@ export interface ServerWithHistory {
   lastUpdated?: number;
   online: boolean;
   consecutiveFailures?: number;
+}
+
+export interface ServerDetails {
+  mapHistory: Array<{timestamp: number, mapName: string, gameMode: GameMode}>;
+  motdHistory: Array<{timestamp: number, name: string, motd: string, modeName: string}>;
+  playerPeaks: {
+    allTime: number;
+    allTimeDate: Date;
+    daily: number;
+    weekly: number;
+  };
+  uptime: {
+    last24h: number;
+    last7d: number;
+  };
 }

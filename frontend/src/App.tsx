@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ServerWithHistory } from  '../../common/models/serverData';
 import ServerGroup from './components/ServerGroup';
 import useWebSocket from './hooks/useWebSocket';
+import {isHub} from "./util/mindustry.ts";
 
 const App: React.FC = () => {
     const [serverGroups, setServerGroups] = useState<Record<string, ServerWithHistory[]>>({});
@@ -45,10 +46,19 @@ const App: React.FC = () => {
             });
         });
 
-        setServerGroups(groups);
+        // Sort the groups according to player count (desc)
+        const sortedGroups: Record<string, ServerWithHistory[]> = Object.fromEntries(
+            Object.entries(groups).sort((a, b) => {
+                const aPlayers = a[1].reduce((sum, server) => sum + (server.currentData?.players || 0), 0);
+                const bPlayers = b[1].reduce((sum, server) => sum + (server.currentData?.players || 0), 0);
+                return bPlayers - aPlayers; // descending order
+            })
+        );
+
+        setServerGroups(sortedGroups);
         setTotalServers(servers.length);
         setOnlineServers(servers.filter(s => s.online).length);
-        setTotalPlayers(servers.reduce((sum, server) => sum + (server.currentData?.players || 0), 0));
+        setTotalPlayers(servers.reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0));
     };
 
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
+import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
 import { HistoryPoint } from '../../../common/models/serverData';
 
 // Register Chart.js components
-Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend);
+Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler);
 
 interface ServerHistoryChartProps {
     history: HistoryPoint[];
@@ -39,7 +39,7 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history }) => {
                     borderColor: 'rgb(79, 70, 229)',
                     backgroundColor: 'rgba(79, 70, 229, 0.1)',
                     fill: true,
-                    tension: 0.2,
+                    tension: 0.1,
                     borderWidth: 2
                 }]
             },
@@ -109,7 +109,7 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history }) => {
 
     return (
         <div className="chart-container">
-            <canvas ref={chartRef} height="100"></canvas>
+            <canvas ref={chartRef}></canvas>
         </div>
     );
 };

@@ -1,23 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ServerWithHistory } from '../../../common/models/serverData';
+import { ServerWithHistory, ServerDetails } from '../../../common/models/serverData';
+import {getGameModeName, removeColors} from "../util/mindustry.ts";
 
 interface ServerDetailsModalProps {
     server: ServerWithHistory;
     onClose: () => void;
-}
-
-interface ServerDetails {
-    mapHistory: Array<{timestamp: number, mapName: string}>;
-    motdHistory: Array<{timestamp: number, message: string}>;
-    playerPeaks: {
-        allTime: number;
-        daily: number;
-        weekly: number;
-    };
-    uptime: {
-        last24h: number;
-        last7d: number;
-    };
 }
 
 const ServerDetailsModal: React.FC<ServerDetailsModalProps> = ({ server, onClose }) => {
@@ -27,7 +14,7 @@ const ServerDetailsModal: React.FC<ServerDetailsModalProps> = ({ server, onClose
     useEffect(() => {
         const fetchDetails = async () => {
             try {
-                const response = await fetch(`/api/servers/${server.host}/${server.port}/details`);
+                const response = await fetch(`/api/servers/${server.id}/details`);
                 if (!response.ok) throw new Error('Failed to fetch server details');
                 const data = await response.json();
                 setDetails(data);
@@ -46,14 +33,14 @@ const ServerDetailsModal: React.FC<ServerDetailsModalProps> = ({ server, onClose
     };
 
     const formatUptime = (percentage: number) => {
-        return `${(percentage * 100).toFixed(1)}%`;
+        return `${percentage.toFixed(1)}%`;
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-4 border-b flex justify-between items-center">
-                    <h3 className="text-lg font-bold">{server.host}:{server.port} Details</h3>
+                    <h3 className="text-lg font-bold">{server.name}</h3>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700"
@@ -110,7 +97,7 @@ const ServerDetailsModal: React.FC<ServerDetailsModalProps> = ({ server, onClose
                                         {details.mapHistory.map((item, index) => (
                                             <div key={index} className="p-2 border-b last:border-b-0">
                                                 <div className="flex justify-between items-center">
-                                                    <span className="font-medium">{item.mapName}</span>
+                                                    <span className="font-medium">{String(removeColors(item.mapName))} - {getGameModeName(item.gameMode)}</span>
                                                     <span className="text-xs text-gray-500">{formatDate(item.timestamp)}</span>
                                                 </div>
                                             </div>
@@ -127,7 +114,8 @@ const ServerDetailsModal: React.FC<ServerDetailsModalProps> = ({ server, onClose
                                     <div className="bg-gray-50 rounded-lg p-2 max-h-40 overflow-y-auto">
                                         {details.motdHistory.map((item, index) => (
                                             <div key={index} className="p-2 border-b last:border-b-0">
-                                                <div className="text-sm">{item.message}</div>
+                                                <div className="text-sm font-bold mindustry-font">{String(removeColors(item.name))}</div>
+                                                <div className="text-xs mindustry-font">{String(removeColors(item.motd))}</div>
                                                 <div className="text-xs text-gray-500 mt-1">{formatDate(item.timestamp)}</div>
                                             </div>
                                         ))}

@@ -13,12 +13,12 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': {
-                target: 'http://hosting.gergo.tech:2938',
+                target: 'http://localhost:3000',
                 changeOrigin: true,
                 ws: true,
             },
             '/ws': {
-                target: 'http://hosting.gergo.tech:2938',
+                target: 'http://localhost:3000',
                 changeOrigin: true,
                 ws: true,
             }

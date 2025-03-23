@@ -1,25 +1,20 @@
 import express from 'express';
-import { getServerData, getServerByAddress } from '../services/dataCollector';
 import { query } from '../config/database';
+import {getServer} from "../repositories/serverRepository";
 
 const router = express.Router();
 
-// Get all servers
-router.get('/servers', (req, res) => {
-  res.json(getServerData());
-});
-
 // Get server by address
-router.get('/servers/:host/:port', async (req, res) => {
-  const { host, port } = req.params;
-  const portNumber = parseInt(port, 10);
+router.get('/servers/:id/details', async (req, res) => {
+  const { id } = req.params;
+  const idNumber = parseInt(id, 10);
   
-  if (isNaN(portNumber)) {
-    res.status(400).json({ error: 'Invalid port number' });
+  if (isNaN(idNumber)) {
+    res.status(400).json({ error: 'Invalid ID number' });
     return;
   }
   
-  const server = await getServerByAddress(host, portNumber);
+  const server = await getServer(idNumber);
   
   if (!server) {
     res.status(404).json({ error: 'Server not found' });
@@ -30,29 +25,16 @@ router.get('/servers/:host/:port', async (req, res) => {
 });
 
 // Get MOTD history for a server
-router.get('/servers/:host/:port/motd-history', async (req, res) => {
-  const { host, port } = req.params;
-  const portNumber = parseInt(port, 10);
-  
-  if (isNaN(portNumber)) {
-    res.status(400).json({ error: 'Invalid port number' });
+router.get('/servers/:id/motd-history', async (req, res) => {
+  const { id } = req.params;
+  const idNumber = parseInt(id, 10);
+
+  if (isNaN(idNumber)) {
+    res.status(400).json({ error: 'Invalid ID number' });
     return;
   }
   
   try {
-    // First get the server ID
-    const serverResult = await query(
-      'SELECT id FROM servers WHERE host = $1 AND port = $2',
-      [host, portNumber]
-    );
-    
-    if (serverResult.rows.length === 0) {
-      res.status(404).json({ error: 'Server not found' });
-      return;
-    }
-    
-    const serverId = serverResult.rows[0].id;
-    
     // Get MOTD history with time periods
     const result = await query(
       `SELECT 
@@ -61,7 +43,7 @@ router.get('/servers/:host/:port/motd-history', async (req, res) => {
        FROM server_motds 
        WHERE server_id = $1 
        ORDER BY valid_from DESC`,
-      [serverId]
+      [idNumber]
     );
     
     res.json(result.rows);
@@ -72,29 +54,16 @@ router.get('/servers/:host/:port/motd-history', async (req, res) => {
 });
 
 // Get map history for a server
-router.get('/servers/:host/:port/map-history', async (req, res) => {
-  const { host, port } = req.params;
-  const portNumber = parseInt(port, 10);
-  
-  if (isNaN(portNumber)) {
-    res.status(400).json({ error: 'Invalid port number' });
+router.get('/servers/:id/map-history', async (req, res) => {
+  const { id } = req.params;
+  const idNumber = parseInt(id, 10);
+
+  if (isNaN(idNumber)) {
+    res.status(400).json({ error: 'Invalid ID number' });
     return;
   }
-  
+
   try {
-    // First get the server ID
-    const serverResult = await query(
-      'SELECT id FROM servers WHERE host = $1 AND port = $2',
-      [host, portNumber]
-    );
-    
-    if (serverResult.rows.length === 0) {
-      res.status(404).json({ error: 'Server not found' });
-      return;
-    }
-    
-    const serverId = serverResult.rows[0].id;
-    
     // Get map history with time periods
     const result = await query(
       `SELECT 
@@ -103,7 +72,7 @@ router.get('/servers/:host/:port/map-history', async (req, res) => {
        FROM server_maps 
        WHERE server_id = $1 
        ORDER BY valid_from DESC`,
-      [serverId]
+      [idNumber]
     );
     
     res.json(result.rows);

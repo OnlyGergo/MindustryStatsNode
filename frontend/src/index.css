@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@font-face {
+    font-family: fontello;
+    src: url('/src/assets/mindustry_font.woff') format("woff2");
+}
+
+.mindustry-font {
+    font-family: fontello, 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}

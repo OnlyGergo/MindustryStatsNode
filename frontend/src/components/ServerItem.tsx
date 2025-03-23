@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { ServerWithHistory } from '../../../common/models/serverData';
+import React, {useState} from 'react';
+import {ServerWithHistory} from '../../../common/models/serverData';
 import ServerHistoryChart from './ServerHistoryChart';
 import ServerDetailsModal from './ServerDetailsModal';
+import {removeColors, getGameModeName} from "../util/mindustry.ts";
 
 interface ServerItemProps {
     server: ServerWithHistory;
 }
 
-const ServerItem: React.FC<ServerItemProps> = ({ server }) => {
+const ServerItem: React.FC<ServerItemProps> = ({server}) => {
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const serverData = server.currentData;
     const serverStatus = server.online ? 'Online' : 'Offline';
@@ -18,66 +19,63 @@ const ServerItem: React.FC<ServerItemProps> = ({ server }) => {
     return (
         <div className="p-3 server-item">
             <div className="flex flex-wrap justify-between items-center">
-                <div>
-                    <h4 className="font-medium">{server.host}:{server.port}</h4>
-                    <div className="flex items-center mt-1">
-            <span className={`${statusClass} text-xs px-2 py-0.5 rounded-full`}>
-              {serverStatus}
-            </span>
-                        {server.online && serverData && (
-                            <>
-                <span className="text-xs text-gray-500 ml-2">
-                  {serverData.players}/{serverData.playerLimit} players
-                </span>
-                                <span className="text-xs text-gray-500 ml-2">
-                  {serverData.ping}ms
-                </span>
-                            </>
-                        )}
-                    </div>
+                <div className="flex items-center">
+                    <span className={`${statusClass} text-xs px-2 rounded-full`}>
+                        {serverStatus}
+                    </span>
+                    {server.online && serverData && (
+                        <>
+                            <span className="text-xs text-gray-500 ml-2">
+                                {serverData.players}/{serverData.playerLimit} players
+                            </span>
+                            <span className="text-xs text-gray-500 ml-2">
+                                {serverData.ping}ms
+                            </span>
+                        </>
+                    )}
                 </div>
 
                 {server.online && serverData && (
                     <div className="text-right">
-                        <div className="text-lg font-bold text-indigo-600">{serverData.players}</div>
+                        <div className="text-lg font-bold text-indigo-600">{String(serverData.players)}</div>
                         <div className="text-xs text-gray-500">players</div>
                     </div>
                 )}
             </div>
 
-            {server.online && serverData && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs">
-                    <div className="bg-gray-50 p-1 rounded">
-                        <span className="text-gray-500">Map:</span>
-                        <span className="font-medium">{serverData.mapName || 'Unknown'}</span>
-                    </div>
-                    <div className="bg-gray-50 p-1 rounded">
-                        <span className="text-gray-500">Wave:</span>
-                        <span className="font-medium">{serverData.wave || '0'}</span>
-                    </div>
-                    <div className="bg-gray-50 p-1 rounded">
-                        <span className="text-gray-500">Mode:</span>
-                        <span className="font-medium">
-              {serverData.modeName || getGameModeName(serverData.mode)}
-            </span>
-                    </div>
-                    <div className="bg-gray-50 p-1 rounded">
-                        <span className="text-gray-500">Version:</span>
-                        <span className="font-medium">
-              {serverData.versionType || ''} {serverData.version || ''}
-            </span>
-                    </div>
+            {serverData?.description && (
+                <div className="mt-2 text-m font-bold italic text-gray-600 truncate mindustry-font">
+                    {String(removeColors(serverData.description))}
                 </div>
             )}
 
-            {serverData?.description && (
-                <div className="mt-2 text-xs italic text-gray-600 truncate">
-                    {serverData.description}
+            {serverData && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs">
+                    <div className="bg-gray-50 p-1 rounded">
+                        <span className="text-gray-500">Map: </span>
+                        <span className="font-medium">{String(removeColors(serverData.mapName)) || 'Unknown'}</span>
+                    </div>
+                    <div className="bg-gray-50 p-1 rounded">
+                        <span className="text-gray-500">Wave: </span>
+                        <span className="font-medium">{serverData.wave || '0'}</span>
+                    </div>
+                    <div className="bg-gray-50 p-1 rounded">
+                        <span className="text-gray-500">Mode: </span>
+                        <span className="font-medium">
+                          {String(removeColors(serverData.modeName)) || getGameModeName(serverData.mode)}
+                        </span>
+                    </div>
+                    <div className="bg-gray-50 p-1 rounded">
+                        <span className="text-gray-500">Version: </span>
+                        <span className="font-medium">
+                          {String(serverData.versionType) || ''} {String(serverData.version) || ''}
+                        </span>
+                    </div>
                 </div>
             )}
 
             <div className="mt-3 chart-container">
-                <ServerHistoryChart history={server.history} />
+                <ServerHistoryChart history={server.history}/>
             </div>
 
             <div className="mt-3 flex justify-end space-x-2">
@@ -110,9 +108,5 @@ const ServerItem: React.FC<ServerItemProps> = ({ server }) => {
         </div>
     );
 };
-
-function getGameModeName(mode?: number): string {
-    return ['Survival', 'Sandbox', 'Attack', 'PvP', 'Editor'][mode || 0] || 'Unknown';
-}
 
 export default ServerItem;
