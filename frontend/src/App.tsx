@@ -49,8 +49,8 @@ const App: React.FC = () => {
         // Sort the groups according to player count (desc)
         const sortedGroups: Record<string, ServerWithHistory[]> = Object.fromEntries(
             Object.entries(groups).sort((a, b) => {
-                const aPlayers = a[1].reduce((sum, server) => sum + (server.currentData?.players || 0), 0);
-                const bPlayers = b[1].reduce((sum, server) => sum + (server.currentData?.players || 0), 0);
+                const aPlayers = a[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
+                const bPlayers = b[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
                 return bPlayers - aPlayers; // descending order
             })
         );

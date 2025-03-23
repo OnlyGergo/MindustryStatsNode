@@ -4,6 +4,7 @@ import ServerHistoryChart from './ServerHistoryChart';
 import ServerDetailsModal from './ServerDetailsModal';
 import {removeColors, getGameModeName} from "../util/mindustry.ts";
 import {formatDate} from "../util/general.ts";
+import CopyButton from "./CopyButton.tsx";
 
 interface ServerItemProps {
     server: ServerWithHistory;
@@ -32,6 +33,10 @@ const ServerItem: React.FC<ServerItemProps> = ({server}) => {
                             <span className="text-xs text-gray-500 ml-2">
                                 {serverData.ping}ms
                             </span>
+                            <CopyButton
+                                text={`${server.host}:${server.port}`}
+                                className="ml-2 bg-gray-100 hover:bg-gray-300 text-gray-700 text-xs px-2 py-0.5 rounded transition-colors"
+                            />
                         </>
                     )}
                 </div>
@@ -60,7 +65,7 @@ const ServerItem: React.FC<ServerItemProps> = ({server}) => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs">
                     <div className="bg-gray-50 p-1 rounded">
                         <span className="text-gray-500">Map: </span>
-                        <span className="font-medium">{String(removeColors(serverData.mapName)) || 'Unknown'}</span>
+                        <span className="font-medium mindustry-font">{String(removeColors(serverData.mapName)) || 'Unknown'}</span>
                     </div>
                     <div className="bg-gray-50 p-1 rounded">
                         <span className="text-gray-500">Wave: </span>

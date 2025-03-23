@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ServerWithHistory, ServerDetails } from '../../../common/models/serverData';
 import {getGameModeName, removeColors} from "../util/mindustry.ts";
 import {formatDate} from "../util/general.ts";
+import CopyButton from "./CopyButton.tsx";
 
 interface ServerDetailsModalProps {
     server: ServerWithHistory;
@@ -37,7 +38,13 @@ const ServerDetailsModal: React.FC<ServerDetailsModalProps> = ({ server, onClose
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-4 border-b flex justify-between items-center">
-                    <h3 className="text-lg font-bold mindustry-font">{removeColors(server.currentData?.serverName || server.name)}</h3>
+                    <div>
+                        <span className="text-lg font-bold mindustry-font">{removeColors(server.currentData?.serverName || server.name)}</span>
+                        <CopyButton
+                            text={`${server.host}:${server.port}`}
+                            className="ml-2 bg-gray-100 hover:bg-gray-300 text-gray-700 text-xs px-2 py-0.5 rounded transition-colors"
+                        />
+                    </div>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700"

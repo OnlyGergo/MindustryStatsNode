@@ -65,13 +65,13 @@ async function processBatch(batch: Array<{ config: ServerConfig, address: string
     const promises = batch.map(async ({config, address}) => {
         try {
             const [host, portStr] = address.split(':');
-            const port = parseInt(portStr, 10) || 6567;
+            const port = portStr ? parseInt(portStr, 10) : 6567;
 
             if (!host || isNaN(port)) {
                 return;  // Don't use default port - this could be a lobby server (Add something to handle this in future)
             }
 
-            const serverData = await queryServer(address);
+            const serverData = await queryServer(host, port);
             const timestamp = Date.now();
 
             // Find server in cache
@@ -87,7 +87,7 @@ async function processBatch(batch: Array<{ config: ServerConfig, address: string
                 // If server exists in cache, use its last seen time, otherwise use current time as it's new
                 // and won't exist in database either
                 // Always timestamp if server online
-                lastSeen: serverData?.online ? timestamp : serverEntry?.lastSeen || timestamp
+                lastSeen: serverData?.online ? timestamp : undefined,
             });
 
             // If server not in cache, create a new entry - database would've also had an instance created

@@ -12,7 +12,7 @@ export async function getServerData(host: string, port: number): Promise<ServerD
     try {
       const socket = dgram.createSocket('udp4');
       const pingTime = Date.now();
-      
+
       // Prepare the request packet - {-2, 1}
       const packet = Buffer.from([0xFE, 0x01]); // 0xFE is -2 in two's complement
       
@@ -28,8 +28,8 @@ export async function getServerData(host: string, port: number): Promise<ServerD
           failedServersCache.add(serverKey);
         }
         
-        reject(new Error('Server request timed out'));
-      }, 800); // Shorter timeout for faster performance
+        resolve(null);
+      }, 2000); // Shorter timeout for faster performance
       
       socket.on('error', (err) => {
         clearTimeout(timeout);
@@ -119,18 +119,12 @@ export async function getServerData(host: string, port: number): Promise<ServerD
   });
 }
 
-export async function queryServer(address: string): Promise<ServerData | null> {
-  const [host, portStr] = address.split(':');
-  const port = parseInt(portStr, 10);
-  
-  if (!host || isNaN(port)) {
-    return null;
-  }
-  
+export async function queryServer(host: string, port: number): Promise<ServerData | null> {
   try {
     return await getServerData(host, port);
   } catch (err) {
     // We already handle logging in getServerData, so we just return null here
+    console.error("queryServer: " , err)
     return null;
   }
 }
