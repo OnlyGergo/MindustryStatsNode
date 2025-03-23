@@ -3,6 +3,7 @@ import {ServerWithHistory} from '../../../common/models/serverData';
 import ServerHistoryChart from './ServerHistoryChart';
 import ServerDetailsModal from './ServerDetailsModal';
 import {removeColors, getGameModeName} from "../util/mindustry.ts";
+import {formatDate} from "../util/general.ts";
 
 interface ServerItemProps {
     server: ServerWithHistory;
@@ -11,7 +12,7 @@ interface ServerItemProps {
 const ServerItem: React.FC<ServerItemProps> = ({server}) => {
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const serverData = server.currentData;
-    const serverStatus = server.online ? 'Online' : 'Offline';
+    const serverStatus = server.online ? 'Online' : server.lastSeen ? 'Offline - Last Seen ' + formatDate(server.lastSeen) : 'Offline';
     const statusClass = server.online
         ? 'bg-green-100 text-green-800'
         : 'bg-red-100 text-red-800';
@@ -43,8 +44,14 @@ const ServerItem: React.FC<ServerItemProps> = ({server}) => {
                 )}
             </div>
 
-            {serverData?.description && (
+            {serverData?.serverName && (
                 <div className="mt-2 text-m font-bold italic text-gray-600 truncate mindustry-font">
+                    {String(removeColors(serverData.serverName))}
+                </div>
+            )}
+
+            {serverData?.description && (
+                <div className="mt-2 text-sm font-bold italic text-gray-600 truncate mindustry-font">
                     {String(removeColors(serverData.description))}
                 </div>
             )}

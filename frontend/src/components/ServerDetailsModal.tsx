@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ServerWithHistory, ServerDetails } from '../../../common/models/serverData';
 import {getGameModeName, removeColors} from "../util/mindustry.ts";
+import {formatDate} from "../util/general.ts";
 
 interface ServerDetailsModalProps {
     server: ServerWithHistory;
@@ -28,10 +29,6 @@ const ServerDetailsModal: React.FC<ServerDetailsModalProps> = ({ server, onClose
         fetchDetails();
     }, [server]);
 
-    const formatDate = (timestamp: number) => {
-        return new Date(timestamp).toLocaleString();
-    };
-
     const formatUptime = (percentage: number) => {
         return `${percentage.toFixed(1)}%`;
     };
@@ -40,7 +37,7 @@ const ServerDetailsModal: React.FC<ServerDetailsModalProps> = ({ server, onClose
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-4 border-b flex justify-between items-center">
-                    <h3 className="text-lg font-bold">{server.name}</h3>
+                    <h3 className="text-lg font-bold mindustry-font">{removeColors(server.currentData?.serverName || server.name)}</h3>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700"
@@ -97,7 +94,7 @@ const ServerDetailsModal: React.FC<ServerDetailsModalProps> = ({ server, onClose
                                         {details.mapHistory.map((item, index) => (
                                             <div key={index} className="p-2 border-b last:border-b-0">
                                                 <div className="flex justify-between items-center">
-                                                    <span className="font-medium">{String(removeColors(item.mapName))} - {getGameModeName(item.gameMode)}</span>
+                                                    <span className="font-medium mindustry-font">{String(removeColors(item.mapName))} - {getGameModeName(item.gameMode)}</span>
                                                     <span className="text-xs text-gray-500">{formatDate(item.timestamp)}</span>
                                                 </div>
                                             </div>

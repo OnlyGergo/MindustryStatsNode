@@ -2,7 +2,6 @@ import { query } from '../config/database';
 import {
     ServerData,
     ServerDetails,
-    ServerHistory,
     ServerWithHistory
 } from '../../../common/models/serverData';
 
@@ -20,16 +19,20 @@ export async function upsertServer(config: {
   name: string;
   host: string;
   port: number;
+  lastSeen?: number;
 }): Promise<ServerRecord> {
-  const result = await query(
-    `INSERT INTO servers (name, host, port) 
-     VALUES ($1, $2, $3)
-     ON CONFLICT (host, port) 
-     DO UPDATE SET name = $1, updated_at = NOW()
-     RETURNING *`,
-    [config.name, config.host, config.port]
-  );
-  
+    const result = await query(
+        `INSERT INTO servers (name, host, port, last_seen)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (host, port)
+             DO UPDATE SET
+                 name = $1,
+                 updated_at = NOW(),
+                 last_seen = COALESCE($4, servers.last_seen)
+         RETURNING *`,
+        [config.name, config.host, config.port, config.lastSeen ? new Date(config.lastSeen) : null]
+    );
+
   return result.rows[0];
 }
 
@@ -184,6 +187,7 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
                s.host,
                s.port,
                s.updated_at                         as "lastUpdated",
+               s.last_seen,
                stats.online,
                stats.timestamp,
                stats.players,
@@ -216,6 +220,7 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
             port: row.port,
             history: row.history,
             online: row.online || false,
+            lastSeen: row.last_seen,
             lastUpdated: row.lastUpdated?.getTime() || Date.now()
         };
 
@@ -241,116 +246,6 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
 
         return serverWithHistory;
     });
-}
-
-// Get server history for a specific server within a time range
-export async function getServerHistory(
-  serverId: number,
-  hoursBack: number = 24
-): Promise<ServerHistory[]> {
-  const result = await query(
-    `SELECT timestamp, players
-     FROM server_stats
-     WHERE server_id = $1
-       AND timestamp > NOW() - interval '${hoursBack} hours'
-     ORDER BY timestamp ASC`,
-    [serverId]
-  );
-
-  return result.rows.map(row => ({
-    timestamp: row.timestamp.getTime(),
-    players: row.players
-  }));
-}
-
-// Get server by host and port
-export async function getServerByAddress(
-  host: string,
-  port: number
-): Promise<ServerWithHistory | undefined> {
-  const servers = await query(
-    `SELECT id, name, host, port
-     FROM servers
-     WHERE host = $1 AND port = $2`,
-    [host, port]
-  );
-
-  if (servers.rows.length === 0) {
-    return undefined;
-  }
-
-  const server = servers.rows[0];
-
-  // Get latest stats
-  const statsResult = await query(
-    `SELECT players, max_players as "playerLimit", wave,
-            version, version_type as "versionType", 
-            ping, online, timestamp
-     FROM server_stats
-     WHERE server_id = $1
-     ORDER BY timestamp DESC
-     LIMIT 1`,
-    [server.id]
-  );
-
-  // Get latest MOTD
-  const motdResult = await query(
-    `SELECT server_name as "serverName", description, mode_name as "modeName"
-     FROM server_motds
-     WHERE server_id = $1 AND valid_to IS NULL
-     ORDER BY valid_from DESC
-     LIMIT 1`,
-    [server.id]
-  );
-
-  // Get latest map
-  const mapResult = await query(
-    `SELECT map_name as "mapName", game_mode as mode
-     FROM server_maps
-     WHERE server_id = $1 AND valid_to IS NULL
-     ORDER BY valid_from DESC
-     LIMIT 1`,
-    [server.id]
-  );
-
-  // Get history
-  const history = await getServerHistory(server.id);
-
-  const serverWithHistory: ServerWithHistory = {
-    id: server.id,
-    name: server.name,
-    host: server.host,
-    port: server.port,
-    history,
-    online: statsResult.rows[0]?.online || false,
-    lastUpdated: statsResult.rows[0]?.timestamp?.getTime() || Date.now()
-  };
-
-  // Combine stats, MOTD, and map if available
-  if (statsResult.rows.length > 0) {
-    const stats = statsResult.rows[0];
-    const motd = motdResult.rows[0] || {};
-    const map = mapResult.rows[0] || {};
-
-    serverWithHistory.currentData = {
-      ping: stats.ping || 0,
-      host: server.host,
-      port: server.port,
-      serverName: motd.serverName || 'Unknown',
-      mapName: map.mapName || 'Unknown',
-      players: stats.players || 0,
-      wave: stats.wave || 0,
-      version: stats.version || 0,
-      versionType: stats.versionType || 'Unknown',
-      mode: map.mode || 0,
-      playerLimit: stats.playerLimit || 0,
-      description: motd.description || '',
-      modeName: motd.modeName || '',
-      online: stats.online || false
-    };
-  }
-
-  return serverWithHistory;
 }
 
 // Get detailed information about a specific server

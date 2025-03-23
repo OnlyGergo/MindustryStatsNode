@@ -45,6 +45,7 @@ export interface ServerWithHistory {
   port: number;
   currentData?: ServerData;
   history: ServerHistory[];
+  lastSeen?: number;
   lastUpdated?: number;
   online: boolean;
   consecutiveFailures?: number;
