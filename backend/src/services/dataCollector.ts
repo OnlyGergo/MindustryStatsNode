@@ -1,7 +1,8 @@
-import {ServerConfig, ServerWithHistory} from '../../../common/models/serverData';
+import {ServerWithHistory} from '../../../common/models/serverData';
 import {queryServer} from './mindustryService';
 import * as serverRepository from '../repositories/serverRepository';
 import os from 'os';
+import {getServers, ServerRecord} from "../repositories/serverRepository";
 
 const MAX_HISTORY_POINTS = 288 * 3; // Store 36 hours of data at 5-minute intervals
 const MAX_CONCURRENT_QUERIES = Math.max(4, Math.floor(os.cpus().length * 1.5)); // 1.5x CPU cores, at least 4
@@ -61,42 +62,24 @@ export async function initDataStorage(): Promise<void> {
 }
 
 // Process a batch of servers concurrently
-async function processBatch(batch: Array<{ config: ServerConfig, address: string }>) {
-    const promises = batch.map(async ({config, address}) => {
+async function processBatch(batch: Array<ServerRecord>) {
+    const promises = batch.map(async (record) => {
         try {
-            const [host, portStr] = address.split(':');
-            const port = portStr ? parseInt(portStr, 10) : 6567;
-
-            if (!host || isNaN(port)) {
-                return;  // Don't use default port - this could be a lobby server (Add something to handle this in future)
-            }
-
-            const serverData = await queryServer(host, port);
+            const serverData = await queryServer(record.host, record.port);
             const timestamp = Date.now();
 
             // Find server in cache
             let serverEntry = serverDataCache.find(
-                s => s.host === host && s.port === port
+                s => s.host === record.host && s.port === record.port
             );
 
-            // First, upsert server in database to get a valid server object with ID
-            const server = await serverRepository.upsertServer({
-                name: config.name,
-                host,
-                port,
-                // If server exists in cache, use its last seen time, otherwise use current time as it's new
-                // and won't exist in database either
-                // Always timestamp if server online
-                lastSeen: serverData?.online ? timestamp : undefined,
-            });
-
-            // If server not in cache, create a new entry - database would've also had an instance created
+            // If server not in cache, create a new entry - database already has one
             if (!serverEntry) {
                 serverEntry = {
-                    id: server.id,
-                    name: server.name,
-                    host,
-                    port,
+                    id: record.id,
+                    name: record.name,
+                    host: record.host,
+                    port: record.port,
                     history: [],
                     lastSeen: timestamp,
                     lastUpdated: timestamp,
@@ -108,9 +91,9 @@ async function processBatch(batch: Array<{ config: ServerConfig, address: string
 
             if (serverData) {
                 // Save server data to DB
-                await serverRepository.saveServerStats(server.id, serverData);
-                await serverRepository.saveMotdIfChanged(server.id, serverData);
-                await serverRepository.saveMapIfChanged(server.id, serverData);
+                await serverRepository.saveServerStats(record.id, serverData);
+                await serverRepository.saveMotdIfChanged(record.id, serverData);
+                await serverRepository.saveMapIfChanged(record.id, serverData);
 
                 // Update current data in memory
                 serverEntry.currentData = serverData;
@@ -136,10 +119,10 @@ async function processBatch(batch: Array<{ config: ServerConfig, address: string
                 serverEntry.consecutiveFailures = (serverEntry.consecutiveFailures || 0) + 1;
 
                 // Save offline status to DB
-                await serverRepository.saveServerStats(server.id, {
+                await serverRepository.saveServerStats(record.id, {
                     ping: null,
-                    host: host,
-                    port: port,
+                    host: record.host,
+                    port: record.port,
                     serverName: null,
                     mapName: null,
                     players: null,
@@ -162,20 +145,12 @@ async function processBatch(batch: Array<{ config: ServerConfig, address: string
     await Promise.all(promises);
 }
 
-export async function collectServerData(servers: ServerConfig[]): Promise<void> {
+export async function collectServerData(): Promise<void> {
     console.time('Server data collection');
 
-    // Create flattened list of all servers
-    const allServers: Array<{ config: ServerConfig, address: string }> = [];
-
-    for (const server of servers) {
-        for (const address of server.address) {
-            allServers.push({config: server, address});
-        }
-    }
-
     // Process in batches to limit concurrency
-    const batches: Array<Array<{ config: ServerConfig, address: string }>> = [];
+    const batches: Array<Array<ServerRecord>> = [];
+    const allServers = await getServers();
 
     for (let i = 0; i < allServers.length; i += MAX_CONCURRENT_QUERIES) {
         batches.push(allServers.slice(i, i + MAX_CONCURRENT_QUERIES));

@@ -4,13 +4,8 @@ export function readString(buffer: Buffer, offset: { value: number }): string {
   
   if (length <= 0) return "";
   
-  const bytes = buffer.slice(offset.value, offset.value + length);
+  const bytes = buffer.subarray(offset.value, offset.value + length);
   offset.value += length;
   
   return bytes.toString('utf8');
-}
-
-// Utility to safely retrieve keys for server identification
-export function getServerKey(host: string, port: number): string {
-  return `${host}:${port}`;
 }

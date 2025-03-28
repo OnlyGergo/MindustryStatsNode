@@ -29,7 +29,7 @@ export async function getServerData(host: string, port: number): Promise<ServerD
         }
         
         resolve(null);
-      }, 2000); // Shorter timeout for faster performance
+      }, 800); // Shorter timeout for faster performance
       
       socket.on('error', (err) => {
         clearTimeout(timeout);

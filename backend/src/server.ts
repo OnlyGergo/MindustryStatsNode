@@ -37,19 +37,15 @@ export async function createServer() {
 
   // Start data collection
   try {
-    const serverConfig = JSON.parse(
-        await fs.readFile(path.join(process.cwd(), 'serverlist.json'), 'utf8')
-    );
-
     // Initial data collection
-    collectServerData(serverConfig).catch(err =>
+    collectServerData().catch(err =>
       console.error('Failed to collect initial server data:', err)
     );
 
     // Schedule periodic collection (every 5 minutes)
     const collectionInterval = 5 * 60 * 1000; // 5 minutes
     setInterval(() => {
-      collectServerData(serverConfig).catch(err =>
+      collectServerData().catch(err =>
           console.error('Failed to collect server data:', err)
       );
     }, collectionInterval);

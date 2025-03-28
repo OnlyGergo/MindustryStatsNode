@@ -121,5 +121,4 @@ async function runMigrations(): Promise<void> {
 }
 
 // Export query functions
-export const query = (text: string, params?: any[]) => pool.query(text, params);
-export default pool;
+export const query = async (text: string, params?: any[]) => pool.query(text, params);

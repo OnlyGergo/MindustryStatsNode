@@ -15,25 +15,27 @@ export interface ServerRecord {
 }
 
 // Create or update a server in the database
-export async function upsertServer(config: {
-  name: string;
+export async function createServer(config: {
+  group_id: number;
   host: string;
   port: number;
-  lastSeen?: number;
 }): Promise<ServerRecord> {
     const result = await query(
-        `INSERT INTO servers (name, host, port, last_seen)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (host, port)
-             DO UPDATE SET
-                 name = $1,
-                 updated_at = NOW(),
-                 last_seen = COALESCE($4, servers.last_seen)
-         RETURNING *`,
-        [config.name, config.host, config.port, config.lastSeen ? new Date(config.lastSeen) : null]
+        `INSERT INTO servers (host, port, server_group_id)
+         VALUES ($1, $2, server_group_id)
+         RETURNING host, port`,
+        [config.host, config.port, config.group_id]
     );
 
   return result.rows[0];
+}
+
+export async function getServers(): Promise<ServerRecord[]> {
+    const qry = await query(
+        `SELECT id, host, port, created_at, updated_at, last_seen from servers;`
+    );
+
+    return qry.rows;
 }
 
 // Save server stats
@@ -58,6 +60,8 @@ export async function saveServerStats(
     ]
   );
 }
+
+
 
 // Check and save MOTD if changed
 export async function saveMotdIfChanged(
@@ -143,7 +147,7 @@ export async function saveMapIfChanged(
 
 // Get all servers with their latest stats
 export async function getAllServersWithHistory(hoursBack: number = 36): Promise<ServerWithHistory[]> {
-    const request = query(`
+    const result = await query(`
         WITH latest_motds AS (SELECT DISTINCT ON (server_id) server_id,
                                                              server_name as "serverName",
                                                              description,
@@ -183,7 +187,7 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
                               WHERE timestamp > NOW() - interval '${hoursBack} hours'
                               GROUP BY server_id)
         SELECT s.id,
-               s.name,
+               sg.name,
                s.host,
                s.port,
                s.updated_at                         as "lastUpdated",
@@ -207,10 +211,9 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
                  LEFT JOIN latest_motds motds ON s.id = motds.server_id
                  LEFT JOIN latest_maps maps ON s.id = maps.server_id
                  LEFT JOIN history_data h ON s.id = h.server_id
+                 LEFT JOIN server_groups sg ON s.server_group_id = sg.id
         ORDER BY s.name, s.host, s.port
     `);
-
-    const [result] = await Promise.all([request]);
 
     return result.rows.map(row => {
         const serverWithHistory: ServerWithHistory = {
@@ -252,11 +255,12 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
 export async function getServer(
     serverId: number
 ): Promise<ServerWithHistory & ServerDetails | undefined> {
-    const qry = query(`
+    const result = await query(`
     WITH current_server AS (
-      SELECT id, name, host, port, updated_at
-      FROM servers
-      WHERE id = $1
+      SELECT s.id, host, port, s.updated_at
+      FROM servers s
+      INNER JOIN server_groups sg ON s.server_group_id = sg.id
+      WHERE s.id = $1
     ),
     latest_stats AS (
       SELECT players, max_players as "playerLimit", wave,
@@ -352,8 +356,6 @@ export async function getServer(
     LEFT JOIN player_peaks p ON true
     LEFT JOIN uptime_stats u ON true
   `, [serverId]);
-
-    const [result] = await Promise.all([qry]);
 
     if (result.rows.length === 0) {
         return undefined;
