@@ -212,7 +212,7 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
                  LEFT JOIN latest_maps maps ON s.id = maps.server_id
                  LEFT JOIN history_data h ON s.id = h.server_id
                  LEFT JOIN server_groups sg ON s.server_group_id = sg.id
-        ORDER BY s.name, s.host, s.port
+        ORDER BY sg.name, s.host, s.port
     `);
 
     return result.rows.map(row => {
@@ -257,7 +257,7 @@ export async function getServer(
 ): Promise<ServerWithHistory & ServerDetails | undefined> {
     const result = await query(`
     WITH current_server AS (
-      SELECT s.id, host, port, s.updated_at
+      SELECT s.id, sg.name, host, port, s.updated_at
       FROM servers s
       INNER JOIN server_groups sg ON s.server_group_id = sg.id
       WHERE s.id = $1
