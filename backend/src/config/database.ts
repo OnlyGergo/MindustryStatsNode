@@ -44,7 +44,7 @@ export async function initDatabase(): Promise<void> {
     console.log(`Connected to database ${dbConfig.database} successfully`);
 
     // Check if TimescaleDB extension exists
-    const [results] = await sequelize.query(
+    const [results]: any = await sequelize.query(
       "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'timescaledb')"
     );
 
