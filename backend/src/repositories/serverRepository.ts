@@ -1,191 +1,189 @@
-import { query } from '../config/database';
+import sequelize from '../config/database';
 import {
-    ServerData,
-    ServerDetails,
-    ServerWithHistory
-} from '../../../common/models/serverData';
+    Server,
+    ServerMotd,
+    ServerMap,
+    ServerStats, ServerGroup
+} from "../models";
+import {ServerData, ServerDetails, ServerWithHistory} from "../../../common/models/serverData";
+import {Sequelize} from "sequelize";
 
 export interface ServerRecord {
-  id: number;
-  name: string;
-  host: string;
-  port: number;
-  created_at: Date;
-  updated_at: Date;
+    id: number;
+    name: string;
+    host: string;
+    port: number;
+    created_at: Date;
+    updated_at: Date;
 }
 
 // Create or update a server in the database
 export async function createServer(config: {
-  group_id: number;
-  host: string;
-  port: number;
+    group_id: number;
+    host: string;
+    port: number;
 }): Promise<ServerRecord> {
-    const result = await query(
-        `INSERT INTO servers (host, port, server_group_id)
-         VALUES ($1, $2, server_group_id)
-         RETURNING host, port`,
-        [config.host, config.port, config.group_id]
-    );
+    const server = await Server.create({
+        host: config.host,
+        port: config.port,
+        server_group_id: config.group_id
+    });
 
-  return result.rows[0];
+    return server.toJSON() as ServerRecord;
 }
 
 export async function getServers(): Promise<ServerRecord[]> {
-    const qry = await query(
-        `SELECT id, host, port, created_at, updated_at, last_seen from servers;`
-    );
+    const servers = await Server.findAll();
+    const serverGroups = await ServerGroup.findAll();
 
-    return qry.rows;
+    const serverGroupMap = new Map<number, string>();
+    serverGroups.forEach(group => {
+        serverGroupMap.set(group.id, group.name);
+    });
+
+    return  servers.map(server => {
+        const serverRecord = server.toJSON() as ServerRecord;
+        serverRecord.name = serverGroupMap.get(server.server_group_id) || 'Unknown';
+        return serverRecord;
+    });
 }
 
 // Save server stats
 export async function saveServerStats(
-  serverId: number,
-  data: ServerData
+    serverId: number,
+    data: ServerData
 ): Promise<void> {
-  await query(
-    `INSERT INTO server_stats 
-     (server_id, timestamp, players, max_players, wave, 
-      version, version_type, ping, online)
-     VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8)`,
-    [
-      serverId,
-      data.players,
-      data.playerLimit,
-      data.wave,
-      data.version,
-      data.versionType,
-      data.ping,
-      data.online
-    ]
-  );
+    await ServerStats.create({
+        server_id: serverId,
+        timestamp: new Date(),
+        players: data.players,
+        max_players: data.playerLimit,
+        wave: data.wave,
+        version: data.version,
+        version_type: data.versionType,
+        ping: data.ping,
+        online: data.online
+    })
 }
-
-
 
 // Check and save MOTD if changed
 export async function saveMotdIfChanged(
-  serverId: number,
-  data: ServerData
+    serverId: number,
+    data: ServerData
 ): Promise<void> {
-  // Get the most recent MOTD for this server
-  const lastMotdResult = await query(
-    `SELECT id, server_name, description, mode_name 
-     FROM server_motds 
-     WHERE server_id = $1 AND valid_to IS NULL
-     LIMIT 1`,
-    [serverId]
-  );
-  
-  const lastMotd = lastMotdResult.rows[0];
-  
-  // Check if MOTD has changed
-  const motdChanged = !lastMotd || 
-    lastMotd.server_name !== data.serverName ||
-    lastMotd.description !== data.description ||
-    lastMotd.mode_name !== data.modeName;
-  
-  if (motdChanged) {
-    // Update the previous MOTD's valid_to date if it exists
-    if (lastMotd) {
-      await query(
-        `UPDATE server_motds SET valid_to = NOW()
-         WHERE id = $1`,
-        [lastMotd.id]
-      );
+    const lastMotd = await ServerMotd.findOne({
+        where: {
+            server_id: serverId,
+            valid_to: null
+        },
+        order: [['valid_from', 'DESC']]
+    })
+
+    // Check if MOTD has changed
+    const motdChanged = !lastMotd ||
+        lastMotd.server_name !== data.serverName ||
+        lastMotd.description !== data.description ||
+        lastMotd.mode_name !== data.modeName;
+
+    if (motdChanged) {
+        // Set the previous MOTD's valid_to date if it exists
+        if (lastMotd) {
+            await lastMotd.update({
+                valid_to: new Date()
+            });
+        }
+
+        // Insert the new MOTD
+        await ServerMotd.create({
+            server_id: serverId,
+            valid_from: new Date(),
+            server_name: data.serverName,
+            description: data.description,
+            mode_name: data.modeName
+        });
     }
-    
-    // Insert the new MOTD
-    await query(
-      `INSERT INTO server_motds 
-       (server_id, valid_from, server_name, description, mode_name)
-       VALUES ($1, NOW(), $2, $3, $4)`,
-      [serverId, data.serverName, data.description, data.modeName]
-    );
-  }
 }
 
 // Check and save Map if changed
 export async function saveMapIfChanged(
-  serverId: number,
-  data: ServerData
+    serverId: number,
+    data: ServerData
 ): Promise<void> {
-  // Get the most recent map for this server
-  const lastMapResult = await query(
-    `SELECT id, map_name, game_mode 
-     FROM server_maps 
-     WHERE server_id = $1 AND valid_to IS NULL
-     LIMIT 1`,
-    [serverId]
-  );
-  
-  const lastMap = lastMapResult.rows[0];
-  
-  // Check if map has changed
-  const mapChanged = !lastMap || 
-    lastMap.map_name !== data.mapName;
-  
-  if (mapChanged) {
-    // Update the previous map's valid_to date if it exists
-    if (lastMap) {
-      await query(
-        `UPDATE server_maps SET valid_to = NOW()
-         WHERE id = $1`,
-        [lastMap.id]
-      );
+    // Get the most recent map for this server
+    const lastMap = await ServerMap.findOne({
+        where: {
+            server_id: serverId,
+            valid_to: null
+        }
+    })
+
+    // Check if map has changed
+    const mapChanged = !lastMap ||
+        lastMap.map_name !== data.mapName;
+
+    if (mapChanged) {
+        // Update the previous map's valid_to date if it exists
+        if (lastMap) {
+            await lastMap.update({
+                valid_to: new Date()
+            });
+        }
+
+        // Insert the new map
+        await ServerMap.create({
+            server_id: serverId,
+            valid_from: new Date(),
+            map_name: data.mapName,
+            game_mode: data.mode
+        })
     }
-    
-    // Insert the new map
-    await query(
-      `INSERT INTO server_maps 
-       (server_id, valid_from, map_name, game_mode)
-       VALUES ($1, NOW(), $2, $3)`,
-      [serverId, data.mapName, data.mode]
-    );
-  }
 }
 
 // Get all servers with their latest stats
 export async function getAllServersWithHistory(hoursBack: number = 36): Promise<ServerWithHistory[]> {
-    const result = await query(`
-        WITH latest_motds AS (SELECT DISTINCT ON (server_id) server_id,
-                                                             server_name as "serverName",
-                                                             description,
-                                                             mode_name   as "modeName",
-                                                             valid_from
-                              FROM server_motds
-                              WHERE valid_to IS NULL
-                              ORDER BY server_id, valid_from DESC),
-             latest_maps AS (SELECT DISTINCT ON (server_id) server_id,
-                                                            map_name  as "mapName",
-                                                            game_mode as mode,
-                                                            valid_from
-                             FROM server_maps
-                             WHERE valid_to IS NULL
-                             ORDER BY server_id, valid_from DESC),
-             latest_stats AS (SELECT DISTINCT ON (server_id) server_id,
-                                                             timestamp,
-                                                             players,
-                                                             max_players,
-                                                             wave,
-                                                             version,
-                                                             version_type,
-                                                             ping,
-                                                             online
-                              FROM server_stats
-                              WHERE timestamp > NOW() - interval '${hoursBack} hours'
-                              ORDER BY server_id, timestamp DESC),
-             history_data AS (SELECT server_id,
-                                     json_agg(
-                                             json_build_object(
-                                                     'timestamp', extract(epoch from timestamp) * 1000,
-                                                     'players', players
-                                             )
-                                             ORDER BY timestamp
-                                     ) as history_json
-                              FROM server_stats
-                              WHERE timestamp > NOW() - interval '${hoursBack} hours'
-                              GROUP BY server_id)
+    const [result] = await sequelize.query(`
+        WITH latest_motds AS (SELECT DISTINCT
+        ON (server_id) server_id,
+            server_name as "serverName",
+            description,
+            mode_name as "modeName",
+            valid_from
+        FROM server_motds
+        WHERE valid_to IS NULL
+        ORDER BY server_id, valid_from DESC),
+            latest_maps AS (
+        SELECT DISTINCT
+        ON (server_id) server_id,
+            map_name as "mapName",
+            game_mode as mode,
+            valid_from
+        FROM server_maps
+        WHERE valid_to IS NULL
+        ORDER BY server_id, valid_from DESC),
+            latest_stats AS (
+        SELECT DISTINCT
+        ON (server_id) server_id,
+            timestamp,
+            players,
+            max_players,
+            wave,
+            version,
+            version_type,
+            ping,
+            online
+        FROM server_stats
+        WHERE timestamp > NOW() - interval '${hoursBack} hours'
+        ORDER BY server_id, timestamp DESC),
+            history_data AS (
+        SELECT server_id, json_agg(
+            json_build_object(
+            'timestamp', extract (epoch from timestamp) * 1000, 'players', players
+            )
+            ORDER BY timestamp
+            ) as history_json
+        FROM server_stats
+        WHERE timestamp > NOW() - interval '${hoursBack} hours'
+        GROUP BY server_id)
         SELECT s.id,
                sg.name,
                s.host,
@@ -213,9 +211,11 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
                  LEFT JOIN history_data h ON s.id = h.server_id
                  LEFT JOIN server_groups sg ON s.server_group_id = sg.id
         ORDER BY sg.name, s.host, s.port
-    `);
+    `, {
+        type: "SELECT"
+    })
 
-    return result.rows.map(row => {
+    return result.map((row: any) => {
         const serverWithHistory: ServerWithHistory = {
             id: row.id,
             name: row.name,
@@ -255,153 +255,54 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
 export async function getServer(
     serverId: number
 ): Promise<ServerWithHistory & ServerDetails | undefined> {
-    const result = await query(`
-    WITH current_server AS (
-      SELECT s.id, sg.name, host, port, s.updated_at
-      FROM servers s
-      INNER JOIN server_groups sg ON s.server_group_id = sg.id
-      WHERE s.id = $1
-    ),
-    latest_stats AS (
-      SELECT players, max_players as "playerLimit", wave,
-             version, version_type as "versionType", 
-             ping, online, timestamp
-      FROM server_stats
-      WHERE server_id = $1
-      ORDER BY timestamp DESC
-      LIMIT 1
-    ),
-    latest_motd AS (
-      SELECT server_name as "serverName", description, mode_name as "modeName"
-      FROM server_motds
-      WHERE server_id = $1 AND valid_to IS NULL
-      ORDER BY valid_from DESC
-      LIMIT 1
-    ),
-    latest_map AS (
-      SELECT map_name as "mapName", game_mode as mode
-      FROM server_maps
-      WHERE server_id = $1 AND valid_to IS NULL
-      ORDER BY valid_from DESC
-      LIMIT 1
-    ),
-    map_history AS (
-      SELECT json_agg(
-        json_build_object(
-          'timestamp', extract(epoch from valid_from) * 1000,
-          'mapName', map_name,
-          'gameMode', game_mode
-        )
-        ORDER BY valid_from DESC
-      ) as map_history_json
-      FROM server_maps
-      WHERE server_id = $1
-      GROUP BY server_id
-      LIMIT 50
-    ),
-    motd_history AS (
-      SELECT json_agg(
-        json_build_object(
-          'timestamp', extract(epoch from valid_from) * 1000,
-          'name', server_name,
-          'motd', description,
-          'modeName', mode_name
-        )
-        ORDER BY valid_from DESC
-      ) as motd_history_json
-      FROM server_motds
-      WHERE server_id = $1
-      GROUP BY server_id
-      LIMIT 50
-    ),
-    player_peaks AS (
-      SELECT 
-        MAX(players) as all_time_peak,
-        (SELECT timestamp FROM server_stats 
-         WHERE server_id = $1 AND players = (SELECT MAX(players) FROM server_stats WHERE server_id = $1)
-         ORDER BY timestamp DESC LIMIT 1) as all_time_peak_date,
-        (SELECT MAX(players) FROM server_stats 
-         WHERE server_id = $1 AND timestamp > NOW() - interval '24 hours') as daily_peak,
-        (SELECT MAX(players) FROM server_stats 
-         WHERE server_id = $1 AND timestamp > NOW() - interval '7 days') as weekly_peak
-      FROM server_stats
-      WHERE server_id = $1
-    ),
-    uptime_stats AS (
-      SELECT 
-        (COUNT(CASE WHEN online = true THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)) as last_24h_uptime,
-        (SELECT (COUNT(CASE WHEN online = true THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)) 
-         FROM server_stats 
-         WHERE server_id = $1 AND timestamp > NOW() - interval '7 days') as last_7d_uptime
-      FROM server_stats
-      WHERE server_id = $1 AND timestamp > NOW() - interval '24 hours'
-    )
-    SELECT 
-      s.id, s.name, s.host, s.port, s.updated_at as "lastUpdated",
-      st.online, st.timestamp, st.players, st."playerLimit", st.wave,
-      st.version, st."versionType", st.ping,
-      m."serverName", m.description, m."modeName",
-      map."mapName", map.mode,
-      COALESCE(mh.map_history_json, '[]'::json) as map_history,
-      COALESCE(mth.motd_history_json, '[]'::json) as motd_history,
-      p.all_time_peak, p.all_time_peak_date,
-      p.daily_peak, p.weekly_peak,
-      u.last_24h_uptime, u.last_7d_uptime
-    FROM current_server s
-    LEFT JOIN latest_stats st ON true
-    LEFT JOIN latest_motd m ON true
-    LEFT JOIN latest_map map ON true
-    LEFT JOIN map_history mh ON true
-    LEFT JOIN motd_history mth ON true
-    LEFT JOIN player_peaks p ON true
-    LEFT JOIN uptime_stats u ON true
-  `, [serverId]);
+    const [result]: any = await sequelize.query(`SELECT * FROM get_server_details($1)`, {
+        bind: [serverId],
+        type: "SELECT"
+    });
 
-    if (result.rows.length === 0) {
+    if (!result) {
         return undefined;
     }
 
-    const row = result.rows[0];
-
     const serverWithDetails: ServerWithHistory & ServerDetails = {
-        id: row.id,
-        name: row.name,
-        host: row.host,
-        port: row.port,
+        id: result.id,
+        name: result.name,
+        host: result.host,
+        port: result.port,
         history: [],
-        online: row.online || false,
-        lastUpdated: row.lastUpdated?.getTime() || Date.now(),
-        mapHistory: row.map_history || [],
-        motdHistory: row.motd_history || [],
+        online: result.online || false,
+        lastUpdated: result.lastUpdated?.getTime() || Date.now(),
+        mapHistory: result.map_history || [],
+        motdHistory: result.motd_history || [],
         playerPeaks: {
-            allTime: row.all_time_peak || 0,
-            allTimeDate: row.all_time_peak_date || new Date(),
-            daily: row.daily_peak || 0,
-            weekly: row.weekly_peak || 0
+            allTime: result.all_time_peak || 0,
+            allTimeDate: result.all_time_peak_date || new Date(),
+            daily: result.daily_peak || 0,
+            weekly: result.weekly_peak || 0
         },
         uptime: {
-            last24h: parseFloat(row.last_24h_uptime) || 0,
-            last7d: parseFloat(row.last_7d_uptime) || 0
+            last24h: parseFloat(result.last_24h_uptime) || 0,
+            last7d: parseFloat(result.last_7d_uptime) || 0
         }
     };
 
     // Add current data if we have stats
-    if (row.timestamp) {
+    if (result.timestamp) {
         serverWithDetails.currentData = {
-            ping: row.ping || 0,
-            host: row.host,
-            port: row.port,
-            serverName: row.serverName || 'Unknown',
-            mapName: row.mapName || 'Unknown',
-            players: row.players || 0,
-            wave: row.wave || 0,
-            version: row.version || 0,
-            versionType: row.versionType || 'Unknown',
-            mode: row.mode || 0,
-            playerLimit: row.playerLimit || 0,
-            description: row.description || '',
-            modeName: row.modeName || '',
-            online: row.online || false
+            ping: result.ping || 0,
+            host: result.host,
+            port: result.port,
+            serverName: result.serverName || 'Unknown',
+            mapName: result.mapName || 'Unknown',
+            players: result.players || 0,
+            wave: result.wave || 0,
+            version: result.version || 0,
+            versionType: result.versionType || 'Unknown',
+            mode: result.mode || 0,
+            playerLimit: result.playerLimit || 0,
+            description: result.description || '',
+            modeName: result.modeName || '',
+            online: result.online || false
         };
     }
 
