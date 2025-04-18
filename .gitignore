@@ -3,3 +3,5 @@
 /.idea/
 /backend/.env
 /build/
+/backend/node_modules/
+/frontend/node_modules/
