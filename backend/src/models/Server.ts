@@ -3,13 +3,13 @@ import sequelize from '../config/database';
 import ServerGroup from './ServerGroup';
 
 class Server extends Model {
-  public id!: number;
-  public host!: string;
-  public port!: number;
-  public server_group_id!: number;
-  public created_at!: Date;
-  public updated_at!: Date;
-  public last_seen!: Date | null;
+  declare id: number;
+  declare host: string;
+  declare port: number;
+  declare server_group_id: number;
+  declare created_at: Date;
+  declare updated_at: Date;
+  declare last_seen: Date | null;
 }
 
 Server.init({

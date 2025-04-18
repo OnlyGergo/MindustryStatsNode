@@ -2,10 +2,10 @@ import { Model, DataTypes } from 'sequelize';
 import sequelize from '../config/database';
 
 class ServerGroup extends Model {
-  public id!: number;
-  public name!: string;
-  public created_at!: Date;
-  public updated_at!: Date;
+  declare id: number;
+  declare name: string;
+  declare created_at: Date;
+  declare updated_at: Date;
 }
 
 ServerGroup.init({

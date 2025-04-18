@@ -3,12 +3,12 @@ import sequelize from '../config/database';
 import Server from './Server';
 
 class ServerMap extends Model {
-    public id!: number;
-    public server_id!: number;
-    public valid_from!: Date;
-    public valid_to!: Date | null;
-    public map_name!: string;
-    public game_mode!: number;
+    declare id: number;
+    declare server_id: number;
+    declare valid_from: Date;
+    declare valid_to: Date | null;
+    declare map_name: string;
+    declare game_mode: number;
 }
 
 ServerMap.init({

@@ -3,16 +3,16 @@ import sequelize from '../config/database';
 import Server from './Server';
 
 class ServerStats extends Model {
-  public id!: number;
-  public server_id!: number;
-  public timestamp!: Date;
-  public players!: number;
-  public max_players!: number | null;
-  public wave!: number | null;
-  public version!: number | null;
-  public version_type!: string | null;
-  public ping!: number | null;
-  public online!: boolean;
+  declare id: number;
+  declare server_id: number;
+  declare timestamp: Date;
+  declare players: number;
+  declare max_players: number | null;
+  declare wave: number | null;
+  declare version: number | null;
+  declare version_type: string | null;
+  declare ping: number | null;
+  declare online: boolean;
 }
 
 ServerStats.init({

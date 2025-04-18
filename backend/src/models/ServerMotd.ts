@@ -3,13 +3,13 @@ import sequelize from '../config/database';
 import Server from './Server';
 
 class ServerMotd extends Model {
-  public id!: number;
-  public server_id!: number;
-  public valid_from!: Date;
-  public valid_to!: Date | null;
-  public server_name!: string | null;
-  public description!: string | null;
-  public mode_name!: string | null;
+  declare id: number;
+  declare server_id: number;
+  declare valid_from: Date;
+  declare valid_to: Date | null;
+  declare server_name: string | null;
+  declare description: string | null;
+  declare mode_name: string | null;
 }
 
 ServerMotd.init({

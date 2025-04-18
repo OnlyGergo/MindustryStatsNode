@@ -141,7 +141,7 @@ export async function saveMapIfChanged(
 
 // Get all servers with their latest stats
 export async function getAllServersWithHistory(hoursBack: number = 36): Promise<ServerWithHistory[]> {
-    const [result] = await sequelize.query(`
+    const result = await sequelize.query(`
         WITH latest_motds AS (SELECT DISTINCT
         ON (server_id) server_id,
             server_name as "serverName",
@@ -251,6 +251,24 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
     });
 }
 
+export async function getMapHistory(serverId: number): Promise<ServerMap[]> {
+    return await ServerMap.findAll({
+        where: {
+            server_id: serverId
+        },
+        limit: 500
+    })
+}
+
+export async function getMotdHistory(serverId: number): Promise<ServerMotd[]> {
+    return await ServerMotd.findAll({
+        where: {
+            server_id: serverId
+        },
+        limit: 500
+    })
+}
+
 // Get detailed information about a specific server
 export async function getServer(
     serverId: number
@@ -265,44 +283,44 @@ export async function getServer(
     }
 
     const serverWithDetails: ServerWithHistory & ServerDetails = {
-        id: result.id,
-        name: result.name,
-        host: result.host,
-        port: result.port,
+        id: result.detail_id,
+        name: result.detail_name,
+        host: result.detail_host,
+        port: result.detail_port,
         history: [],
-        online: result.online || false,
-        lastUpdated: result.lastUpdated?.getTime() || Date.now(),
-        mapHistory: result.map_history || [],
-        motdHistory: result.motd_history || [],
+        online: result.detail_online || false,
+        lastUpdated: result.detail_lastUpdated?.getTime() || Date.now(),
+        mapHistory: result.detail_map_history || [],
+        motdHistory: result.detail_motd_history || [],
         playerPeaks: {
-            allTime: result.all_time_peak || 0,
-            allTimeDate: result.all_time_peak_date || new Date(),
-            daily: result.daily_peak || 0,
-            weekly: result.weekly_peak || 0
+            allTime: result.detail_all_time_peak || 0,
+            allTimeDate: result.detail_peak_date || new Date(),
+            daily: result.detail_daily_peak || 0,
+            weekly: result.detail_weekly_peak || 0
         },
         uptime: {
-            last24h: parseFloat(result.last_24h_uptime) || 0,
-            last7d: parseFloat(result.last_7d_uptime) || 0
+            last24h: parseFloat(result.detail_24h_uptime) || 0,
+            last7d: parseFloat(result.detail_7d_uptime) || 0
         }
     };
 
     // Add current data if we have stats
     if (result.timestamp) {
         serverWithDetails.currentData = {
-            ping: result.ping || 0,
-            host: result.host,
-            port: result.port,
-            serverName: result.serverName || 'Unknown',
-            mapName: result.mapName || 'Unknown',
-            players: result.players || 0,
-            wave: result.wave || 0,
-            version: result.version || 0,
-            versionType: result.versionType || 'Unknown',
-            mode: result.mode || 0,
-            playerLimit: result.playerLimit || 0,
-            description: result.description || '',
-            modeName: result.modeName || '',
-            online: result.online || false
+            ping: result.detail_ping || 0,
+            host: result.detail_host,
+            port: result.detail_port,
+            serverName: result.detail_name || 'Unknown',
+            mapName: result.detail_map_name || 'Unknown',
+            players: result.detail_players || 0,
+            wave: result.detail_wave || 0,
+            version: result.detail_version || 0,
+            versionType: result.detail_version_type || 'Unknown',
+            mode: result.detail_mode || 0,
+            playerLimit: result.detail_player_limit || 0,
+            description: result.detail_description || '',
+            modeName: result.detail_mode_name || '',
+            online: result.detail_online || false
         };
     }
 
