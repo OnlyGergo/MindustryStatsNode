@@ -1,12 +1,11 @@
 import sequelize from '../config/database';
-import {
-    Server,
-    ServerMotd,
-    ServerMap,
-    ServerStats, ServerGroup
-} from "../models";
+import {Server, ServerGroup, ServerMap, ServerMotd, ServerStats} from "../models";
 import {ServerData, ServerDetails, ServerWithHistory} from "../../../common/models/serverData";
-import {Sequelize} from "sequelize";
+import {ServerListElement} from "../models/ServerListElement";
+import {createLogger} from "../logger";
+import {QueryTypes} from "sequelize";
+
+const logger = createLogger("Repository");
 
 export interface ServerRecord {
     id: number;
@@ -15,21 +14,6 @@ export interface ServerRecord {
     port: number;
     created_at: Date;
     updated_at: Date;
-}
-
-// Create or update a server in the database
-export async function createServer(config: {
-    group_id: number;
-    host: string;
-    port: number;
-}): Promise<ServerRecord> {
-    const server = await Server.create({
-        host: config.host,
-        port: config.port,
-        server_group_id: config.group_id
-    });
-
-    return server.toJSON() as ServerRecord;
 }
 
 export async function getServers(): Promise<ServerRecord[]> {
@@ -325,4 +309,28 @@ export async function getServer(
     }
 
     return serverWithDetails;
+}
+
+// Could be more efficient by querying and comparing.... but it runs once every 5 hours so it's fine
+export async function ensureServers(servers: ServerListElement[]): Promise<void> {
+    try {
+        for (const server of servers) {
+            for (const address of server.address) {
+                // Split host to address and port
+                const [host, portStr] = address.split(':');
+                const port = portStr ? parseInt(portStr, 10) : 6567;
+
+                await sequelize.query(
+                    `SELECT add_server_and_group(:name, :host, :port);`,
+                    {
+                        replacements: { name: server.name, host, port },
+                        type: QueryTypes.SELECT
+                    }
+                );
+            }
+        }
+    } catch (error) {
+        logger.error('Error calling function:', error);
+        throw error;
+    }
 }

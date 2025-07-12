@@ -1,18 +1,20 @@
 import {ServerWithHistory} from '../../../common/models/serverData';
-import {queryServer} from './mindustryService';
+import {getServerData} from './mindustryService';
 import * as serverRepository from '../repositories/serverRepository';
-import os from 'os';
 import {getServers, ServerRecord} from "../repositories/serverRepository";
+import {
+    DATA_COLLECTION_INTERVAL_MILLISECONDS,
+    MAX_CONCURRENT_QUERIES,
+    MAX_HISTORY_HOURS,
+    MAX_HISTORY_POINTS
+} from "../const";
+import {createLogger} from "../logger";
 
-const MAX_HISTORY_POINTS = 288 * 3; // Store 36 hours of data at 5-minute intervals
-const MAX_CONCURRENT_QUERIES = Math.max(4, Math.floor(os.cpus().length * 1.5)); // 1.5x CPU cores, at least 4
+const logger = createLogger("Collector");
 
 // In-memory cache of the latest data
 let serverDataCache: ServerWithHistory[] = [];
 let wsClients: Set<any> = new Set();
-
-// Server status update listeners
-const updateListeners: Array<(servers: ServerWithHistory[]) => void> = [];
 
 export function registerWebSocketClient(client: any) {
     wsClients.add(client);
@@ -38,14 +40,10 @@ export function broadcastUpdate(data: any) {
     }
 }
 
-export function onServerUpdate(callback: (servers: ServerWithHistory[]) => void) {
-    updateListeners.push(callback);
-}
-
 export async function initDataStorage(): Promise<void> {
     try {
         // Load servers from database
-        serverDataCache = await serverRepository.getAllServersWithHistory(36);
+        serverDataCache = await serverRepository.getAllServersWithHistory(MAX_HISTORY_HOURS);
 
         // Mark all servers as offline initially
         serverDataCache.forEach(server => {
@@ -56,7 +54,7 @@ export async function initDataStorage(): Promise<void> {
         });
 
     } catch (err) {
-        console.error('Failed to initialize data storage:', err);
+        logger.error('Failed to initialize data storage:', err);
         serverDataCache = [];
     }
 }
@@ -65,7 +63,7 @@ export async function initDataStorage(): Promise<void> {
 async function processBatch(batch: Array<ServerRecord>) {
     const promises = batch.map(async (record) => {
         try {
-            const serverData = await queryServer(record.host, record.port);
+            const serverData = await getServerData(record.host, record.port);
             const timestamp = Date.now();
 
             // Find server in cache
@@ -138,7 +136,7 @@ async function processBatch(batch: Array<ServerRecord>) {
             }
         } catch (err) {
             // Error already logged in queryServer
-            console.error(err);
+            logger.error(err);
         }
     });
 
@@ -146,7 +144,8 @@ async function processBatch(batch: Array<ServerRecord>) {
 }
 
 export async function collectServerData(): Promise<void> {
-    console.time('Server data collection');
+    const startTime = Date.now();
+    logger.info("Started Server Collection...")
 
     // Process in batches to limit concurrency
     const batches: Array<Array<ServerRecord>> = [];
@@ -160,11 +159,6 @@ export async function collectServerData(): Promise<void> {
         await processBatch(batch);
     }
 
-    // Notify listeners
-    for (const listener of updateListeners) {
-        listener(serverDataCache);
-    }
-
     // Broadcast update to WebSocket clients
     broadcastUpdate({
         type: 'update',
@@ -172,5 +166,6 @@ export async function collectServerData(): Promise<void> {
         timestamp: Date.now()
     });
 
-    console.timeEnd('Server data collection');
+   const timeTaken = (Date.now() - startTime) / 1000;
+   logger.info("Completed Server Collection in " + timeTaken.toFixed(2) + " seconds");
 }

@@ -1,6 +1,7 @@
 import dgram from 'dgram';
 import { GameMode, ServerData } from '../../../common/models/serverData';
 import { readString } from '../utils/buffer';
+import {MINDUSTRY_TIMEOUT_MILLISECONDS} from "../const";
 
 // Cache failed attempts to avoid excessive logging
 const failedServersCache = new Set<string>();
@@ -27,9 +28,14 @@ export async function getServerData(host: string, port: number): Promise<ServerD
           console.warn(`Server request timed out for ${serverKey}`);
           failedServersCache.add(serverKey);
         }
+        else
+        {
+          // Delete on success
+          failedServersCache.delete(serverKey);
+        }
         
         resolve(null);
-      }, 800); // Shorter timeout for faster performance
+      }, MINDUSTRY_TIMEOUT_MILLISECONDS); // Shorter timeout for faster performance
       
       socket.on('error', (err) => {
         clearTimeout(timeout);
@@ -122,13 +128,4 @@ export async function getServerData(host: string, port: number): Promise<ServerD
       reject(err);
     }
   });
-}
-
-export async function queryServer(host: string, port: number): Promise<ServerData | null> {
-  try {
-    return await getServerData(host, port);
-  } catch (err) {
-    // We already handle logging in getServerData, so we just return null here
-    return null;
-  }
 }

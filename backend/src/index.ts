@@ -1,17 +1,19 @@
 import { createServer } from './server';
+import {env} from "./config/env";
+import {createLogger} from "./logger";
 
-const PORT = process.env.SERVER_PORT || 3000;
+const logger = createLogger("Entry");
 
 async function main() {
   try {
     const server = await createServer();
     
-    server.listen(PORT, () => {
-      console.log(`Server running at http://localhost:${PORT}`);
-      console.log(`WebSocket server running at ws://localhost:${PORT}/ws`);
+    server.listen(env.PORT, () => {
+      logger.info(`Server running at http://localhost:${env.PORT}`);
+      logger.info(`WebSocket server running at ws://localhost:${env.PORT}/ws`);
     });
   } catch (err) {
-    console.error('Failed to start server:', err);
+    logger.error('Failed to start server:', err);
     process.exit(1);
   }
 }

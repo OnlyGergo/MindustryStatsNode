@@ -1,16 +1,16 @@
 import express from 'express';
 import path from 'path';
-import fs from 'fs/promises';
 import http from 'http';
 import WebSocket from 'ws';
 import {
-  collectServerData,
   initDataStorage,
-  registerWebSocketClient,
-  onServerUpdate
+  registerWebSocketClient
 } from './services/dataCollector';
 import apiRoutes from './routes/api';
 import { initDatabase } from './config/database';
+import {createLogger} from "./logger";
+import {initSchedules} from "./services/schedules";
+const logger = createLogger("Web Server");
 
 export async function createServer() {
   const app = express();
@@ -25,7 +25,7 @@ export async function createServer() {
 
   // WebSocket connection handling
   wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
+    logger.info('WS Connected, total: ' + wss.clients.size);
     registerWebSocketClient(ws);
   });
   
@@ -35,28 +35,8 @@ export async function createServer() {
   // Initialize data storage
   await initDataStorage();
 
-  // Start data collection
-  try {
-    // Initial data collection
-    collectServerData().catch(err =>
-      console.error('Failed to collect initial server data:', err)
-    );
-
-    // Schedule periodic collection (every 5 minutes)
-    const collectionInterval = 5 * 60 * 1000; // 5 minutes
-    setInterval(() => {
-      collectServerData().catch(err =>
-          console.error('Failed to collect server data:', err)
-      );
-    }, collectionInterval);
-
-    // Setup update handler
-    onServerUpdate((servers) => {
-      console.log(`Updated ${servers.length} servers`);
-    });
-  } catch (err) {
-    console.error('Failed to read server list:', err);
-  }
+  // Start all schedules, like list updating and the server info collection
+  await initSchedules();
 
   return server;
 }
