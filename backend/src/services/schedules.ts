@@ -40,7 +40,7 @@ async function scheduleDataCollection() {
 
 async function scheduleServerListCollection() {
     // Initial data collection
-    await collectServerData();
+    await refreshServerList();
 
     // Schedule periodic collection
     const timeout = setInterval(
