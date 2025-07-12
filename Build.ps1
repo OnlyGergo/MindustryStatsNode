@@ -1,6 +1,5 @@
 # Clean up from last time
 Remove-Item -Path "./build" -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -Path "./build.zip" -Recurse -Force -ErrorAction SilentlyContinue
 
 # Create build folders
 mkdir "./build"
