@@ -12,7 +12,7 @@ const dbConfig = {
   username: env.DB_USER,
   password: env.DB_PASSWORD,
   dialect: 'postgres',
-  logging: env.NODE_ENV !== 'production' ? logger.info : false,
+  logging: env.NODE_ENV !== 'production' ? logger.debug.bind(logger) : false,
   pool: {
     max: 20,
     min: 0,
