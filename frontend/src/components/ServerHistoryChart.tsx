@@ -1,31 +1,23 @@
 import React, { useEffect, useRef } from 'react';
 import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
-import { HistoryPoint } from '../../../common/models/serverData';
 
 // Register Chart.js components
 Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler);
 
-interface ServerHistoryChartProps {
-    history: HistoryPoint[];
-}
-
-const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history }) => {
+const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players: number }> }> = ({ history }) => {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<Chart | null>(null);
 
     useEffect(() => {
         if (!chartRef.current) return;
 
-        // Cleanup previous chart
         if (chartInstance.current) {
             chartInstance.current.destroy();
         }
 
-        // Format data
         const labels = history.map(h => formatTime(h.timestamp));
         const data = history.map(h => h.players);
 
-        // Create new chart
         const ctx = chartRef.current.getContext('2d');
         if (!ctx) return;
 
@@ -36,28 +28,34 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history }) => {
                 datasets: [{
                     label: 'Players',
                     data,
-                    borderColor: 'rgb(79, 70, 229)',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    borderColor: 'rgb(0, 255, 255)',
+                    backgroundColor: 'rgba(0, 255, 255, 0.1)',
                     fill: true,
-                    tension: 0.1,
-                    borderWidth: 2
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgb(0, 255, 255)',
+                    pointBorderColor: 'rgb(0, 255, 255)',
+                    pointHoverBackgroundColor: 'rgb(255, 0, 255)',
+                    pointHoverBorderColor: 'rgb(255, 0, 255)'
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                    duration: 300 // Faster animations
+                    duration: 300
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
                         ticks: {
                             precision: 0,
-                            font: { size: 10 }
+                            font: { size: 10 },
+                            color: 'rgba(255, 255, 255, 0.6)'
                         },
                         grid: {
-                            display: false
+                            display: true,
+                            color: 'rgba(0, 255, 255, 0.1)'
                         }
                     },
                     x: {
@@ -65,16 +63,23 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history }) => {
                             maxRotation: 0,
                             autoSkip: true,
                             maxTicksLimit: 6,
-                            font: { size: 9 }
+                            font: { size: 9 },
+                            color: 'rgba(255, 255, 255, 0.6)'
                         },
                         grid: {
-                            display: false
+                            display: true,
+                            color: 'rgba(0, 255, 255, 0.1)'
                         }
                     }
                 },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: 'rgb(0, 255, 255)',
+                        bodyColor: 'rgb(255, 255, 255)',
+                        borderColor: 'rgb(0, 255, 255)',
+                        borderWidth: 1,
                         callbacks: {
                             title: (items) => {
                                 if (!items.length) return '';
@@ -108,7 +113,7 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history }) => {
     };
 
     return (
-        <div className="chart-container">
+        <div className="h-24 w-full">
             <canvas ref={chartRef}></canvas>
         </div>
     );

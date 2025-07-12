@@ -13,7 +13,7 @@ const App: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<boolean>(false);
 
-    const { connectionStatus, data } = useWebSocket();
+    const {connectionStatus, data} = useWebSocket();
 
     useEffect(() => {
         if (data && data.type === 'init' || data?.type === 'update') {
@@ -82,23 +82,34 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className="bg-gray-100 min-h-screen text-gray-800">
-            <div className="container mx-auto p-4">
-                <header className="bg-indigo-600 text-white p-4 rounded-lg shadow mb-4">
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+            {/* Animated background elements */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div
+                    className="absolute -top-40 -right-40 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
+                <div
+                    className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse"
+                    style={{animationDelay: '1s'}}></div>
+                <div
+                    className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-green-500/5 rounded-full blur-3xl animate-pulse"
+                    style={{animationDelay: '2s'}}></div>
+            </div>
+
+            <div className="relative container mx-auto p-6">
+                <header
+                    className="bg-slate-800/30 backdrop-blur-md border border-cyan-500/30 text-white p-6 rounded-xl shadow-2xl mb-6">
                     <div className="flex justify-between items-center">
                         <div>
-                            <h1 className="text-2xl font-bold">Mindustry Server Monitor</h1>
-                            <p className="mt-1 text-sm opacity-90">Real-time player counts and status</p>
+                            <h1 className="text-3xl font-bold text-cyan-400">Mindustry Server Monitor</h1>
+                            <p className="mt-2 text-sm text-gray-300">Real-time player counts and status</p>
                         </div>
                         <div className="flex items-center">
-              <span
-                  className={`px-2 py-1 rounded text-xs flex items-center ${
-                      connectionStatus === 'connected' ? 'bg-green-500' :
-                          connectionStatus === 'reconnecting' ? 'bg-yellow-500 blink' :
-                              'bg-red-500'
-                  }`}
-              >
-                <span className="inline-block w-2 h-2 rounded-full bg-white mr-1"></span>
+              <span className={`px-4 py-2 rounded-full text-sm flex items-center border backdrop-blur-sm ${
+                  connectionStatus === 'connected' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                      connectionStatus === 'reconnecting' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                          'bg-red-500/20 text-red-400 border-red-500/30'
+              }`}>
+                <span className="inline-block w-2 h-2 rounded-full bg-current mr-2"></span>
                   {connectionStatus === 'connected' ? 'Connected' :
                       connectionStatus === 'reconnecting' ? 'Reconnecting...' :
                           'Connection Error'}
@@ -107,62 +118,66 @@ const App: React.FC = () => {
                     </div>
                 </header>
 
-                <div className="mb-4 flex flex-wrap items-center justify-between">
-                    <div className="mb-2 sm:mb-0">
-                        <h2 className="text-lg font-semibold">Server Status</h2>
-                        <p className="text-xs text-gray-600">Last updated: {lastUpdated}</p>
+                <div className="mb-6 flex flex-wrap items-center justify-between">
+                    <div className="mb-4 sm:mb-0">
+                        <h2 className="text-xl font-semibold text-white">Server Status</h2>
+                        <p className="text-sm text-gray-400">Last updated: {lastUpdated}</p>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-3">
                         <button
                             onClick={handleExpandAll}
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                            className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30 px-4 py-2 rounded-lg text-sm transition-colors backdrop-blur-sm"
                         >
                             Expand All
                         </button>
                         <button
                             onClick={handleCollapseAll}
-                            className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                            className="bg-slate-700/50 hover:bg-slate-600/50 text-gray-300 border border-slate-600/30 px-4 py-2 rounded-lg text-sm transition-colors backdrop-blur-sm"
                         >
                             Collapse All
                         </button>
                     </div>
                 </div>
 
-                <div className="mb-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm">
-                        <div className="bg-white p-2 rounded shadow stats-card">
-                            <div className="text-gray-600">Total Servers</div>
-                            <div className="text-xl font-bold">{totalServers}</div>
+                <div className="mb-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                        <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-4 rounded-xl">
+                            <div className="text-gray-400 text-sm">Total Servers</div>
+                            <div className="text-2xl font-bold text-white">{totalServers}</div>
                         </div>
-                        <div className="bg-white p-2 rounded shadow stats-card">
-                            <div className="text-gray-600">Online Servers</div>
-                            <div className="text-xl font-bold text-green-600">{onlineServers}</div>
+                        <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-4 rounded-xl">
+                            <div className="text-gray-400 text-sm">Online Servers</div>
+                            <div className="text-2xl font-bold text-green-400">{onlineServers}</div>
                         </div>
-                        <div className="bg-white p-2 rounded shadow stats-card">
-                            <div className="text-gray-600">Total Players</div>
-                            <div className="text-xl font-bold text-indigo-600">{totalPlayers}</div>
+                        <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-4 rounded-xl">
+                            <div className="text-gray-400 text-sm">Total Players</div>
+                            <div
+                                className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">{totalPlayers}</div>
                         </div>
-                        <div className="bg-white p-2 rounded shadow stats-card">
-                            <div className="text-gray-600">Server Groups</div>
-                            <div className="text-xl font-bold">{Object.keys(serverGroups).length}</div>
+                        <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-4 rounded-xl">
+                            <div className="text-gray-400 text-sm">Server Groups</div>
+                            <div className="text-2xl font-bold text-white">{Object.keys(serverGroups).length}</div>
                         </div>
                     </div>
                 </div>
 
                 {loading && (
-                    <div className="text-center p-8 bg-white rounded-lg shadow mb-4">
-                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-4 border-indigo-500 border-t-transparent"></div>
-                        <p className="mt-2">Loading server data...</p>
+                    <div
+                        className="text-center p-8 bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl mb-6">
+                        <div
+                            className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-cyan-400 border-t-transparent"></div>
+                        <p className="mt-4 text-gray-300">Loading server data...</p>
                     </div>
                 )}
 
                 {error && (
-                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+                    <div
+                        className="bg-red-500/20 border border-red-500/30 text-red-400 px-6 py-4 rounded-xl backdrop-blur-sm mb-6">
                         <span className="block sm:inline">Failed to load server data. Please try again later.</span>
                     </div>
                 )}
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                     {Object.entries(serverGroups).map(([groupName, servers]) => (
                         <ServerGroup
                             key={groupName}
@@ -174,12 +189,12 @@ const App: React.FC = () => {
                     ))}
                 </div>
 
-                <footer className="mt-6 text-center text-xs text-gray-500 py-4">
+                <footer className="mt-8 text-center text-sm text-gray-500 py-6">
                     <p>Mindustry Server Monitor | Last updated: {lastUpdated}</p>
                 </footer>
             </div>
         </div>
     );
-};
+}
 
 export default App;
