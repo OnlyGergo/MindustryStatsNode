@@ -5,7 +5,7 @@ import {createLogger} from "../logger";
 const logger = createLogger("Server List Updater");
 
 export async function refreshServerList() {
-    let serverCount = 0;
+    let groupsCount = 0;
     const startTime = Date.now();
     logger.info("Refreshing servers...");
 
@@ -14,10 +14,10 @@ export async function refreshServerList() {
         // Get the JSON
         const response = await fetch(url);
         const servers: ServerListElement[] = await response.json();
-        serverCount += servers.length;
+        groupsCount += servers.length;
         await serverRepository.ensureServers(servers);
     }
 
     const timeTaken = (Date.now() - startTime) / 1000;
-    logger.info(`Found ${serverCount} total servers in ${timeTaken.toFixed(2)} seconds.`);
+    logger.info(`Found ${groupsCount} total server groups in ${timeTaken.toFixed(2)} seconds.`);
 }
