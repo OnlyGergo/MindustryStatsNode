@@ -6,6 +6,7 @@ const logger = createLogger("Entry");
 
 async function main() {
   try {
+    logger.info("Starting Mindustry Stats...");
     const server = await createServer();
     
     server.listen(env.PORT, () => {
