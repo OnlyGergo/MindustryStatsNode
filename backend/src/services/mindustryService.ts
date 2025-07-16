@@ -53,10 +53,12 @@ export async function getServerData(host: string, port: number): Promise<ServerD
           if (err.message.startsWith("getaddrinfo ENOTFOUND")) {
             logger.warn(`Unable to resolve domain (getaddrinfo ENOTFOUND) for ${serverKey}`);
             resolve(null);
+
+          } else {
+            logger.warn(`Error connecting to ${serverKey}: ${err.message}`);
           }
 
           failedServersCache.add(serverKey);
-          logger.warn(`Error connecting to ${serverKey}: ${err.message}`);
         }
 
         reject(err);
