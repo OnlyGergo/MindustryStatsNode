@@ -13,12 +13,14 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': {
-                target: 'http://localhost:2948',
+                //target: 'http://localhost:2948',
+                target: 'https://tracker.gergo.tech:443',
                 changeOrigin: true,
                 ws: true,
             },
             '/ws': {
-                target: 'http://localhost:2948',
+                //target: 'http://localhost:2948',
+                target: 'https://tracker.gergo.tech:443',
                 changeOrigin: true,
                 ws: true,
             }

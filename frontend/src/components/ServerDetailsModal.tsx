@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import {FC, useEffect, useState} from 'react';
 import {getGameModeName, removeColors} from "../util/mindustry.ts";
 import {formatDate} from "../util/general.ts";
 import CopyButton from "./CopyButton.tsx";
+import {createPortal} from "react-dom";
 
-const ServerDetailsModal: React.FC<{ server: any; onClose: () => void }> = ({ server, onClose }) => {
+const ServerDetailsModal: FC<{ server: any; onClose: () => void }> = ({ server, onClose }) => {
     const [details, setDetails] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
@@ -38,8 +38,8 @@ const ServerDetailsModal: React.FC<{ server: any; onClose: () => void }> = ({ se
     };
 
     const modalContent = (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-            <div className="bg-slate-900/90 backdrop-blur-md border border-cyan-500/30 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+            <div className="bg-slate-900/95 backdrop-blur-md border border-cyan-500/30 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                 <div className="p-6 border-b border-slate-700/50 flex justify-between items-center">
                     <div className="flex items-center space-x-3">
                         <span className="text-xl font-bold text-cyan-400">{removeColors(server.currentData?.serverName || server.name)}</span>
@@ -50,7 +50,7 @@ const ServerDetailsModal: React.FC<{ server: any; onClose: () => void }> = ({ se
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-white text-xl"
+                        className="text-gray-400 hover:text-white text-xl transition-colors"
                     >
                         ✕
                     </button>
@@ -149,7 +149,6 @@ const ServerDetailsModal: React.FC<{ server: any; onClose: () => void }> = ({ se
         </div>
     );
 
-    // Render modal content into document.body using createPortal
     return createPortal(modalContent, document.body);
 };
 

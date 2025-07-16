@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, {useEffect, useRef} from 'react';
 import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
 
 // Register Chart.js components
@@ -50,36 +50,37 @@ const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players
                         beginAtZero: true,
                         ticks: {
                             precision: 0,
-                            font: { size: 10 },
-                            color: 'rgba(255, 255, 255, 0.6)'
+                            font: { size: 11 },
+                            color: 'rgba(255, 255, 255, 0.7)'
                         },
                         grid: {
                             display: true,
-                            color: 'rgba(0, 255, 255, 0.1)'
+                            color: 'rgba(0, 255, 255, 0.15)'
                         }
                     },
                     x: {
                         ticks: {
                             maxRotation: 0,
                             autoSkip: true,
-                            maxTicksLimit: 6,
-                            font: { size: 9 },
-                            color: 'rgba(255, 255, 255, 0.6)'
+                            maxTicksLimit: 8,
+                            font: { size: 10 },
+                            color: 'rgba(255, 255, 255, 0.7)'
                         },
                         grid: {
                             display: true,
-                            color: 'rgba(0, 255, 255, 0.1)'
+                            color: 'rgba(0, 255, 255, 0.15)'
                         }
                     }
                 },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
                         titleColor: 'rgb(0, 255, 255)',
                         bodyColor: 'rgb(255, 255, 255)',
                         borderColor: 'rgb(0, 255, 255)',
                         borderWidth: 1,
+                        cornerRadius: 8,
                         callbacks: {
                             title: (items) => {
                                 if (!items.length) return '';
@@ -94,8 +95,8 @@ const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players
                 elements: {
                     point: {
                         radius: 0,
-                        hitRadius: 10,
-                        hoverRadius: 4
+                        hitRadius: 12,
+                        hoverRadius: 5
                     }
                 }
             }
@@ -113,7 +114,7 @@ const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players
     };
 
     return (
-        <div className="h-24 w-full">
+        <div className="h-full w-full">
             <canvas ref={chartRef}></canvas>
         </div>
     );
