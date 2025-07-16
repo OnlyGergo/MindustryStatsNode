@@ -1,6 +1,8 @@
 import express from 'express';
 import {getMapHistory, getMotdHistory, getServer} from "../repositories/serverRepository";
+import {createLogger} from "../logger";
 
+const logger = createLogger("API");
 const router = express.Router();
 
 // Get server by address
@@ -36,7 +38,7 @@ router.get('/servers/:id/motd-history', async (req, res) => {
   try {
     res.json(getMotdHistory(idNumber));
   } catch (err) {
-    console.error('Failed to fetch MOTD history:', err);
+    logger.error('Failed to fetch MOTD history:', err);
     res.status(500).json({ error: 'Failed to fetch MOTD history' });
   }
 });
@@ -54,7 +56,7 @@ router.get('/servers/:id/map-history', async (req, res) => {
   try {
     res.json(getMapHistory(idNumber));
   } catch (err) {
-    console.error('Failed to fetch map history:', err);
+    logger.error('Failed to fetch map history:', err);
     res.status(500).json({ error: 'Failed to fetch map history' });
   }
 });
