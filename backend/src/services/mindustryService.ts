@@ -2,9 +2,11 @@ import dgram from 'dgram';
 import { GameMode, ServerData } from '../../../common/models/serverData';
 import { readString } from '../utils/buffer';
 import {MINDUSTRY_TIMEOUT_MILLISECONDS} from "../const";
+import {createLogger} from "../logger";
 
 // Cache failed attempts to avoid excessive logging
 const failedServersCache = new Set<string>();
+const logger = createLogger('Mindustry Service');
 
 export async function getServerData(host: string, port: number): Promise<ServerData | null> {
   const serverKey = `${host}:${port}`;
@@ -25,7 +27,7 @@ export async function getServerData(host: string, port: number): Promise<ServerD
         
         // Only log if it's the first failure
         if (!failedServersCache.has(serverKey)) {
-          console.warn(`Server request timed out for ${serverKey}`);
+          logger.warn(`Server request timed out for ${serverKey}`);
           failedServersCache.add(serverKey);
         }
         else
@@ -49,12 +51,12 @@ export async function getServerData(host: string, port: number): Promise<ServerD
         // Only log if it's the first failure
         if (!failedServersCache.has(serverKey)) {
           if (err.message.startsWith("getaddrinfo ENOTFOUND")) {
-            console.warn(`Unable to resolve domain (getaddrinfo ENOTFOUND) for ${serverKey}`);
+            logger.warn(`Unable to resolve domain (getaddrinfo ENOTFOUND) for ${serverKey}`);
             resolve(null);
           }
 
           failedServersCache.add(serverKey);
-          console.warn(`Error connecting to ${serverKey}: ${err.message}`);
+          logger.warn(`Error connecting to ${serverKey}: ${err.message}`);
         }
 
         reject(err);
