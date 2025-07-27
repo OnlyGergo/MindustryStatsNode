@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ServerWithHistory } from  '../../common/models/serverData';
-import MasterPanel from './components/MasterPanel';
+import MasterPanel from './components/sidebar/MasterPanel';
 import DetailPanel from './components/DetailPanel';
 import useWebSocket from './hooks/useWebSocket';
 import { useResponsive } from './hooks/useResponsive';
@@ -84,14 +84,6 @@ const App: React.FC = () => {
         setTotalPlayers(servers.reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0));
     };
 
-    const handleExpandAll = () => {
-        setExpandedGroups(new Set(Object.keys(serverGroups)));
-    };
-
-    const handleCollapseAll = () => {
-        setExpandedGroups(new Set());
-    };
-
     const toggleGroupExpanded = (groupName: string) => {
         const newExpanded = new Set(expandedGroups);
         if (newExpanded.has(groupName)) {
@@ -144,8 +136,6 @@ const App: React.FC = () => {
                     totalPlayers={totalPlayers}
                     serverGroups={serverGroups}
                     expandedGroups={expandedGroups}
-                    onExpandAll={handleExpandAll}
-                    onCollapseAll={handleCollapseAll}
                     onToggleGroup={toggleGroupExpanded}
                     onServerSelect={handleServerSelect}
                     selectedServer={selectedServer}

@@ -1,6 +1,12 @@
 import React from 'react';
-import { ServerWithHistory } from '../../../common/models/serverData';
 import ServerGroup from './ServerGroup';
+import FlatServerList from './FlatServerList';
+import {ServerWithHistory} from "../../../../common/models/serverData.ts";
+import SearchBar from "../SearchBar.tsx";
+import ToggleButton from "../ToggleButton.tsx";
+import SortDropdown from "../SortDropdown.tsx";
+import Tooltip from "../Tooltip.tsx";
+import { useServerList } from "../../hooks/useServerList.ts";
 
 interface MasterPanelProps {
     isCollapsed: boolean;
@@ -11,8 +17,6 @@ interface MasterPanelProps {
     totalPlayers: number;
     serverGroups: Record<string, ServerWithHistory[]>;
     expandedGroups: Set<string>;
-    onExpandAll: () => void;
-    onCollapseAll: () => void;
     onToggleGroup: (groupName: string) => void;
     onServerSelect: (server: ServerWithHistory) => void;
     selectedServer: ServerWithHistory | null;
@@ -29,10 +33,8 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                                      totalServers,
                                                      onlineServers,
                                                      totalPlayers,
-                                                     serverGroups,
+                                                     serverGroups: rawServerGroups,
                                                      expandedGroups,
-                                                     onExpandAll,
-                                                     onCollapseAll,
                                                      onToggleGroup,
                                                      onServerSelect,
                                                      selectedServer,
@@ -41,6 +43,26 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                                      lastUpdated,
                                                      isMobile
                                                  }) => {
+    // Convert grouped data to flat array for the hook
+    const rawServers = React.useMemo(() => {
+        return Object.values(rawServerGroups).flat();
+    }, [rawServerGroups]);
+
+    const {
+        serverGroups: processedServerGroups,
+        flatServers,
+        searchTerm,
+        isGrouped,
+        hideInactiveEnabled,
+        sortCriteria,
+        sortDirection,
+        setSearchTerm,
+        toggleGrouping,
+        toggleHideInactive,
+        handleSortChange,
+        sortOptions
+    } = useServerList(rawServers);
+
     return (
         <div className={`relative transition-all duration-300 ${
             isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-1/3'
@@ -82,38 +104,72 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     <div className="p-4 border-b border-slate-700/50 flex-shrink-0">
                         <div className="grid grid-cols-2 gap-2 text-center">
                             <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-2 rounded-lg">
-                                <div className="text-gray-400 text-xs">Total Servers</div>
-                                <div className="text-lg font-bold text-white">{totalServers}</div>
-                            </div>
-                            <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-2 rounded-lg">
-                                <div className="text-gray-400 text-xs">Online</div>
-                                <div className="text-lg font-bold text-green-400">{onlineServers}</div>
+                                <div className="text-gray-400 text-xs">Online / Total Servers</div>
+                                <div className="flex items-center justify-center space-x-2">
+                                    <span className="text-lg font-bold text-green-400">{onlineServers}</span>
+                                    <span className="text-lg font-bold text-gray-400"> / </span>
+                                    <span className="text-lg font-bold text-white">{totalServers}</span>
+                                </div>
                             </div>
                             <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-2 rounded-lg">
                                 <div className="text-gray-400 text-xs">Total Players</div>
                                 <div className="text-lg font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">{totalPlayers}</div>
                             </div>
-                            <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-2 rounded-lg">
-                                <div className="text-gray-400 text-xs">Groups</div>
-                                <div className="text-lg font-bold text-white">{Object.keys(serverGroups).length}</div>
-                            </div>
                         </div>
                     </div>
 
                     {/* Controls */}
-                    <div className="p-4 border-b border-slate-700/50 flex space-x-2 flex-shrink-0">
-                        <button
-                            onClick={onExpandAll}
-                            className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30 px-3 py-1 rounded-lg text-xs transition-colors backdrop-blur-sm flex-1"
-                        >
-                            Expand All
-                        </button>
-                        <button
-                            onClick={onCollapseAll}
-                            className="bg-slate-700/50 hover:bg-slate-600/50 text-gray-300 border border-slate-600/30 px-3 py-1 rounded-lg text-xs transition-colors backdrop-blur-sm flex-1"
-                        >
-                            Collapse All
-                        </button>
+                    <div className="p-4 border-b border-slate-700/50 flex-shrink-0">
+                        {/* Search Bar */}
+                        <div className="mb-3">
+                            <SearchBar
+                                onSearchValueChange={setSearchTerm}
+                                value={searchTerm}
+                            />
+                        </div>
+
+                        {/* Control Buttons */}
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            <Tooltip
+                                content={isGrouped ? "Switch to flat list view showing all servers" : "Group servers by their cluster names"}
+                                position="top"
+                                delay={300}
+                                className="flex-1 min-w-0"
+                            >
+                                <ToggleButton
+                                    isActive={isGrouped}
+                                    onClick={toggleGrouping}
+                                    activeText="Ungroup"
+                                    inactiveText="Group"
+                                    className="w-full"
+                                />
+                            </Tooltip>
+
+                            <Tooltip
+                                content={hideInactiveEnabled ? "Show all servers including inactive ones" : "Hide servers that have been offline for more than 7 days"}
+                                position="top"
+                                delay={300}
+                                className="flex-1 min-w-0"
+                            >
+                                <ToggleButton
+                                    isActive={hideInactiveEnabled}
+                                    onClick={toggleHideInactive}
+                                    activeText="Show All"
+                                    inactiveText="Hide Inactive"
+                                    activeColor="bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border-orange-500/30"
+                                    inactiveColor="bg-slate-600/20 hover:bg-slate-600/30 text-slate-400 border-slate-600/30"
+                                    className="w-full"
+                                />
+                            </Tooltip>
+                        </div>
+
+                        {/* Sort Dropdown */}
+                        <SortDropdown
+                            sortOptions={sortOptions}
+                            currentCriteria={sortCriteria}
+                            currentDirection={sortDirection}
+                            onSortChange={handleSortChange}
+                        />
                     </div>
 
                     {/* Server List */}
@@ -131,19 +187,31 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                             </div>
                         )}
 
-                        <div className="space-y-4">
-                            {Object.entries(serverGroups).map(([groupName, servers]) => (
-                                <ServerGroup
-                                    key={groupName}
-                                    name={groupName}
-                                    servers={servers}
-                                    expanded={expandedGroups.has(groupName)}
-                                    onToggleExpand={() => onToggleGroup(groupName)}
-                                    onServerSelect={onServerSelect}
-                                    selectedServer={selectedServer}
-                                />
-                            ))}
-                        </div>
+                        {!loading && !error && (
+                            <div className="space-y-4">
+                                {isGrouped ? (
+                                    // Grouped view
+                                    Object.entries(processedServerGroups).map(([groupName, servers]) => (
+                                        <ServerGroup
+                                            key={groupName}
+                                            name={groupName}
+                                            servers={servers}
+                                            expanded={expandedGroups.has(groupName)}
+                                            onToggleExpand={() => onToggleGroup(groupName)}
+                                            onServerSelect={onServerSelect}
+                                            selectedServer={selectedServer}
+                                        />
+                                    ))
+                                ) : (
+                                    // Flat view
+                                    <FlatServerList
+                                        servers={flatServers}
+                                        onServerSelect={onServerSelect}
+                                        selectedServer={selectedServer}
+                                    />
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer */}

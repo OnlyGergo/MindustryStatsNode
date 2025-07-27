@@ -1,6 +1,5 @@
 import React from 'react';
-import {removeColors} from "../util/mindustry.ts";
-//import {formatDate} from "../util/general.ts";
+import {removeColors} from "../../util/mindustry.ts";
 
 const ServerItem: React.FC<{
     server: any;

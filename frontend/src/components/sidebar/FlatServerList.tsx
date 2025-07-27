@@ -1,0 +1,40 @@
+import React from 'react';
+import ServerItem from './ServerItem';
+import { ServerWithHistory } from '../../../../common/models/serverData';
+
+interface FlatServerListProps {
+  servers: ServerWithHistory[];
+  onServerSelect: (server: ServerWithHistory) => void;
+  selectedServer: ServerWithHistory | null;
+}
+
+const FlatServerList: React.FC<FlatServerListProps> = ({
+  servers,
+  onServerSelect,
+  selectedServer
+}) => {
+  if (servers.length === 0) {
+    return (
+      <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 text-center">
+        <p className="text-gray-400">No servers found matching your criteria.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl overflow-hidden">
+      <div className="divide-y divide-slate-700/50">
+        {servers.map(server => (
+          <ServerItem
+            key={`${server.host}-${server.port}`}
+            server={server}
+            onSelect={onServerSelect}
+            isSelected={selectedServer?.id === server.id}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default FlatServerList;

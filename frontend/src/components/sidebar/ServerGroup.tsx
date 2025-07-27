@@ -1,6 +1,6 @@
 import React from 'react';
 import ServerItem from './ServerItem';
-import {isHub} from "../util/mindustry.ts";
+import {isHub} from "../../util/mindustry.ts";
 
 const ServerGroup: React.FC<{
     name: string;

@@ -105,18 +105,6 @@ const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
                         >
                             View Detailed Stats
                         </button>
-                        <button
-                            onClick={() => window.open(`/api/servers/${server.host}/${server.port}/maps`, '_blank')}
-                            className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 border border-purple-500/30 px-4 py-2 rounded-lg transition-colors backdrop-blur-sm"
-                        >
-                            Map History
-                        </button>
-                        <button
-                            onClick={() => window.open(`/api/servers/${server.host}/${server.port}/motd`, '_blank')}
-                            className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 px-4 py-2 rounded-lg transition-colors backdrop-blur-sm"
-                        >
-                            MOTD History
-                        </button>
                     </div>
                 </div>
 
