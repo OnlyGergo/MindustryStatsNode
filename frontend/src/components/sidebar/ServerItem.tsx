@@ -1,5 +1,5 @@
 import React from 'react';
-import {removeColors} from "../../util/mindustry.ts";
+import {formatUnsafeText, removeColors} from "../../util/mindustry.ts";
 
 const ServerItem: React.FC<{
     server: any;
@@ -29,27 +29,28 @@ const ServerItem: React.FC<{
                 )}
 
                 {serverData?.description && (
-                    <div className="text-xs text-gray-300 truncate mb-2">
-                        {String(removeColors(serverData.description))}
+                    <div
+                        className="text-xs text-gray-300 truncate mb-2"
+                        dangerouslySetInnerHTML={{ __html: formatUnsafeText(serverData.description) }}
+                    >
                     </div>
                 )}
 
                 {server.online && serverData && (
-                    <div className="text-xs text-gray-400">
-                        <span>{serverData.players}/{serverData.playerLimit} • </span>
-                        <span>{serverData.ping}ms • </span>
+                    <div className="text-s text-gray-400">
                         <span>{String(removeColors(serverData.mapName)) || 'Unknown'}</span>
                     </div>
                 )}
             </div>
             <div className="flex flex-col items-end">
                 <span className={`${statusClass} text-xs px-2 py-1 rounded-full border backdrop-blur-sm mb-1`}>
-                    {server.online ? 'Online' : 'Offline'}
+                    {server.online ? 'Online - ' + serverData.ping + 'ms' : 'Offline'}
                 </span>
                 {server.online && serverData && (
                     <div className="text-right">
                         <div className="text-lg font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">
                             {String(serverData.players)}
+                            <span className="text-gray-500 ml-1">/ {String(serverData.playerLimit)}</span>
                         </div>
                         <div className="text-xs text-gray-400">players</div>
                     </div>

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import ServerHistoryChart from './ServerHistoryChart';
-import ServerDetailsModal from './ServerDetailsModal';
-import {removeColors, getGameModeName} from "../util/mindustry.ts";
-import {formatDate} from "../util/general.ts";
-import CopyButton from "./CopyButton.tsx";
+import ServerHistoryChart from './ServerHistoryChart.tsx';
+import ServerDetailsModal from './ServerDetailsModal.tsx';
+import {removeColors, getGameModeName} from "../../util/mindustry.ts";
+import {formatDate} from "../../util/general.ts";
+import CopyButton from "../CopyButton.tsx";
 
 const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
     const [showDetailsModal, setShowDetailsModal] = useState(false);

@@ -1,7 +1,7 @@
 import {FC, useEffect, useState} from 'react';
-import {getGameModeName, removeColors} from "../util/mindustry.ts";
-import {formatDate} from "../util/general.ts";
-import CopyButton from "./CopyButton.tsx";
+import {getGameModeName, removeColors} from "../../util/mindustry.ts";
+import {formatDate} from "../../util/general.ts";
+import CopyButton from "../CopyButton.tsx";
 import {createPortal} from "react-dom";
 
 const ServerDetailsModal: FC<{ server: any; onClose: () => void }> = ({ server, onClose }) => {

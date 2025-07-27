@@ -1,5 +1,5 @@
 import React from 'react';
-import { ServerWithHistory } from '../../../common/models/serverData';
+import { ServerWithHistory } from '../../../../common/models/serverData';
 import ServerDetail from './ServerDetail';
 
 interface DetailPanelProps {
