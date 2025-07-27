@@ -14,15 +14,36 @@ const ServerItem: React.FC<{
 
     return (
         <div
-            className={`p-3 cursor-pointer transition-colors ${
+            className={`p-3 cursor-pointer transition-colors flex items-center justify-between ${
                 isSelected
                     ? 'bg-cyan-500/20 border-l-4 border-l-cyan-400'
                     : 'hover:bg-slate-700/30'
             }`}
             onClick={() => onSelect(server)}
         >
-            <div className="flex justify-between items-center mb-2">
-                <span className={`${statusClass} text-xs px-2 py-1 rounded-full border backdrop-blur-sm`}>
+            <div className="flex flex-col flex-1 min-w-0 mr-4">
+                {serverData?.serverName && (
+                    <div className="text-sm font-bold text-white truncate mb-1">
+                        {String(removeColors(serverData.serverName))}
+                    </div>
+                )}
+
+                {serverData?.description && (
+                    <div className="text-xs text-gray-300 truncate mb-2">
+                        {String(removeColors(serverData.description))}
+                    </div>
+                )}
+
+                {server.online && serverData && (
+                    <div className="text-xs text-gray-400">
+                        <span>{serverData.players}/{serverData.playerLimit} • </span>
+                        <span>{serverData.ping}ms • </span>
+                        <span>{String(removeColors(serverData.mapName)) || 'Unknown'}</span>
+                    </div>
+                )}
+            </div>
+            <div className="flex flex-col items-end">
+                <span className={`${statusClass} text-xs px-2 py-1 rounded-full border backdrop-blur-sm mb-1`}>
                     {server.online ? 'Online' : 'Offline'}
                 </span>
                 {server.online && serverData && (
@@ -34,26 +55,6 @@ const ServerItem: React.FC<{
                     </div>
                 )}
             </div>
-
-            {serverData?.serverName && (
-                <div className="text-sm font-bold text-white truncate mb-1">
-                    {String(removeColors(serverData.serverName))}
-                </div>
-            )}
-
-            {serverData?.description && (
-                <div className="text-xs text-gray-300 truncate mb-2">
-                    {String(removeColors(serverData.description))}
-                </div>
-            )}
-
-            {server.online && serverData && (
-                <div className="text-xs text-gray-400">
-                    <span>{serverData.players}/{serverData.playerLimit} • </span>
-                    <span>{serverData.ping}ms • </span>
-                    <span>{String(removeColors(serverData.mapName)) || 'Unknown'}</span>
-                </div>
-            )}
         </div>
     );
 };
