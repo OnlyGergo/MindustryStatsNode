@@ -71,7 +71,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
                 className="px-3 py-2 hover:bg-slate-700/50 cursor-pointer transition-colors"
                 onClick={() => {
                   onSortChange(option.key);
-                  setIsOpen(false);
+                  setIsOpen(true);
                 }}
               >
                 <div className="flex justify-between items-center">

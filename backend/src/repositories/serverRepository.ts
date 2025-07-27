@@ -1,6 +1,13 @@
 import sequelize from '../config/database';
 import {Server, ServerGroup, ServerMap, ServerMotd, ServerStats} from "../models";
-import {ServerData, ServerDetails, ServerWithHistory} from "../../../common/models/serverData";
+import {
+    GameMode,
+    ServerData,
+    ServerDetails,
+    ServerMapData,
+    ServerMotdData,
+    ServerWithHistory
+} from "../../../common/models/serverData";
 import {ServerListElement} from "../models/ServerListElement";
 import {createLogger} from "../logger";
 import {QueryTypes} from "sequelize";
@@ -266,6 +273,25 @@ export async function getServer(
         return undefined;
     }
 
+    const allMapsData: ServerMapData[] = (result.detail_all_maps || []).map((map: any) => ({
+        id: map.id,
+        serverId: map.serverId,
+        validFrom: new Date(map.validFrom),
+        validTo: map.validTo ? new Date(map.validTo) : null,
+        mapName: map.mapName,
+        gameMode: map.gameMode as GameMode
+    }));
+
+    const allMotdsData: ServerMotdData[] = (result.detail_all_motds || []).map((motd: any) => ({
+        id: motd.id,
+        serverId: motd.serverId,
+        validFrom: new Date(motd.validFrom),
+        validTo: motd.validTo ? new Date(motd.validTo) : null,
+        serverName: motd.serverName,
+        description: motd.description,
+        modeName: motd.modeName
+    }));
+
     const serverWithDetails: ServerWithHistory & ServerDetails = {
         id: result.detail_id,
         name: result.detail_name,
@@ -273,9 +299,7 @@ export async function getServer(
         port: result.detail_port,
         history: [],
         online: result.detail_online || false,
-        lastUpdated: result.detail_lastUpdated?.getTime() || Date.now(),
-        mapHistory: result.detail_map_history || [],
-        motdHistory: result.detail_motd_history || [],
+        lastUpdated: result.detail_last_updated?.getTime() || Date.now(),
         playerPeaks: {
             allTime: result.detail_all_time_peak || 0,
             allTimeDate: result.detail_peak_date || new Date(),
@@ -285,25 +309,34 @@ export async function getServer(
         uptime: {
             last24h: parseFloat(result.detail_24h_uptime) || 0,
             last7d: parseFloat(result.detail_7d_uptime) || 0
-        }
+        },
+        // New: Complete arrays of all records
+        allMaps: allMapsData,
+        allMotds: allMotdsData,
+        // Keep current records for convenience (first active record or most recent)
+        currentMotd: allMotdsData.find(motd => motd.validTo === null) || allMotdsData[0] || null,
+        currentMap: allMapsData.find(map => map.validTo === null) || allMapsData[0] || null
     };
 
     // Add current data if we have stats
-    if (result.timestamp) {
+    if (result.detail_timestamp) {
+        const currentMotd = serverWithDetails.currentMotd;
+        const currentMap = serverWithDetails.currentMap;
+
         serverWithDetails.currentData = {
             ping: result.detail_ping || 0,
             host: result.detail_host,
             port: result.detail_port,
-            serverName: result.detail_name || 'Unknown',
-            mapName: result.detail_map_name || 'Unknown',
+            serverName: result.detail_display_name || currentMotd?.serverName || 'Unknown',
+            mapName: result.detail_map_name || currentMap?.mapName || 'Unknown',
             players: result.detail_players || 0,
             wave: result.detail_wave || 0,
             version: result.detail_version || 0,
             versionType: result.detail_version_type || 'Unknown',
-            mode: result.detail_mode || 0,
+            mode: (result.detail_mode ?? currentMap?.gameMode ?? 0) as GameMode,
             playerLimit: result.detail_player_limit || 0,
-            description: result.detail_description || '',
-            modeName: result.detail_mode_name || '',
+            description: result.detail_description || currentMotd?.description || '',
+            modeName: result.detail_mode_name || currentMotd?.modeName || '',
             online: result.detail_online || false
         };
     }

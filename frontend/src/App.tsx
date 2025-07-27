@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ServerWithHistory } from  '../../common/models/serverData';
 import MasterPanel from './components/sidebar/MasterPanel';
-import DetailPanel from './components/DetailPanel';
+import DetailPanel from './components/detail/DetailPanel';
 import useWebSocket from './hooks/useWebSocket';
 import { useResponsive } from './hooks/useResponsive';
 import {isHub} from "./util/mindustry.ts";

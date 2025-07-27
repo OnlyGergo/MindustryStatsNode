@@ -161,15 +161,17 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                     className="w-full"
                                 />
                             </Tooltip>
+
+                            {/* Sort Dropdown */}
+                            <SortDropdown
+                                sortOptions={sortOptions}
+                                currentCriteria={sortCriteria}
+                                currentDirection={sortDirection}
+                                onSortChange={handleSortChange}
+                            />
                         </div>
 
-                        {/* Sort Dropdown */}
-                        <SortDropdown
-                            sortOptions={sortOptions}
-                            currentCriteria={sortCriteria}
-                            currentDirection={sortDirection}
-                            onSortChange={handleSortChange}
-                        />
+
                     </div>
 
                     {/* Server List */}

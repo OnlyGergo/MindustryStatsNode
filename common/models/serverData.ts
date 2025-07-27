@@ -6,11 +6,6 @@ export enum GameMode {
   EDITOR
 }
 
-export interface HistoryPoint {
-  timestamp: number;
-  players: number;
-}
-
 export interface ServerData {
   ping: number | null;
   host: string;
@@ -26,11 +21,6 @@ export interface ServerData {
   description: string | null;
   modeName: string | null;
   online: boolean;
-}
-
-export interface ServerConfig {
-  name: string;
-  address: string[];
 }
 
 export interface ServerHistory {
@@ -51,9 +41,26 @@ export interface ServerWithHistory {
   consecutiveFailures?: number;
 }
 
+export interface ServerMotdData {
+  id: number;
+  serverId: number;
+  validFrom: Date;
+  validTo: Date | null;
+  serverName: string | null;
+  description: string | null;
+  modeName: string | null;
+}
+
+export interface ServerMapData {
+  id: number;
+  serverId: number;
+  validFrom: Date;
+  validTo: Date | null;
+  mapName: string;
+  gameMode: GameMode | null;
+}
+
 export interface ServerDetails {
-  mapHistory: Array<{timestamp: number, mapName: string, gameMode: GameMode}>;
-  motdHistory: Array<{timestamp: number, name: string, motd: string, modeName: string}>;
   playerPeaks: {
     allTime: number;
     allTimeDate: Date;
@@ -64,4 +71,10 @@ export interface ServerDetails {
     last24h: number;
     last7d: number;
   };
+
+  allMaps: ServerMapData[];
+  allMotds: ServerMotdData[];
+  // Keep single current records for convenience
+  currentMotd: ServerMotdData | null;
+  currentMap: ServerMapData | null;
 }

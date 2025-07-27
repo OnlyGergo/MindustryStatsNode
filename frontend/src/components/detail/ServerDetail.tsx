@@ -1,21 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ServerHistoryChart from './ServerHistoryChart.tsx';
-import ServerDetailsModal from './ServerDetailsModal.tsx';
-import {removeColors, getGameModeName} from "../../util/mindustry.ts";
-import {formatDate} from "../../util/general.ts";
+import MapHistoryTable from './table/MapHistoryTable.tsx';
+import MotdHistoryTable from './table/MotdHistoryTable.tsx';
+import { removeColors, getGameModeName } from "../../util/mindustry.ts";
+import { formatDate } from "../../util/general.ts";
 import CopyButton from "../CopyButton.tsx";
+import {ServerDetails} from "../../../../common/models/serverData.ts";
 
 const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
-    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [details, setDetails] = useState<ServerDetails | null>(null);
+    const [loading, setLoading] = useState(true);
+
     const serverData = server.currentData;
     const serverStatus = server.online ? 'Online' : server.lastSeen ? 'Offline - Last Seen ' + formatDate(server.lastSeen) : 'Offline';
     const statusClass = server.online
         ? 'bg-green-500/20 text-green-400 border-green-500/30'
         : 'bg-red-500/20 text-red-400 border-red-500/30';
 
+    // Fetch additional server details (map and MOTD history, player peaks, uptime)
+    useEffect(() => {
+        const fetchDetails = async () => {
+            try {
+                const response = await fetch(`/api/servers/${server.id}/details`);
+                if (!response.ok) throw new Error('Failed to fetch server details');
+                const data: ServerDetails = await response.json();
+                setDetails(data);
+            } catch (error) {
+                console.error('Error fetching server details:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDetails();
+    }, [server]);
+
+    const formatUptime = (percentage: number) => {
+        return `${percentage.toFixed(1)}%`;
+    };
+
+    if (loading) {
+        return (
+            <div className="h-full flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-400 border-t-transparent"></div>
+            </div>
+        );
+    }
+
+    if (!details) {
+        return (
+            <div className="h-full flex items-center justify-center">
+                <p className="text-red-400">Failed to load server details.</p>
+            </div>
+        );
+    }
+
     return (
         <div className="h-full overflow-y-auto p-6">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-6xl mx-auto"> {/* Increased max-width */}
                 {/* Header */}
                 <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 mb-6">
                     <div className="flex justify-between items-start mb-4">
@@ -87,33 +129,60 @@ const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
                     )}
                 </div>
 
+                {/* Player Peaks and Uptime */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 p-6 rounded-xl">
+                        <h4 className="font-medium mb-4 text-cyan-400 text-lg">Player Peaks</h4>
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">{details.playerPeaks.daily}</div>
+                                <div className="text-sm text-gray-400">Today</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">{details.playerPeaks.weekly}</div>
+                                <div className="text-sm text-gray-400">This Week</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">{details.playerPeaks.allTime}</div>
+                                <div className="text-sm text-gray-400">All Time</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 p-6 rounded-xl">
+                        <h4 className="font-medium mb-4 text-green-400 text-lg">Server Uptime</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-green-400">{formatUptime(details.uptime.last24h)}</div>
+                                <div className="text-sm text-gray-400">Last 24h</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-green-400">{formatUptime(details.uptime.last7d)}</div>
+                                <div className="text-sm text-gray-400">Last 7 Days</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Player History Chart */}
                 <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 mb-6">
                     <h2 className="text-lg font-semibold text-white mb-4">Player History</h2>
-                    <div className="h-64">
+                    <div className="h-96"> {/* Increased height */}
                         <ServerHistoryChart history={server.history} />
                     </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6">
-                    <h2 className="text-lg font-semibold text-white mb-4">Server Actions</h2>
-                    <div className="flex flex-wrap gap-3">
-                        <button
-                            onClick={() => setShowDetailsModal(true)}
-                            className="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30 px-4 py-2 rounded-lg transition-colors backdrop-blur-sm"
-                        >
-                            View Detailed Stats
-                        </button>
-                    </div>
+                {/* Map History Table */}
+                <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 mb-6">
+                    <h2 className="text-lg font-semibold text-white mb-4">Map History</h2>
+                    <MapHistoryTable mapHistory={details.allMaps} />
                 </div>
 
-                {showDetailsModal && (
-                    <ServerDetailsModal
-                        server={server}
-                        onClose={() => setShowDetailsModal(false)}
-                    />
-                )}
+                {/* MOTD History Table */}
+                <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 mb-6">
+                    <h2 className="text-lg font-semibold text-white mb-4">MOTD History</h2>
+                    <MotdHistoryTable motdHistory={details.allMotds} />
+                </div>
             </div>
         </div>
     );
