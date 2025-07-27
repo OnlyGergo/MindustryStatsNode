@@ -115,13 +115,13 @@ BEGIN
                                         'validTo', CASE WHEN valid_to IS NOT NULL THEN extract(epoch from valid_to) * 1000 ELSE NULL END,
                                         'mapName', map_name,
                                         'gameMode', game_mode
-                                ) ORDER BY valid_from DESC
+                                ) ORDER BY valid_from
                         ) as all_maps_json
                  FROM (
                           SELECT id, server_id, valid_from, valid_to, map_name, game_mode
                           FROM server_maps
                           WHERE server_id = server_id_param
-                          ORDER BY valid_from DESC
+                          ORDER BY valid_from
                           LIMIT 100
                       ) all_map_records
              ),
@@ -135,13 +135,13 @@ BEGIN
                                         'serverName', server_name,
                                         'description', description,
                                         'modeName', mode_name
-                                ) ORDER BY valid_from DESC
+                                ) ORDER BY valid_from
                         ) as all_motds_json
                  FROM (
                           SELECT id, server_id, valid_from, valid_to, server_name, description, mode_name
                           FROM server_motds
                           WHERE server_id = server_id_param
-                          ORDER BY valid_from DESC
+                          ORDER BY valid_from
                           LIMIT 100
                       ) all_motd_records
              )
