@@ -32,7 +32,7 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[] }> = ({motdHist
             />
 
             {filteredHistory.length > 0 ? (
-                <div className="overflow-x-auto rounded-lg border border-slate-700/50 shadow-lg">
+                <div className="overflow-x-auto overflow-y-auto rounded-lg border border-slate-700/50 shadow-lg" style={{ maxHeight: '50vh', minHeight: '400px' }}>
                     <table className="min-w-full divide-y divide-slate-700/50">
                         <thead className="bg-slate-700/50">
                         <tr>
