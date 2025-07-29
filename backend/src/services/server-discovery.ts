@@ -45,11 +45,12 @@ class ServerDiscoveryService extends BaseService {
     // Initialize queue
     this.discoveryQueue = new ValkeyQueue(QUEUES.SERVER_DISCOVERY);
 
-    // Initial server list refresh
+    // Initial server list refresh and server queuing
     await this.refreshServerList();
+    await this.queueAllServersForCollection();
 
-    // Schedule periodic refresh
-    this.intervalId = setInterval(async () => {
+    // Schedule periodic server list refresh (daily)
+    setInterval(async () => {
       try {
         await this.refreshServerList();
       } catch (error) {
@@ -57,7 +58,19 @@ class ServerDiscoveryService extends BaseService {
       }
     }, this.discoveryConfig.SERVER_LIST_INTERVAL_MS);
 
-    logger.info(`Server Discovery Service initialized. Refreshing every ${this.discoveryConfig.SERVER_LIST_INTERVAL_MS / 1000} seconds.`);
+    // Schedule periodic server collection queuing (every 5 minutes)
+    const DATA_COLLECTION_INTERVAL = parseInt(process.env.DATA_COLLECTION_INTERVAL_MS || '300000'); // 5 minutes
+    setInterval(async () => {
+      try {
+        await this.queueAllServersForCollection();
+      } catch (error) {
+        logger.error('Error in scheduled server collection queuing:', error);
+      }
+    }, DATA_COLLECTION_INTERVAL);
+
+    logger.info(`Server Discovery Service initialized.`);
+    logger.info(`- Server list refresh: every ${this.discoveryConfig.SERVER_LIST_INTERVAL_MS / 1000} seconds`);
+    logger.info(`- Server collection queuing: every ${DATA_COLLECTION_INTERVAL / 1000} seconds`);
   }
 
   /**
@@ -134,6 +147,39 @@ class ServerDiscoveryService extends BaseService {
 
     } catch (error) {
       logger.error('Error refreshing server list:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Queue all servers for collection
+   * This replicates the old system's approach of querying ALL servers every 5 minutes
+   */
+  private async queueAllServersForCollection(): Promise<void> {
+    const startTime = Date.now();
+    logger.info("Queuing all servers for collection...");
+
+    try {
+      // Use the same approach as the old system: get ALL servers from database
+      const allServers = await serverRepository.getServers();
+
+      let queuedCount = 0;
+      for (const server of allServers) {
+        // Queue each server for collection
+        await this.discoveryQueue.push({
+          host: server.host,
+          port: server.port,
+          networkName: server.name, // This is the server group name from the join
+          timestamp: Date.now()
+        });
+        queuedCount++;
+      }
+
+      const timeTaken = (Date.now() - startTime) / 1000;
+      logger.info(`Queued ${queuedCount} servers for collection in ${timeTaken.toFixed(2)} seconds.`);
+
+    } catch (error) {
+      logger.error('Error queuing servers for collection:', error);
       throw error;
     }
   }
