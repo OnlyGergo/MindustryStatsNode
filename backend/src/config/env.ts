@@ -6,7 +6,6 @@ dotenv.config();
 const envSchema = z.object({
     DB_HOST: z.string().default('localhost'),
     DB_PORT: z.string().regex(/^\d+$/).default('5432'),
-    DEV_DB_NAME: z.string().optional(),
     DB_NAME: z.string().default('mindustry_stats'),
     DB_USER: z.string().default('postgres'),
     DB_PASSWORD: z.string(),

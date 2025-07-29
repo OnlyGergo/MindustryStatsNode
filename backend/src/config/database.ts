@@ -8,11 +8,11 @@ const logger = createLogger("Database");
 const dbConfig = {
   host: env.DB_HOST,
   port: parseInt(env.DB_PORT, 10),
-  database: env.NODE_ENV === 'development' ? env.DEV_DB_NAME || 'mindustry_stats_dev' : env.DB_NAME,
+  database: env.DB_NAME,
   username: env.DB_USER,
   password: env.DB_PASSWORD,
   dialect: 'postgres',
-  logging: env.NODE_ENV !== 'production' ? logger.debug.bind(logger) : false,
+  logging: logger.debug.bind(logger),
   pool: {
     max: 20,
     min: 0,
