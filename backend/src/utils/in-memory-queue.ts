@@ -45,7 +45,9 @@ export class InMemoryQueue<T = any> {
       const onItemAvailable = () => {
         clearTimeout(timeout);
         this.emitter.removeListener(this.ITEM_AVAILABLE, onItemAvailable);
-        resolve(this.queue.shift() || null);
+        // Check if queue still has items (race condition protection)
+        const item = this.queue.shift();
+        resolve(item !== undefined ? item : null);
       };
 
       this.emitter.once(this.ITEM_AVAILABLE, onItemAvailable);
@@ -84,17 +86,20 @@ export class InMemoryPubSub {
   }
 
   /**
-   * Subscribe to the channel
-   */
-  async subscribe(callback: (data: any) => void): Promise<void> {
-    InMemoryPubSub.emitter.on(this.channel, callback);
-  }
-
-  /**
    * Unsubscribe from the channel
    */
+  private listener?: (data: any) => void;
+
+  async subscribe(callback: (data: any) => void): Promise<void> {
+    this.listener = callback;
+    InMemoryPubSub.emitter.on(this.channel, this.listener);
+  }
+
   async unsubscribe(): Promise<void> {
-    InMemoryPubSub.emitter.removeAllListeners(this.channel);
+    if (this.listener) {
+      InMemoryPubSub.emitter.removeListener(this.channel, this.listener);
+      this.listener = undefined;
+    }
   }
 }
 

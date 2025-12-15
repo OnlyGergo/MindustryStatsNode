@@ -30,6 +30,20 @@ interface RawServerData {
 }
 
 /**
+ * Extended WebSocket interface with connection tracking
+ */
+interface ExtendedWebSocket extends WebSocket {
+  isAlive?: boolean;
+}
+
+/**
+ * Calculate default collection concurrency based on CPU cores
+ */
+function getDefaultConcurrency(): number {
+  return Math.max(4, Math.floor(os.cpus().length * 1.5));
+}
+
+/**
  * Unified Mindustry Stats Application
  * Combines all microservices into a single process
  * Uses p-queue for concurrency control instead of Redis queues
@@ -58,7 +72,7 @@ class MindustryStatsApp {
   private app!: express.Application;
   private httpServer!: http.Server;
   private wsServer!: WebSocket.Server;
-  private wsClients: Set<WebSocket> = new Set();
+  private wsClients: Set<ExtendedWebSocket> = new Set();
 
   // Service control
   private running = false;
@@ -74,7 +88,7 @@ class MindustryStatsApp {
 
     this.collectorConfig = {
       ...baseConfig,
-      COLLECTION_CONCURRENCY: parseInt(process.env.COLLECTION_CONCURRENCY || Math.max(4, Math.floor(os.cpus().length * 1.5)).toString()),
+      COLLECTION_CONCURRENCY: parseInt(process.env.COLLECTION_CONCURRENCY || getDefaultConcurrency().toString()),
       MINDUSTRY_TIMEOUT_MS: parseInt(process.env.MINDUSTRY_TIMEOUT_MS || '1000'),
       QUEUE_POLL_TIMEOUT: parseInt(process.env.QUEUE_POLL_TIMEOUT || '5')
     };
@@ -484,7 +498,7 @@ class MindustryStatsApp {
 
         serverEntry.history.push({
           timestamp,
-          players: data.players!
+          players: data.players ?? 0
         });
 
         if (serverEntry.history.length > this.processorConfig.MAX_HISTORY_POINTS) {
@@ -753,8 +767,8 @@ class MindustryStatsApp {
       }
     });
 
-    this.wsServer.on('connection', (ws) => {
-      (ws as any).isAlive = true;
+    this.wsServer.on('connection', (ws: ExtendedWebSocket) => {
+      ws.isAlive = true;
       this.registerWebSocketClient(ws);
     });
 
@@ -783,7 +797,7 @@ class MindustryStatsApp {
   /**
    * Register a new WebSocket client
    */
-  private async registerWebSocketClient(client: WebSocket): Promise<void> {
+  private async registerWebSocketClient(client: ExtendedWebSocket): Promise<void> {
     try {
       this.wsClients.add(client);
       logger.info(`WebSocket connected, total clients: ${this.wsClients.size}`);
@@ -810,7 +824,7 @@ class MindustryStatsApp {
       });
 
       client.on('pong', () => {
-        (client as any).isAlive = true;
+        client.isAlive = true;
       });
 
     } catch (error) {
@@ -859,15 +873,15 @@ class MindustryStatsApp {
    */
   private startConnectionHealthCheck(): void {
     setInterval(() => {
-      const deadClients: WebSocket[] = [];
+      const deadClients: ExtendedWebSocket[] = [];
 
       for (const client of this.wsClients) {
-        if ((client as any).isAlive === false) {
+        if (client.isAlive === false) {
           deadClients.push(client);
           continue;
         }
 
-        (client as any).isAlive = false;
+        client.isAlive = false;
 
         try {
           client.ping();
