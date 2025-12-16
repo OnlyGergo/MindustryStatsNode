@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 
 /**
- * In-memory queue implementation using p-queue
+ * In-memory queue implementation using EventEmitter
  * Replaces Redis-based ValkeyQueue
  */
 export class InMemoryQueue<T = any> {
