@@ -489,6 +489,7 @@ class MindustryStatsApp {
         await serverRepository.saveServerStats(serverEntry.id, data);
         await serverRepository.saveMotdIfChanged(serverEntry.id, data);
         await serverRepository.saveMapIfChanged(serverEntry.id, data);
+        await serverRepository.updateServerLastSeen(serverEntry.id);
 
         serverEntry.currentData = data;
         serverEntry.lastUpdated = timestamp;

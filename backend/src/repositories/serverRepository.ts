@@ -39,6 +39,16 @@ export async function getServers(): Promise<ServerRecord[]> {
     });
 }
 
+// Update last_seen timestamp for a server
+export async function updateServerLastSeen(
+    serverId: number
+): Promise<void> {
+    await Server.update(
+        { last_seen: new Date() },
+        { where: { id: serverId } }
+    );
+}
+
 // Save server stats
 export async function saveServerStats(
     serverId: number,
