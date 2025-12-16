@@ -1,4 +1,3 @@
-import PQueue from 'p-queue';
 import { EventEmitter } from 'events';
 
 /**
@@ -37,20 +36,23 @@ export class InMemoryQueue<T = any> {
 
     // Wait for an item to become available or timeout
     return new Promise<T | null>((resolve) => {
-      const timeout = setTimeout(() => {
-        this.emitter.removeListener(this.ITEM_AVAILABLE, onItemAvailable);
-        resolve(null);
-      }, timeoutSeconds * 1000);
-
+      let settled = false;
       const onItemAvailable = () => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timeout);
         this.emitter.removeListener(this.ITEM_AVAILABLE, onItemAvailable);
         // Check if queue still has items (race condition protection)
         const item = this.queue.shift();
         resolve(item !== undefined ? item : null);
       };
-
       this.emitter.once(this.ITEM_AVAILABLE, onItemAvailable);
+      const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        this.emitter.removeListener(this.ITEM_AVAILABLE, onItemAvailable);
+        resolve(null);
+      }, timeoutSeconds * 1000);
     });
   }
 
@@ -86,20 +88,14 @@ export class InMemoryPubSub {
   }
 
   /**
-   * Unsubscribe from the channel
+   * Subscribe to the channel.
+   * Returns an unsubscribe function to remove the listener.
    */
-  private listener?: (data: any) => void;
-
-  async subscribe(callback: (data: any) => void): Promise<void> {
-    this.listener = callback;
-    InMemoryPubSub.emitter.on(this.channel, this.listener);
-  }
-
-  async unsubscribe(): Promise<void> {
-    if (this.listener) {
-      InMemoryPubSub.emitter.removeListener(this.channel, this.listener);
-      this.listener = undefined;
-    }
+  subscribe(callback: (data: any) => void): () => void {
+    InMemoryPubSub.emitter.on(this.channel, callback);
+    return () => {
+      InMemoryPubSub.emitter.removeListener(this.channel, callback);
+    };
   }
 }
 
@@ -191,6 +187,8 @@ export class InMemoryCache {
 
   /**
    * Clean up expired entries (should be called periodically)
+   * Note: Iterates through all cache entries. For optimal performance,
+   * ensure cleanup interval is appropriate for expected cache size.
    */
   cleanupExpired(): void {
     const now = Date.now();

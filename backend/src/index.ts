@@ -3,7 +3,7 @@
 import { createLogger } from './logger';
 import { initDatabase } from './config/database';
 import { InMemoryQueue, InMemoryPubSub, InMemoryCache } from './utils/in-memory-queue';
-import { QUEUES, CHANNELS, CACHE_KEYS, CACHE_TTL, SERVICES } from './shared/constants';
+import { QUEUES, CHANNELS, CACHE_KEYS, CACHE_TTL } from './shared/constants';
 import { loadBaseConfig, ServerDiscoveryConfig, ServerCollectorConfig, ServerProcessorConfig, ApiServiceConfig, WebSocketServiceConfig } from './shared/config';
 import { SERVERS_SOURCE } from './const';
 import * as serverRepository from './repositories/serverRepository';
@@ -75,7 +75,22 @@ class MindustryStatsApp {
   private wsClients: Set<ExtendedWebSocket> = new Set();
 
   // Service control
+  /**
+   * Controls the lifecycle of all worker loops.
+   * Set to true to allow workers to run; set to false to signal all workers to stop.
+   * Must be set to false in the shutdown handler *before* any shutdown logic to ensure
+   * all async loops observe the shutdown state and exit promptly.
+   */
   private running = false;
+
+  // Interval IDs for cleanup
+  private serverListRefreshInterval?: NodeJS.Timeout;
+  private collectionQueueInterval?: NodeJS.Timeout;
+  private wsHealthCheckInterval?: NodeJS.Timeout;
+  private cacheCleanupInterval?: NodeJS.Timeout;
+  
+  // Unsubscribe function for pub/sub
+  private unsubscribeUpdates?: () => void;
 
   constructor() {
     // Load configurations
@@ -208,7 +223,7 @@ class MindustryStatsApp {
     await this.queueAllServersForCollection();
 
     // Schedule periodic server list refresh (daily)
-    setInterval(async () => {
+    this.serverListRefreshInterval = setInterval(async () => {
       try {
         await this.refreshServerList();
       } catch (error) {
@@ -218,7 +233,7 @@ class MindustryStatsApp {
 
     // Schedule periodic server collection queuing (every 5 minutes)
     const DATA_COLLECTION_INTERVAL = parseInt(process.env.DATA_COLLECTION_INTERVAL_MS || '300000');
-    setInterval(async () => {
+    this.collectionQueueInterval = setInterval(async () => {
       try {
         await this.queueAllServersForCollection();
       } catch (error) {
@@ -414,7 +429,10 @@ class MindustryStatsApp {
   private async startServerProcessor(): Promise<void> {
     logger.info('Starting Server Processor Service...');
 
-    this.processorLoop();
+    this.processorLoop().catch(error => {
+      logger.error('Fatal error in processorLoop:', error);
+      // Don't crash the process, but log the error
+    });
 
     logger.info('Server Processor Service started');
   }
@@ -437,8 +455,13 @@ class MindustryStatsApp {
           cacheUpdateCounter++;
 
           if (cacheUpdateCounter >= CACHE_UPDATE_INTERVAL) {
-            await this.updateComprehensiveCache();
-            cacheUpdateCounter = 0;
+            try {
+              await this.updateComprehensiveCache();
+              cacheUpdateCounter = 0;
+            } catch (cacheError) {
+              logger.error('Failed to update comprehensive cache:', cacheError);
+              // Do not reset counter, so we retry on next iteration
+            }
           }
         }
 
@@ -774,7 +797,7 @@ class MindustryStatsApp {
     });
 
     // Subscribe to server updates
-    await this.updatesPubSub.subscribe((updateData: any) => {
+    this.unsubscribeUpdates = this.updatesPubSub.subscribe((updateData: any) => {
       this.broadcastUpdate({
         type: 'server_update',
         data: updateData,
@@ -873,7 +896,7 @@ class MindustryStatsApp {
    * Start periodic health check for WebSocket connections
    */
   private startConnectionHealthCheck(): void {
-    setInterval(() => {
+    this.wsHealthCheckInterval = setInterval(() => {
       const deadClients: ExtendedWebSocket[] = [];
 
       for (const client of this.wsClients) {
@@ -911,7 +934,7 @@ class MindustryStatsApp {
    * Start periodic cache cleanup
    */
   private startCacheCleanup(): void {
-    setInterval(() => {
+    this.cacheCleanupInterval = setInterval(() => {
       this.cache.cleanupExpired();
     }, 60000); // Clean up every minute
   }
@@ -923,6 +946,25 @@ class MindustryStatsApp {
     const shutdown = async (signal: string) => {
       logger.info(`Received ${signal}, shutting down gracefully...`);
       this.running = false;
+
+      // Clear all intervals
+      if (this.serverListRefreshInterval) {
+        clearInterval(this.serverListRefreshInterval);
+      }
+      if (this.collectionQueueInterval) {
+        clearInterval(this.collectionQueueInterval);
+      }
+      if (this.wsHealthCheckInterval) {
+        clearInterval(this.wsHealthCheckInterval);
+      }
+      if (this.cacheCleanupInterval) {
+        clearInterval(this.cacheCleanupInterval);
+      }
+
+      // Unsubscribe from pub/sub
+      if (this.unsubscribeUpdates) {
+        this.unsubscribeUpdates();
+      }
 
       // Close WebSocket server
       for (const client of this.wsClients) {
