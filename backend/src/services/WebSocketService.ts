@@ -3,7 +3,7 @@ import { InMemoryCache, InMemoryPubSub } from '../utils/in-memory-queue.js';
 import { CACHE_KEYS } from '../shared/constants.js';
 import { WebSocketServiceConfig } from '../shared/config.js';
 import http from 'http';
-import WebSocket from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 
 const logger = createLogger('WebSocketService');
 
@@ -22,7 +22,7 @@ export class WebSocketService {
   private cache: InMemoryCache;
   private updatesPubSub: InMemoryPubSub;
   private config: WebSocketServiceConfig;
-  private wsServer!: WebSocket.Server;
+  private wsServer!: WebSocketServer;
   private wsHttpServer!: http.Server;
   private wsClients: Set<ExtendedWebSocket> = new Set();
   private wsHealthCheckInterval?: NodeJS.Timeout;
@@ -43,7 +43,7 @@ export class WebSocketService {
 
     this.wsHttpServer = http.createServer();
 
-    this.wsServer = new WebSocket.Server({
+    this.wsServer = new WebSocketServer({
       server: this.wsHttpServer,
       path: this.config.WS_PATH,
       verifyClient: (info: { origin: string }) => {
