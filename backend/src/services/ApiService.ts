@@ -6,6 +6,7 @@ import { ApiServiceConfig } from '../shared/config';
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
+import path from "path";
 
 const logger = createLogger('ApiService');
 
@@ -154,6 +155,9 @@ export class ApiService {
         res.status(500).json({ error: 'Internal server error' });
       }
     });
+
+    // Expose web files
+    this.app.use(express.static(path.join(process.cwd(), 'public')));
   }
 
   /**
