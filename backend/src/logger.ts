@@ -1,7 +1,7 @@
 import winston from 'winston';
 import 'winston-daily-rotate-file';
 import path from 'path';
-import {env} from "./config/env";
+import {env} from './config/env.js';
 
 // Create the logger instance
 export const createLogger = (moduleName?: string) => winston.createLogger({

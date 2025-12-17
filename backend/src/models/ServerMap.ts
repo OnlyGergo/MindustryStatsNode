@@ -1,6 +1,6 @@
 import { Model, DataTypes } from 'sequelize';
-import sequelize from '../config/database';
-import Server from './Server';
+import sequelize from '../config/database.js';
+import Server from './Server.js';
 
 class ServerMap extends Model {
     declare id: number;

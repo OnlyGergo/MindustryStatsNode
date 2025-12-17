@@ -1,9 +1,9 @@
-import { createLogger } from '../logger';
-import { InMemoryQueue } from '../utils/in-memory-queue';
-import { SERVERS_SOURCE } from '../const';
-import * as serverRepository from '../repositories/serverRepository';
-import { ServerListElement } from '../models/ServerListElement';
-import { ServerDiscoveryConfig } from '../shared/config';
+import { createLogger } from '../logger.js';
+import { InMemoryQueue } from '../utils/in-memory-queue.js';
+import { SERVERS_SOURCE } from '../const.js';
+import * as serverRepository from '../repositories/serverRepository.js';
+import { ServerListElement } from '../models/ServerListElement.js';
+import { ServerDiscoveryConfig } from '../shared/config.js';
 
 const logger = createLogger('ServerDiscovery');
 

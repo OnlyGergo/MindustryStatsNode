@@ -1,7 +1,7 @@
-import { createLogger } from '../logger';
-import { InMemoryCache, InMemoryPubSub } from '../utils/in-memory-queue';
-import { CACHE_KEYS } from '../shared/constants';
-import { WebSocketServiceConfig } from '../shared/config';
+import { createLogger } from '../logger.js';
+import { InMemoryCache, InMemoryPubSub } from '../utils/in-memory-queue.js';
+import { CACHE_KEYS } from '../shared/constants.js';
+import { WebSocketServiceConfig } from '../shared/config.js';
 import http from 'http';
 import WebSocket from 'ws';
 

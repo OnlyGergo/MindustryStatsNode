@@ -1,5 +1,5 @@
-import sequelize from '../config/database';
-import {Server, ServerGroup, ServerMap, ServerMotd, ServerStats} from "../models";
+import sequelize from '../config/database.js';
+import {Server, ServerGroup, ServerMap, ServerMotd, ServerStats} from '../models/index.js';
 import {
     GameMode,
     ServerData,
@@ -7,9 +7,9 @@ import {
     ServerMapData,
     ServerMotdData,
     ServerWithHistory
-} from "../../../common/models/serverData";
-import {ServerListElement} from "../models/ServerListElement";
-import {createLogger} from "../logger";
+} from '../../../common/models/serverData.js';
+import {ServerListElement} from '../models/ServerListElement.js';
+import {createLogger} from '../logger.js';
 import {QueryTypes} from "sequelize";
 
 const logger = createLogger("Repository");
@@ -28,11 +28,11 @@ export async function getServers(): Promise<ServerRecord[]> {
     const serverGroups = await ServerGroup.findAll();
 
     const serverGroupMap = new Map<number, string>();
-    serverGroups.forEach(group => {
+    serverGroups.forEach((group: any) => {
         serverGroupMap.set(group.id, group.name);
     });
 
-    return  servers.map(server => {
+    return  servers.map((server: any) => {
         const serverRecord = server.toJSON() as ServerRecord;
         serverRecord.name = serverGroupMap.get(server.server_group_id) || 'Unknown';
         return serverRecord;

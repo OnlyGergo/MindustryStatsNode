@@ -5,7 +5,7 @@
  * This stub implementation throws errors if used, as Redis/Valkey is no longer required
  */
 
-import { createLogger } from '../logger';
+import { createLogger } from '../logger.js';
 
 const logger = createLogger('Valkey');
 

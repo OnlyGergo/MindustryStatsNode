@@ -1,8 +1,8 @@
-import { createLogger } from '../logger';
-import { InMemoryCache } from '../utils/in-memory-queue';
-import { CACHE_KEYS, CACHE_TTL } from '../shared/constants';
-import * as serverRepository from '../repositories/serverRepository';
-import { ApiServiceConfig } from '../shared/config';
+import { createLogger } from '../logger.js';
+import { InMemoryCache } from '../utils/in-memory-queue.js';
+import { CACHE_KEYS, CACHE_TTL } from '../shared/constants.js';
+import * as serverRepository from '../repositories/serverRepository.js';
+import { ApiServiceConfig } from '../shared/config.js';
 import express from 'express';
 import cors from 'cors';
 import http from 'http';

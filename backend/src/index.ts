@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
-import { createLogger } from './logger';
-import { initDatabase } from './config/database';
-import { InMemoryQueue, InMemoryPubSub, InMemoryCache } from './utils/in-memory-queue';
-import { loadBaseConfig } from './shared/config';
-import { ServerDiscoveryService } from './services/ServerDiscoveryService';
-import { ServerCollectorService, RawServerData } from './services/ServerCollectorService';
-import { ServerProcessorService } from './services/ServerProcessorService';
-import { ApiService } from './services/ApiService';
-import { WebSocketService } from './services/WebSocketService';
+import { createLogger } from './logger.js';
+import { initDatabase } from './config/database.js';
+import { InMemoryQueue, InMemoryPubSub, InMemoryCache } from './utils/in-memory-queue.js';
+import { loadBaseConfig } from './shared/config.js';
+import { ServerDiscoveryService } from './services/ServerDiscoveryService.js';
+import { ServerCollectorService, RawServerData } from './services/ServerCollectorService.js';
+import { ServerProcessorService } from './services/ServerProcessorService.js';
+import { ApiService } from './services/ApiService.js';
+import { WebSocketService } from './services/WebSocketService.js';
 import os from 'os';
 
 const logger = createLogger('Main');

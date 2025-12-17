@@ -1,10 +1,9 @@
-import { createLogger } from '../logger';
-import { InMemoryQueue, InMemoryCache } from '../utils/in-memory-queue';
-import { CACHE_KEYS, CACHE_TTL } from '../shared/constants';
-import { getServerData } from './mindustryService';
-import { ServerData } from '../../../common/models/serverData';
-import { ServerCollectorConfig } from '../shared/config';
-import PQueue from 'p-queue';
+import { createLogger } from '../logger.js';
+import { InMemoryQueue, InMemoryCache } from '../utils/in-memory-queue.js';
+import { CACHE_KEYS, CACHE_TTL } from '../shared/constants.js';
+import { getServerData } from './mindustryService.js';
+import { ServerData } from '../../../common/models/serverData.js';
+import { ServerCollectorConfig } from '../shared/config.js';
 
 const logger = createLogger('ServerCollector');
 
@@ -27,7 +26,7 @@ export class ServerCollectorService {
   private rawDataQueue: InMemoryQueue<RawServerData>;
   private cache: InMemoryCache;
   private config: ServerCollectorConfig;
-  private collectionQueue: PQueue;
+  private collectionQueue: any; // Will be initialized as PQueue
   private running = false;
 
   constructor(
@@ -40,18 +39,21 @@ export class ServerCollectorService {
     this.rawDataQueue = rawDataQueue;
     this.cache = cache;
     this.config = config;
+  }
 
+  async start(): Promise<void> {
+    logger.info('Starting Server Collector Service...');
+    this.running = true;
+
+    // Dynamically import p-queue (ES module)
+    const { default: PQueue } = await import('p-queue');
+    
     // Initialize p-queue for server collection with concurrency control
     this.collectionQueue = new PQueue({
       concurrency: this.config.COLLECTION_CONCURRENCY,
       interval: 1000,
       intervalCap: this.config.COLLECTION_CONCURRENCY * 2
     });
-  }
-
-  async start(): Promise<void> {
-    logger.info('Starting Server Collector Service...');
-    this.running = true;
 
     // Start workers that continuously process the discovery queue
     for (let i = 0; i < this.config.COLLECTION_CONCURRENCY; i++) {
