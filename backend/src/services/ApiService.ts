@@ -50,7 +50,9 @@ export class ApiService {
 
   async stop(): Promise<void> {
     if (this.httpServer) {
-      this.httpServer.close();
+      await new Promise<void>((resolve) => {
+        this.httpServer.close(() => resolve());
+      });
     }
     logger.info('API Service stopped');
   }

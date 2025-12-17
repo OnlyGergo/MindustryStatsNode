@@ -204,7 +204,7 @@ export class ServerProcessorService {
   }
 
   /**
-   * Update the comprehensive server cache
+   * Update the comprehensive server cache (public for shutdown)
    */
   async updateComprehensiveCache(): Promise<void> {
     try {
