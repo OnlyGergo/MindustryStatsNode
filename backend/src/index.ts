@@ -77,13 +77,12 @@ class MindustryStatsApp {
 
       const apiConfig = {
         ...baseConfig,
-        PORT: parseInt(process.env.API_PORT || '3000'),
+        PORT: parseInt(process.env.PORT || '3000'),
         CORS_ORIGIN: process.env.CORS_ORIGIN || '*'
       };
 
       const wsConfig = {
         ...baseConfig,
-        PORT: parseInt(process.env.WS_PORT || '3001'),
         WS_PATH: process.env.WS_PATH || '/ws',
         CORS_ORIGIN: process.env.CORS_ORIGIN || '*'
       };
@@ -114,12 +113,19 @@ class MindustryStatsApp {
       // Initialize processor data storage
       await this.processorService.initialize();
 
-      // Start all services
+      // Start data processing services
       await this.discoveryService.start();
       await this.collectorService.start();
       await this.processorService.start();
+      
+      // Initialize API service (creates HTTP server but doesn't start listening)
       await this.apiService.start();
-      await this.wsService.start();
+      
+      // Attach WebSocket to the same HTTP server
+      await this.wsService.start(this.apiService.getHttpServer());
+      
+      // Start the shared HTTP server
+      await this.apiService.listen();
 
       // Start periodic cache cleanup
       this.startCacheCleanup();
@@ -128,8 +134,8 @@ class MindustryStatsApp {
       this.setupShutdownHandlers();
 
       logger.info('=== All services started successfully ===');
-      logger.info(`API Server: http://localhost:${apiConfig.PORT}`);
-      logger.info(`WebSocket Server: ws://localhost:${wsConfig.PORT}${wsConfig.WS_PATH}`);
+      logger.info(`API & WebSocket Server: http://localhost:${apiConfig.PORT}`);
+      logger.info(`WebSocket Path: ws://localhost:${apiConfig.PORT}${wsConfig.WS_PATH}`);
       logger.info(`Collection Concurrency: ${collectorConfig.COLLECTION_CONCURRENCY}`);
       logger.info(`Server Count: ${this.processorService.getServerCount()}`);
 

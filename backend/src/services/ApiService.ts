@@ -38,15 +38,31 @@ export class ApiService {
 
     this.setupRoutes();
 
-    // Start HTTP server
+    // Create HTTP server but don't start it yet - will be started by main app
+    this.httpServer = http.createServer(this.app);
+    
+    logger.info('API Service initialized (HTTP server will be started by main app)');
+  }
+
+  /**
+   * Start listening on the configured port
+   */
+  async listen(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
-      this.httpServer = this.app.listen(this.config.PORT, () => {
+      this.httpServer.listen(this.config.PORT, () => {
         logger.info(`API Service HTTP server started on port ${this.config.PORT}`);
         resolve();
       });
 
       this.httpServer.on('error', reject);
     });
+  }
+
+  /**
+   * Get the HTTP server instance for WebSocket attachment
+   */
+  getHttpServer(): http.Server {
+    return this.httpServer;
   }
 
   async stop(): Promise<void> {

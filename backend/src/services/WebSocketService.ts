@@ -23,7 +23,6 @@ export class WebSocketService {
   private updatesPubSub: InMemoryPubSub;
   private config: WebSocketServiceConfig;
   private wsServer!: WebSocketServer;
-  private wsHttpServer!: http.Server;
   private wsClients: Set<ExtendedWebSocket> = new Set();
   private wsHealthCheckInterval?: NodeJS.Timeout;
   private unsubscribeUpdates?: () => void;
@@ -38,13 +37,11 @@ export class WebSocketService {
     this.config = config;
   }
 
-  async start(): Promise<void> {
+  async start(httpServer: http.Server): Promise<void> {
     logger.info('Starting WebSocket Service...');
 
-    this.wsHttpServer = http.createServer();
-
     this.wsServer = new WebSocketServer({
-      server: this.wsHttpServer,
+      server: httpServer,
       path: this.config.WS_PATH,
       verifyClient: (info: { origin: string }) => {
         if (this.config.CORS_ORIGIN === '*') {
@@ -72,14 +69,7 @@ export class WebSocketService {
     // Start connection health check
     this.startConnectionHealthCheck();
 
-    await new Promise<void>((resolve, reject) => {
-      this.wsHttpServer.listen(this.config.PORT, () => {
-        logger.info(`WebSocket server started on port ${this.config.PORT}${this.config.WS_PATH}`);
-        resolve();
-      });
-
-      this.wsHttpServer.on('error', reject);
-    });
+    logger.info(`WebSocket server initialized on path ${this.config.WS_PATH}`);
   }
 
   async stop(): Promise<void> {
@@ -105,13 +95,6 @@ export class WebSocketService {
     // Close WebSocket server
     if (this.wsServer) {
       this.wsServer.close();
-    }
-
-    // Close HTTP server
-    if (this.wsHttpServer) {
-      await new Promise<void>((resolve) => {
-        this.wsHttpServer.close(() => resolve());
-      });
     }
 
     logger.info('WebSocket Service stopped');
