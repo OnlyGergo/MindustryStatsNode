@@ -43,18 +43,33 @@ export class WebSocketService {
     this.wsServer = new WebSocketServer({
       server: httpServer,
       path: this.config.WS_PATH,
-      verifyClient: (info: { origin: string }) => {
-        if (this.config.CORS_ORIGIN === '*') {
-          return true;
-        }
+      // Don't verify origin when CORS is set to '*' (allow all)
+      // This is necessary when behind a reverse proxy where origin headers may vary
+      verifyClient: this.config.CORS_ORIGIN === '*' ? undefined : (info: { origin: string }) => {
         const origin = info.origin;
-        return origin === this.config.CORS_ORIGIN;
-      }
+        const allowed = origin === this.config.CORS_ORIGIN;
+        if (!allowed) {
+          logger.warn(`WebSocket connection rejected from origin: ${origin}`);
+        }
+        return allowed;
+      },
+      // Handle proxied connections properly
+      perMessageDeflate: false,
+      clientTracking: false // We track clients manually
     });
 
-    this.wsServer.on('connection', (ws: ExtendedWebSocket) => {
+    this.wsServer.on('connection', (ws: ExtendedWebSocket, req) => {
       ws.isAlive = true;
+      logger.debug(`WebSocket connection attempt from ${req.socket.remoteAddress}, path: ${req.url}`);
       this.registerWebSocketClient(ws);
+    });
+
+    this.wsServer.on('error', (error) => {
+      logger.error('WebSocket server error:', error);
+    });
+
+    this.wsServer.on('headers', (headers, req) => {
+      logger.debug(`WebSocket upgrade headers from ${req.socket.remoteAddress}`);
     });
 
     // Subscribe to server updates
