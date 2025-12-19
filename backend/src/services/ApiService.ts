@@ -7,7 +7,7 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import path from "path";
-import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version";
+import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version.js";
 
 const logger = createLogger('ApiService');
 
