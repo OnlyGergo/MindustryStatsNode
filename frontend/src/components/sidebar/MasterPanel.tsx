@@ -219,7 +219,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
 
                     {/* Footer */}
                     <div className="p-4 border-t border-neutral-700/50 flex-shrink-0">
-                        <p className="text-xs text-gray-500">Last updated: {lastUpdated} | Version: {VERSION} | Build: {COMMIT}</p>
+                        <p className="text-xs text-gray-500">Last updated: {lastUpdated} | Version: {VERSION} | Commit: {COMMIT}</p>
                     </div>
                 </>
             )}
