@@ -1,12 +1,18 @@
 @import "tailwindcss";
 
 @font-face {
-    font-family: fontello;
-    src: url('/src/assets/mindustry_font.woff') format("woff2");
+    font-family: Mindustry;
+    src: url('/src/assets/mindustry_font.woff') format("woff");
+    font-display: swap;
+}
+
+/* Apply system font with Mindustry as fallback for icons */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif, Mindustry;
 }
 
 .mindustry-font {
-    font-family: fontello, 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: Mindustry, 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 /*#root {

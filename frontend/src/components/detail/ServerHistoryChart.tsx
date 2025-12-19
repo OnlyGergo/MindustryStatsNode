@@ -1,12 +1,77 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
 
 // Register Chart.js components
 Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler);
 
-const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players: number }> }> = ({ history }) => {
+type DateRangeOption = '1d' | '7d' | '14d' | '3m' | '12m' | 'custom';
+
+interface DateRange {
+    label: string;
+    value: DateRangeOption;
+    hours?: number;
+}
+
+const DATE_RANGE_OPTIONS: DateRange[] = [
+    { label: '1 Day', value: '1d', hours: 24 },
+    { label: '7 Days', value: '7d', hours: 168 },
+    { label: '14 Days', value: '14d', hours: 336 },
+    { label: '3 Months', value: '3m', hours: 2190 },
+    { label: '12 Months', value: '12m', hours: 8760 },
+    { label: 'Custom', value: 'custom' },
+];
+
+interface ServerHistoryChartProps {
+    history: Array<{ timestamp: number; players: number }>;
+    serverId: number;
+}
+
+const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, serverId }) => {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<Chart | null>(null);
+    const [selectedRange, setSelectedRange] = useState<DateRangeOption>('1d');
+    const [customStartDate, setCustomStartDate] = useState<string>('');
+    const [customEndDate, setCustomEndDate] = useState<string>('');
+    const [chartData, setChartData] = useState<Array<{ timestamp: number; players: number }>>(history);
+    const [loading, setLoading] = useState(false);
+
+    // Fetch history data when range changes
+    useEffect(() => {
+        const fetchHistoryData = async () => {
+            if (selectedRange === '1d') {
+                // Use the initial history data for 1 day (default)
+                setChartData(history);
+                return;
+            }
+
+            setLoading(true);
+            try {
+                let url = `/api/servers/${serverId}/history?range=${selectedRange}`;
+                
+                if (selectedRange === 'custom' && customStartDate && customEndDate) {
+                    const startTs = new Date(customStartDate).getTime();
+                    const endTs = new Date(customEndDate).getTime();
+                    url = `/api/servers/${serverId}/history?startDate=${startTs}&endDate=${endTs}`;
+                } else if (selectedRange === 'custom') {
+                    // Don't fetch if custom is selected but dates aren't set
+                    setLoading(false);
+                    return;
+                }
+
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    setChartData(data);
+                }
+            } catch (error) {
+                console.error('Error fetching history data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHistoryData();
+    }, [selectedRange, customStartDate, customEndDate, serverId, history]);
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -15,8 +80,8 @@ const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players
             chartInstance.current.destroy();
         }
 
-        const labels = history.map(h => formatTime(h.timestamp));
-        const data = history.map(h => h.players);
+        const labels = chartData.map(h => formatTime(h.timestamp, selectedRange));
+        const data = chartData.map(h => h.players);
 
         const ctx = chartRef.current.getContext('2d');
         if (!ctx) return;
@@ -28,15 +93,15 @@ const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players
                 datasets: [{
                     label: 'Players',
                     data,
-                    borderColor: 'rgb(0, 255, 255)',
-                    backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                    borderColor: 'rgb(249, 115, 22)',
+                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
                     fill: true,
                     tension: 0.4,
                     borderWidth: 2,
-                    pointBackgroundColor: 'rgb(0, 255, 255)',
-                    pointBorderColor: 'rgb(0, 255, 255)',
-                    pointHoverBackgroundColor: 'rgb(255, 0, 255)',
-                    pointHoverBorderColor: 'rgb(255, 0, 255)'
+                    pointBackgroundColor: 'rgb(249, 115, 22)',
+                    pointBorderColor: 'rgb(249, 115, 22)',
+                    pointHoverBackgroundColor: 'rgb(251, 146, 60)',
+                    pointHoverBorderColor: 'rgb(251, 146, 60)'
                 }]
             },
             options: {
@@ -55,7 +120,7 @@ const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players
                         },
                         grid: {
                             display: true,
-                            color: 'rgba(0, 255, 255, 0.15)'
+                            color: 'rgba(249, 115, 22, 0.15)'
                         }
                     },
                     x: {
@@ -68,7 +133,7 @@ const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players
                         },
                         grid: {
                             display: true,
-                            color: 'rgba(0, 255, 255, 0.15)'
+                            color: 'rgba(249, 115, 22, 0.15)'
                         }
                     }
                 },
@@ -76,9 +141,9 @@ const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players
                     legend: { display: false },
                     tooltip: {
                         backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                        titleColor: 'rgb(0, 255, 255)',
+                        titleColor: 'rgb(249, 115, 22)',
                         bodyColor: 'rgb(255, 255, 255)',
-                        borderColor: 'rgb(0, 255, 255)',
+                        borderColor: 'rgb(249, 115, 22)',
                         borderWidth: 1,
                         cornerRadius: 8,
                         callbacks: {
@@ -107,15 +172,74 @@ const ServerHistoryChart: React.FC<{ history: Array<{ timestamp: number; players
                 chartInstance.current.destroy();
             }
         };
-    }, [history]);
+    }, [chartData, selectedRange]);
 
-    const formatTime = (timestamp: number): string => {
-        return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formatTime = (timestamp: number, range: DateRangeOption): string => {
+        const date = new Date(timestamp);
+        if (range === '1d') {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (range === '7d' || range === '14d') {
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit' });
+        } else {
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
     };
 
     return (
-        <div className="h-full w-full">
-            <canvas ref={chartRef}></canvas>
+        <div className="h-full w-full flex flex-col">
+            {/* Date Range Selector */}
+            <div className="flex flex-wrap gap-2 mb-4">
+                {DATE_RANGE_OPTIONS.map((option) => (
+                    <button
+                        key={option.value}
+                        onClick={() => setSelectedRange(option.value)}
+                        className={`px-3 py-1 text-sm rounded-lg transition-colors border ${
+                            selectedRange === option.value
+                                ? 'bg-orange-500/30 text-orange-400 border-orange-500/50'
+                                : 'bg-neutral-700/30 text-gray-400 border-neutral-600/50 hover:bg-neutral-600/30'
+                        }`}
+                    >
+                        {option.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Custom Date Range Inputs */}
+            {selectedRange === 'custom' && (
+                <div className="flex gap-4 mb-4">
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-400">From:</label>
+                        <input
+                            type="date"
+                            value={customStartDate}
+                            onChange={(e) => setCustomStartDate(e.target.value)}
+                            className="bg-neutral-700/50 border border-neutral-600/50 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-400">To:</label>
+                        <input
+                            type="date"
+                            value={customEndDate}
+                            onChange={(e) => setCustomEndDate(e.target.value)}
+                            className="bg-neutral-700/50 border border-neutral-600/50 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Loading indicator */}
+            {loading && (
+                <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-orange-400 border-t-transparent"></div>
+                    <span className="ml-2 text-gray-400 text-sm">Loading history...</span>
+                </div>
+            )}
+
+            {/* Chart */}
+            <div className="flex-1 min-h-0">
+                <canvas ref={chartRef}></canvas>
+            </div>
         </div>
     );
 };

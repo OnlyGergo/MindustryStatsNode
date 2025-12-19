@@ -252,22 +252,115 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
     });
 }
 
-export async function getMapHistory(serverId: number): Promise<ServerMap[]> {
-    return await ServerMap.findAll({
+export async function getMapHistory(serverId: number, page: number = 1, perPage: number = 20): Promise<{ data: ServerMap[], total: number }> {
+    const offset = (page - 1) * perPage;
+    const { rows, count } = await ServerMap.findAndCountAll({
         where: {
             server_id: serverId
         },
-        limit: 500
-    })
+        order: [['valid_from', 'DESC']],
+        limit: perPage,
+        offset: offset
+    });
+    return { data: rows, total: count };
 }
 
-export async function getMotdHistory(serverId: number): Promise<ServerMotd[]> {
-    return await ServerMotd.findAll({
+export async function getMotdHistory(serverId: number, page: number = 1, perPage: number = 20): Promise<{ data: ServerMotd[], total: number }> {
+    const offset = (page - 1) * perPage;
+    const { rows, count } = await ServerMotd.findAndCountAll({
         where: {
             server_id: serverId
         },
-        limit: 500
-    })
+        order: [['valid_from', 'DESC']],
+        limit: perPage,
+        offset: offset
+    });
+    return { data: rows, total: count };
+}
+
+/**
+ * Get aggregated player history for a server with time bucket aggregation
+ * Uses MAX to preserve peak values when aggregating
+ */
+export async function getAggregatedHistory(
+    serverId: number, 
+    hoursBack: number = 24,
+    bucketMinutes: number = 0,
+    startDate?: number,
+    endDate?: number
+): Promise<Array<{ timestamp: number; players: number }>> {
+    let query: string;
+    let replacements: Record<string, unknown>;
+
+    if (bucketMinutes === 0) {
+        // No aggregation - return raw data
+        if (startDate && endDate) {
+            query = `
+                SELECT 
+                    extract(epoch from timestamp) * 1000 as timestamp,
+                    players
+                FROM server_stats
+                WHERE server_id = :serverId
+                  AND timestamp >= to_timestamp(:startDate / 1000.0)
+                  AND timestamp <= to_timestamp(:endDate / 1000.0)
+                ORDER BY timestamp
+            `;
+            replacements = { serverId, startDate, endDate };
+        } else {
+            query = `
+                SELECT 
+                    extract(epoch from timestamp) * 1000 as timestamp,
+                    players
+                FROM server_stats
+                WHERE server_id = :serverId
+                  AND timestamp > NOW() - interval '${hoursBack} hours'
+                ORDER BY timestamp
+            `;
+            replacements = { serverId };
+        }
+    } else {
+        // Aggregate using time buckets with MAX to preserve peaks
+        if (startDate && endDate) {
+            query = `
+                SELECT 
+                    extract(epoch from date_trunc('minute', timestamp) - 
+                        (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute') * 1000 as timestamp,
+                    MAX(players) as players
+                FROM server_stats
+                WHERE server_id = :serverId
+                  AND timestamp >= to_timestamp(:startDate / 1000.0)
+                  AND timestamp <= to_timestamp(:endDate / 1000.0)
+                GROUP BY date_trunc('minute', timestamp) - 
+                    (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
+                ORDER BY timestamp
+            `;
+            replacements = { serverId, startDate, endDate, bucketMinutes };
+        } else {
+            query = `
+                SELECT 
+                    extract(epoch from date_trunc('minute', timestamp) - 
+                        (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute') * 1000 as timestamp,
+                    MAX(players) as players
+                FROM server_stats
+                WHERE server_id = :serverId
+                  AND timestamp > NOW() - interval '${hoursBack} hours'
+                GROUP BY date_trunc('minute', timestamp) - 
+                    (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
+                ORDER BY timestamp
+            `;
+            replacements = { serverId, bucketMinutes };
+        }
+    }
+
+    const result = await sequelize.query(query, {
+        replacements,
+        type: 'SELECT'
+    }) as Array<{ timestamp: string; players: number }>;
+
+    return result.map((row) => ({
+        timestamp: parseFloat(row.timestamp),
+        players: row.players
+    }));
 }
 
 // Get detailed information about a specific server

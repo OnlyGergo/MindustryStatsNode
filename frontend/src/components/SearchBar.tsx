@@ -21,7 +21,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearchValueChange, value }) => 
                 value={value}
                 onChange={handleChange}
                 placeholder="Search servers..."
-                className="w-full px-3 py-1 rounded-lg border border-slate-600/30 bg-slate-700/50 text-gray-300 text-xs backdrop-blur-sm"
+                className="w-full px-3 py-1 rounded-lg border border-neutral-600/30 bg-neutral-700/50 text-gray-300 text-xs backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50"
             />
             {value && (
                 <button

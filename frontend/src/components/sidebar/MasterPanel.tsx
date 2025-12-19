@@ -67,17 +67,17 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
     return (
         <div className={`relative transition-all duration-300 ${
             isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-1/3'
-        } min-w-0 bg-slate-800/20 backdrop-blur-md border-r border-slate-700/50 flex flex-col h-screen`}>
+        } min-w-0 bg-neutral-900/20 backdrop-blur-md border-r border-neutral-700/50 flex flex-col h-screen`}>
             {/* Header */}
-            <div className="bg-slate-700/40 backdrop-blur-md border-b border-slate-600/50 p-4 flex items-center justify-between flex-shrink-0">
+            <div className="bg-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center justify-between flex-shrink-0">
                 {!isCollapsed && (
-                    <div className="bg-slate-600/60 backdrop-blur-md border border-slate-500/50 px-4 py-2 rounded-lg">
-                        <h1 className="text-xl font-bold text-cyan-400">Mindustry Tracker</h1>
+                    <div className="bg-neutral-700/60 backdrop-blur-md border border-orange-500/30 px-4 py-2 rounded-lg">
+                        <h1 className="text-xl font-bold text-orange-400">Mindustry Tracker</h1>
                     </div>
                 )}
                 <button
                     onClick={onToggleCollapse}
-                    className="bg-slate-700/50 hover:bg-slate-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-slate-600/50"
+                    className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50"
                 >
                     <svg className={`w-4 h-4 transform transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -88,7 +88,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
             {!isCollapsed && (
                 <>
                     {/* Connection Status */}
-                    <div className="p-4 border-b border-slate-700/50 flex-shrink-0">
+                    <div className="p-4 border-b border-neutral-700/50 flex-shrink-0">
                         <span className={`px-3 py-1 rounded-full text-xs flex items-center border backdrop-blur-sm ${
                             connectionStatus === 'connected' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
                                 connectionStatus === 'reconnecting' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
@@ -102,9 +102,9 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     </div>
 
                     {/* Stats */}
-                    <div className="p-4 border-b border-slate-700/50 flex-shrink-0">
+                    <div className="p-4 border-b border-neutral-700/50 flex-shrink-0">
                         <div className="grid grid-cols-2 gap-2 text-center">
-                            <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-2 rounded-lg">
+                            <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 p-2 rounded-lg">
                                 <div className="text-gray-400 text-xs">Online / Total Servers</div>
                                 <div className="flex items-center justify-center space-x-2">
                                     <span className="text-lg font-bold text-green-400">{onlineServers}</span>
@@ -112,15 +112,15 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                     <span className="text-lg font-bold text-white">{totalServers}</span>
                                 </div>
                             </div>
-                            <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 p-2 rounded-lg">
+                            <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 p-2 rounded-lg">
                                 <div className="text-gray-400 text-xs">Total Players</div>
-                                <div className="text-lg font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">{totalPlayers}</div>
+                                <div className="text-lg font-bold text-orange-400 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">{totalPlayers}</div>
                             </div>
                         </div>
                     </div>
 
                     {/* Controls */}
-                    <div className="p-4 border-b border-slate-700/50 flex-shrink-0">
+                    <div className="p-4 border-b border-neutral-700/50 flex-shrink-0">
                         {/* Search Bar */}
                         <div className="mb-3">
                             <SearchBar
@@ -158,7 +158,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                     activeText="Show All"
                                     inactiveText="Hide Inactive"
                                     activeColor="bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border-orange-500/30"
-                                    inactiveColor="bg-slate-600/20 hover:bg-slate-600/30 text-slate-400 border-slate-600/30"
+                                    inactiveColor="bg-neutral-600/20 hover:bg-neutral-600/30 text-neutral-400 border-neutral-600/30"
                                     className="w-full"
                                 />
                             </Tooltip>
@@ -178,8 +178,8 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     {/* Server List */}
                     <div className="flex-1 overflow-y-auto p-4 min-h-0">
                         {loading && (
-                            <div className="text-center p-8 bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl mb-6">
-                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-cyan-400 border-t-transparent"></div>
+                            <div className="text-center p-8 bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl mb-6">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-400 border-t-transparent"></div>
                                 <p className="mt-4 text-gray-300">Loading server data...</p>
                             </div>
                         )}
@@ -218,7 +218,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     </div>
 
                     {/* Footer */}
-                    <div className="p-4 border-t border-slate-700/50 flex-shrink-0">
+                    <div className="p-4 border-t border-neutral-700/50 flex-shrink-0">
                         <p className="text-xs text-gray-500">Last updated: {lastUpdated} | Version: {VERSION} | Build: {COMMIT}</p>
                     </div>
                 </>

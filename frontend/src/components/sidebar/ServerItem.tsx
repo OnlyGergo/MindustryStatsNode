@@ -16,8 +16,8 @@ const ServerItem: React.FC<{
         <div
             className={`p-3 cursor-pointer transition-colors flex items-center justify-between ${
                 isSelected
-                    ? 'bg-cyan-500/20 border-l-4 border-l-cyan-400'
-                    : 'hover:bg-slate-700/30'
+                    ? 'bg-orange-500/20 border-l-4 border-l-orange-400'
+                    : 'hover:bg-neutral-700/30'
             }`}
             onClick={() => onSelect(server)}
         >
@@ -48,7 +48,7 @@ const ServerItem: React.FC<{
                 </span>
                 {server.online && serverData && (
                     <div className="text-right">
-                        <div className="text-lg font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">
+                        <div className="text-lg font-bold text-orange-400 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">
                             {String(serverData.players)}
                             <span className="text-gray-500 ml-1">/ {String(serverData.playerLimit)}</span>
                         </div>

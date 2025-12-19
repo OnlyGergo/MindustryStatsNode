@@ -14,9 +14,9 @@ const ServerGroup: React.FC<{
     const totalPlayers = servers.reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
 
     return (
-        <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl overflow-hidden">
+        <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl overflow-hidden">
             <div
-                className="bg-slate-900/50 backdrop-blur-sm border-b border-slate-700/50 px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-slate-800/50 transition-colors"
+                className="bg-neutral-900/50 backdrop-blur-sm border-b border-neutral-700/50 px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-neutral-800/50 transition-colors"
                 onClick={onToggleExpand}
             >
                 <div>
@@ -26,11 +26,11 @@ const ServerGroup: React.FC<{
                     </p>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <span className="text-lg font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">
+                    <span className="text-lg font-bold text-orange-400 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">
                         {totalPlayers}
                     </span>
                     <svg
-                        className={`h-4 w-4 text-cyan-400 transform transition-transform ${expanded ? 'rotate-180' : ''}`}
+                        className={`h-4 w-4 text-orange-400 transform transition-transform ${expanded ? 'rotate-180' : ''}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -45,7 +45,7 @@ const ServerGroup: React.FC<{
                 </div>
             </div>
             {expanded && (
-                <div className="divide-y divide-slate-700/50">
+                <div className="divide-y divide-neutral-700/50">
                     {servers.map(server => (
                         <ServerItem
                             key={`${server.host}-${server.port}`}

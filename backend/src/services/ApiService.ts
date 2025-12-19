@@ -121,14 +121,17 @@ export class ApiService {
     this.app.get('/api/servers/:id/motd-history', async (req, res) => {
       try {
         const { id } = req.params;
+        const { page = '1', perPage = '20' } = req.query;
         const idNumber = parseInt(id, 10);
+        const pageNumber = parseInt(page as string, 10) || 1;
+        const perPageNumber = Math.min(parseInt(perPage as string, 10) || 20, 100);
 
         if (isNaN(idNumber)) {
           res.status(400).json({ error: 'Invalid ID number' });
           return;
         }
 
-        const history = await this.getServerMotdHistory(idNumber);
+        const history = await this.getServerMotdHistory(idNumber, pageNumber, perPageNumber);
 
         logger.debug(`Served MOTD history for server ID ${idNumber}`);
         res.json(history);
@@ -142,14 +145,17 @@ export class ApiService {
     this.app.get('/api/servers/:id/map-history', async (req, res) => {
       try {
         const { id } = req.params;
+        const { page = '1', perPage = '20' } = req.query;
         const idNumber = parseInt(id, 10);
+        const pageNumber = parseInt(page as string, 10) || 1;
+        const perPageNumber = Math.min(parseInt(perPage as string, 10) || 20, 100);
 
         if (isNaN(idNumber)) {
           res.status(400).json({ error: 'Invalid ID number' });
           return;
         }
 
-        const history = await this.getServerMapHistory(idNumber);
+        const history = await this.getServerMapHistory(idNumber, pageNumber, perPageNumber);
 
         logger.debug(`Served map history for server ID ${idNumber}`);
         res.json(history);
@@ -157,6 +163,33 @@ export class ApiService {
       } catch (error) {
         logger.error('Failed to fetch map history:', error);
         res.status(500).json({ error: 'Failed to fetch map history' });
+      }
+    });
+
+    this.app.get('/api/servers/:id/history', async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { range, startDate, endDate } = req.query;
+        const idNumber = parseInt(id, 10);
+
+        if (isNaN(idNumber)) {
+          res.status(400).json({ error: 'Invalid ID number' });
+          return;
+        }
+
+        const history = await this.getServerHistory(
+          idNumber, 
+          range as string | undefined,
+          startDate ? parseInt(startDate as string, 10) : undefined,
+          endDate ? parseInt(endDate as string, 10) : undefined
+        );
+
+        logger.debug(`Served history for server ID ${idNumber} with range ${range || 'custom'}`);
+        res.json(history);
+
+      } catch (error) {
+        logger.error('Failed to fetch server history:', error);
+        res.status(500).json({ error: 'Failed to fetch server history' });
       }
     });
 
@@ -202,39 +235,81 @@ export class ApiService {
   }
 
   /**
-   * Get MOTD history with caching
+   * Get MOTD history with pagination (no caching for paginated requests)
    */
-  private async getServerMotdHistory(id: number) {
-    const cacheKey = CACHE_KEYS.MOTD_HISTORY(id);
-
-    let history = await this.cache.get(cacheKey);
-
-    if (!history) {
-      history = await serverRepository.getMotdHistory(id);
-
-      if (history) {
-        await this.cache.set(cacheKey, history, CACHE_TTL.HISTORY);
-      }
-    }
-
-    return history;
+  private async getServerMotdHistory(id: number, page: number = 1, perPage: number = 20) {
+    return await serverRepository.getMotdHistory(id, page, perPage);
   }
 
   /**
-   * Get map history with caching
+   * Get map history with pagination (no caching for paginated requests)
    */
-  private async getServerMapHistory(id: number) {
-    const cacheKey = CACHE_KEYS.MAP_HISTORY(id);
+  private async getServerMapHistory(id: number, page: number = 1, perPage: number = 20) {
+    return await serverRepository.getMapHistory(id, page, perPage);
+  }
 
-    let history = await this.cache.get(cacheKey);
+  /**
+   * Get aggregated server history for different date ranges
+   */
+  private async getServerHistory(
+    id: number, 
+    range?: string,
+    startDate?: number,
+    endDate?: number
+  ) {
+    // Calculate time range and aggregation bucket size
+    let hoursBack: number;
+    let bucketMinutes: number;
 
-    if (!history) {
-      history = await serverRepository.getMapHistory(id);
+    switch (range) {
+      case '7d':
+        hoursBack = 168;
+        bucketMinutes = 60; // 1 hour buckets
+        break;
+      case '14d':
+        hoursBack = 336;
+        bucketMinutes = 120; // 2 hour buckets
+        break;
+      case '3m':
+        hoursBack = 2190;
+        bucketMinutes = 360; // 6 hour buckets
+        break;
+      case '12m':
+        hoursBack = 8760;
+        bucketMinutes = 1440; // 24 hour buckets
+        break;
+      default:
+        hoursBack = 24;
+        bucketMinutes = 0; // No aggregation for 1 day
+    }
 
-      if (history) {
-        await this.cache.set(cacheKey, history, CACHE_TTL.HISTORY);
+    // For custom range, calculate from timestamps
+    if (startDate && endDate) {
+      const diffMs = endDate - startDate;
+      const diffHours = diffMs / (1000 * 60 * 60);
+      hoursBack = Math.ceil(diffHours);
+      
+      // Determine bucket size based on time span
+      if (diffHours <= 24) {
+        bucketMinutes = 0;
+      } else if (diffHours <= 168) {
+        bucketMinutes = 60;
+      } else if (diffHours <= 336) {
+        bucketMinutes = 120;
+      } else if (diffHours <= 2190) {
+        bucketMinutes = 360;
+      } else {
+        bucketMinutes = 1440;
       }
     }
+
+    const history = await serverRepository.getAggregatedHistory(
+      id, 
+      hoursBack, 
+      bucketMinutes,
+      startDate,
+      endDate
+    );
 
     return history;
   }

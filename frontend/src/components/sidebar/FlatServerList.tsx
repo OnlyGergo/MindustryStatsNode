@@ -15,15 +15,15 @@ const FlatServerList: React.FC<FlatServerListProps> = ({
 }) => {
   if (servers.length === 0) {
     return (
-      <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 text-center">
+      <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl p-6 text-center">
         <p className="text-gray-400">No servers found matching your criteria.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl overflow-hidden">
-      <div className="divide-y divide-slate-700/50">
+    <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl overflow-hidden">
+      <div className="divide-y divide-neutral-700/50">
         {servers.map(server => (
           <ServerItem
             key={`${server.host}-${server.port}`}

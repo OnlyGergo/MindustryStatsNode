@@ -59,7 +59,7 @@ const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
         <div className="h-full overflow-y-auto p-6">
             <div className="max-w-6xl mx-auto"> {/* Increased max-width */}
                 {/* Header */}
-                <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 mb-6">
+                <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl p-6 mb-6">
                     <div className="flex justify-between items-start mb-4">
                         <div>
                             {serverData?.serverName && (
@@ -86,7 +86,7 @@ const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
                                         </span>
                                         <CopyButton
                                             text={`${server.host}:${server.port}`}
-                                            className="bg-slate-700/50 hover:bg-slate-600/50 text-gray-300 text-sm px-3 py-1 rounded transition-colors border border-slate-600/50"
+                                            className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 text-sm px-3 py-1 rounded transition-colors border border-neutral-600/50"
                                         />
                                     </>
                                 )}
@@ -95,7 +95,7 @@ const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
 
                         {server.online && serverData && (
                             <div className="text-right">
-                                <div className="text-4xl font-bold text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.3)]">
+                                <div className="text-4xl font-bold text-orange-400 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">
                                     {String(serverData.players)}
                                 </div>
                                 <div className="text-sm text-gray-400">players online</div>
@@ -105,21 +105,21 @@ const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
 
                     {serverData && (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div className="bg-slate-700/30 backdrop-blur-sm border border-slate-600/30 p-3 rounded-lg">
+                            <div className="bg-neutral-700/30 backdrop-blur-sm border border-neutral-600/30 p-3 rounded-lg">
                                 <span className="text-gray-400">Map: </span>
                                 <span className="font-medium text-white">{String(removeColors(serverData.mapName)) || 'Unknown'}</span>
                             </div>
-                            <div className="bg-slate-700/30 backdrop-blur-sm border border-slate-600/30 p-3 rounded-lg">
+                            <div className="bg-neutral-700/30 backdrop-blur-sm border border-neutral-600/30 p-3 rounded-lg">
                                 <span className="text-gray-400">Wave: </span>
                                 <span className="font-medium text-white">{serverData.wave || '0'}</span>
                             </div>
-                            <div className="bg-slate-700/30 backdrop-blur-sm border border-slate-600/30 p-3 rounded-lg">
+                            <div className="bg-neutral-700/30 backdrop-blur-sm border border-neutral-600/30 p-3 rounded-lg">
                                 <span className="text-gray-400">Mode: </span>
                                 <span className="font-medium text-white">
                                     {String(removeColors(serverData.modeName)) || getGameModeName(serverData.mode)}
                                 </span>
                             </div>
-                            <div className="bg-slate-700/30 backdrop-blur-sm border border-slate-600/30 p-3 rounded-lg">
+                            <div className="bg-neutral-700/30 backdrop-blur-sm border border-neutral-600/30 p-3 rounded-lg">
                                 <span className="text-gray-400">Version: </span>
                                 <span className="font-medium text-white">
                                     {String(serverData.versionType) || ''} {String(serverData.version) || ''}
@@ -131,25 +131,25 @@ const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
 
                 {/* Player Peaks and Uptime */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 p-6 rounded-xl">
-                        <h4 className="font-medium mb-4 text-cyan-400 text-lg">Player Peaks</h4>
+                    <div className="bg-neutral-800/30 backdrop-blur-sm border border-neutral-700/50 p-6 rounded-xl">
+                        <h4 className="font-medium mb-4 text-orange-400 text-lg">Player Peaks</h4>
                         <div className="grid grid-cols-3 gap-3">
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">{details.playerPeaks.daily}</div>
+                                <div className="text-2xl font-bold text-orange-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.3)]">{details.playerPeaks.daily}</div>
                                 <div className="text-sm text-gray-400">Today</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">{details.playerPeaks.weekly}</div>
+                                <div className="text-2xl font-bold text-orange-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.3)]">{details.playerPeaks.weekly}</div>
                                 <div className="text-sm text-gray-400">This Week</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_5px_rgba(0,255,255,0.3)]">{details.playerPeaks.allTime}</div>
+                                <div className="text-2xl font-bold text-orange-400 drop-shadow-[0_0_5px_rgba(249,115,22,0.3)]">{details.playerPeaks.allTime}</div>
                                 <div className="text-sm text-gray-400">All Time</div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 p-6 rounded-xl">
+                    <div className="bg-neutral-800/30 backdrop-blur-sm border border-neutral-700/50 p-6 rounded-xl">
                         <h4 className="font-medium mb-4 text-green-400 text-lg">Server Uptime</h4>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="text-center">
@@ -165,21 +165,21 @@ const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
                 </div>
 
                 {/* Player History Chart */}
-                <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 mb-6">
+                <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl p-6 mb-6">
                     <h2 className="text-lg font-semibold text-white mb-4">Player History</h2>
                     <div className="h-96"> {/* Increased height */}
-                        <ServerHistoryChart history={server.history} />
+                        <ServerHistoryChart history={server.history} serverId={server.id} />
                     </div>
                 </div>
 
                 {/* Map History Table */}
-                <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 mb-6">
+                <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl p-6 mb-6">
                     <h2 className="text-lg font-semibold text-white mb-4">Map History</h2>
                     <MapHistoryTable mapHistory={details.allMaps} />
                 </div>
 
                 {/* MOTD History Table */}
-                <div className="bg-slate-800/30 backdrop-blur-md border border-slate-700/50 rounded-xl p-6 mb-6">
+                <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl p-6 mb-6">
                     <h2 className="text-lg font-semibold text-white mb-4">MOTD History</h2>
                     <MotdHistoryTable motdHistory={details.allMotds} />
                 </div>
