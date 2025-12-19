@@ -1,6 +1,6 @@
 import { Model, DataTypes } from 'sequelize';
-import sequelize from '../config/database';
-import ServerGroup from './ServerGroup';
+import sequelize from '../config/database.js';
+import ServerGroup from './ServerGroup.js';
 
 class Server extends Model {
   declare id: number;

@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize';
-import { env } from './env';
-import {createLogger} from "../logger";
+import { env } from './env.js';
+import {createLogger} from '../logger.js';
 
 const logger = createLogger("Database");
 

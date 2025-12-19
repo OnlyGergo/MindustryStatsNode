@@ -9,13 +9,6 @@ export interface BaseServiceConfig {
   DB_NAME: string;
   DB_USER: string;
   DB_PASSWORD: string;
-
-  // Valkey
-  VALKEY_HOST: string;
-  VALKEY_PORT: number;
-  VALKEY_PASSWORD?: string;
-  VALKEY_DB: number;
-  VALKEY_KEY_PREFIX: string;
 }
 
 // Service-specific configurations
@@ -41,7 +34,6 @@ export interface ApiServiceConfig extends BaseServiceConfig {
 }
 
 export interface WebSocketServiceConfig extends BaseServiceConfig {
-  PORT: number;
   WS_PATH: string;
   CORS_ORIGIN: string;
 }
@@ -56,12 +48,6 @@ export function loadBaseConfig(): BaseServiceConfig {
     DB_PORT: parseInt(process.env.DB_PORT || '5432'),
     DB_NAME: process.env.DB_NAME || 'mindustry_stats',
     DB_USER: process.env.DB_USER || 'postgres',
-    DB_PASSWORD: process.env.DB_PASSWORD || '',
-
-    VALKEY_HOST: process.env.VALKEY_HOST || 'localhost',
-    VALKEY_PORT: parseInt(process.env.VALKEY_PORT || '6379'),
-    VALKEY_PASSWORD: process.env.VALKEY_PASSWORD,
-    VALKEY_DB: parseInt(process.env.VALKEY_DB || '0'),
-    VALKEY_KEY_PREFIX: process.env.VALKEY_KEY_PREFIX || 'mindustry:'
+    DB_PASSWORD: process.env.DB_PASSWORD || ''
   };
 }

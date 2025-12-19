@@ -1,12 +1,13 @@
-import Redis from 'ioredis';
-import { createLogger } from '../logger';
+/**
+ * DEPRECATED: This file is kept for backward compatibility with old microservices
+ * The new unified application uses in-memory-queue.ts instead
+ * 
+ * This stub implementation throws errors if used, as Redis/Valkey is no longer required
+ */
+
+import { createLogger } from '../logger.js';
 
 const logger = createLogger('Valkey');
-
-// Valkey client instances
-let client: Redis | null = null;
-let subscriber: Redis | null = null;
-let publisher: Redis | null = null;
 
 export interface ValkeyConfig {
   host: string;
@@ -16,212 +17,104 @@ export interface ValkeyConfig {
   keyPrefix?: string;
 }
 
-const defaultConfig: ValkeyConfig = {
-  host: process.env.VALKEY_HOST || 'localhost',
-  port: parseInt(process.env.VALKEY_PORT || '6379'),
-  password: process.env.VALKEY_PASSWORD,
-  db: parseInt(process.env.VALKEY_DB || '0'),
-  keyPrefix: process.env.VALKEY_KEY_PREFIX || 'mindustry:'
-};
-
 /**
- * Initialize Valkey connections
+ * Initialize Valkey connections - DEPRECATED
  */
 export async function initValkey(config: Partial<ValkeyConfig> = {}): Promise<void> {
-  const finalConfig = { ...defaultConfig, ...config };
-
-  try {
-    // Main client for general operations
-    client = new Redis({
-      host: finalConfig.host,
-      port: finalConfig.port,
-      password: finalConfig.password,
-      db: finalConfig.db,
-      keyPrefix: finalConfig.keyPrefix,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true
-    });
-
-    // Subscriber client for pub/sub
-    subscriber = new Redis({
-      host: finalConfig.host,
-      port: finalConfig.port,
-      password: finalConfig.password,
-      db: finalConfig.db,
-      keyPrefix: finalConfig.keyPrefix,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true
-    });
-
-    // Publisher client for pub/sub
-    publisher = new Redis({
-      host: finalConfig.host,
-      port: finalConfig.port,
-      password: finalConfig.password,
-      db: finalConfig.db,
-      keyPrefix: finalConfig.keyPrefix,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true
-    });
-
-    // Connect all clients
-    await Promise.all([
-      client.connect(),
-      subscriber.connect(),
-      publisher.connect()
-    ]);
-
-    logger.info(`Connected to Valkey at ${finalConfig.host}:${finalConfig.port}`);
-  } catch (error) {
-    logger.error('Failed to connect to Valkey:', error);
-    throw error;
-  }
+  throw new Error('Valkey/Redis is no longer used. Please use the unified application (src/index.ts) instead.');
 }
 
 /**
- * Get the main Valkey client
+ * Get the main Valkey client - DEPRECATED
  */
-export function getValkeyClient(): Redis {
-  if (!client) {
-    throw new Error('Valkey client not initialized. Call initValkey() first.');
-  }
-  return client;
+export function getValkeyClient(): never {
+  throw new Error('Valkey/Redis is no longer used. Please use the unified application (src/index.ts) instead.');
 }
 
 /**
- * Get the subscriber client
+ * Get the subscriber client - DEPRECATED
  */
-export function getValkeySubscriber(): Redis {
-  if (!subscriber) {
-    throw new Error('Valkey subscriber not initialized. Call initValkey() first.');
-  }
-  return subscriber;
+export function getValkeySubscriber(): never {
+  throw new Error('Valkey/Redis is no longer used. Please use the unified application (src/index.ts) instead.');
 }
 
 /**
- * Get the publisher client
+ * Get the publisher client - DEPRECATED
  */
-export function getValkeyPublisher(): Redis {
-  if (!publisher) {
-    throw new Error('Valkey publisher not initialized. Call initValkey() first.');
-  }
-  return publisher;
+export function getValkeyPublisher(): never {
+  throw new Error('Valkey/Redis is no longer used. Please use the unified application (src/index.ts) instead.');
 }
 
 /**
- * Queue operations
+ * Queue operations - DEPRECATED
  */
 export class ValkeyQueue {
   constructor(private queueName: string) {}
 
   async push(data: any): Promise<void> {
-    const client = getValkeyClient();
-    await client.lpush(this.queueName, JSON.stringify(data));
+    throw new Error('ValkeyQueue is deprecated. Use InMemoryQueue from in-memory-queue.ts instead.');
   }
 
   async pop(timeout: number = 0): Promise<any | null> {
-    const client = getValkeyClient();
-    const result = await client.brpop(this.queueName, timeout);
-    return result ? JSON.parse(result[1]) : null;
+    throw new Error('ValkeyQueue is deprecated. Use InMemoryQueue from in-memory-queue.ts instead.');
   }
 
   async length(): Promise<number> {
-    const client = getValkeyClient();
-    return await client.llen(this.queueName);
+    throw new Error('ValkeyQueue is deprecated. Use InMemoryQueue from in-memory-queue.ts instead.');
   }
 }
 
 /**
- * Pub/Sub operations
+ * Pub/Sub operations - DEPRECATED
  */
 export class ValkeyPubSub {
   constructor(private channel: string) {}
 
   async publish(data: any): Promise<void> {
-    const publisher = getValkeyPublisher();
-    await publisher.publish(this.channel, JSON.stringify(data));
+    throw new Error('ValkeyPubSub is deprecated. Use InMemoryPubSub from in-memory-queue.ts instead.');
   }
 
   async subscribe(callback: (data: any) => void): Promise<void> {
-    const subscriber = getValkeySubscriber();
-    await subscriber.subscribe(this.channel);
-
-    subscriber.on('message', (channel, message) => {
-      if (channel === this.channel) {
-        try {
-          const data = JSON.parse(message);
-          callback(data);
-        } catch (error) {
-          logger.error(`Failed to parse message from channel ${channel}:`, error);
-        }
-      }
-    });
+    throw new Error('ValkeyPubSub is deprecated. Use InMemoryPubSub from in-memory-queue.ts instead.');
   }
 
   async unsubscribe(): Promise<void> {
-    const subscriber = getValkeySubscriber();
-    await subscriber.unsubscribe(this.channel);
+    throw new Error('ValkeyPubSub is deprecated. Use InMemoryPubSub from in-memory-queue.ts instead.');
   }
 }
 
 /**
- * Cache operations
+ * Cache operations - DEPRECATED
  */
 export class ValkeyCache {
   async set(key: string, value: any, ttl?: number): Promise<void> {
-    const client = getValkeyClient();
-    const serialized = JSON.stringify(value);
-
-    if (ttl) {
-      await client.setex(key, ttl, serialized);
-    } else {
-      await client.set(key, serialized);
-    }
+    throw new Error('ValkeyCache is deprecated. Use InMemoryCache from in-memory-queue.ts instead.');
   }
 
   async get<T = any>(key: string): Promise<T | null> {
-    const client = getValkeyClient();
-    const result = await client.get(key);
-    return result ? JSON.parse(result) : null;
+    throw new Error('ValkeyCache is deprecated. Use InMemoryCache from in-memory-queue.ts instead.');
   }
 
   async del(key: string): Promise<void> {
-    const client = getValkeyClient();
-    await client.del(key);
+    throw new Error('ValkeyCache is deprecated. Use InMemoryCache from in-memory-queue.ts instead.');
   }
 
   async exists(key: string): Promise<boolean> {
-    const client = getValkeyClient();
-    return (await client.exists(key)) === 1;
+    throw new Error('ValkeyCache is deprecated. Use InMemoryCache from in-memory-queue.ts instead.');
   }
 
   async expire(key: string, ttl: number): Promise<void> {
-    const client = getValkeyClient();
-    await client.expire(key, ttl);
+    throw new Error('ValkeyCache is deprecated. Use InMemoryCache from in-memory-queue.ts instead.');
   }
 
   async keys(pattern: string): Promise<string[]> {
-    const client = getValkeyClient();
-    return await client.keys(pattern);
+    throw new Error('ValkeyCache is deprecated. Use InMemoryCache from in-memory-queue.ts instead.');
   }
 }
 
 /**
- * Close Valkey connections
+ * Close Valkey connections - DEPRECATED
  */
 export async function closeValkey(): Promise<void> {
-  const promises = [];
-
-  if (client) {
-    promises.push(client.quit());
-  }
-  if (subscriber) {
-    promises.push(subscriber.quit());
-  }
-  if (publisher) {
-    promises.push(publisher.quit());
-  }
-
-  await Promise.all(promises);
-  logger.info('Valkey connections closed');
+  logger.info('Valkey connections are no longer used (deprecated)');
 }

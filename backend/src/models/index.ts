@@ -1,8 +1,8 @@
-import Server from './Server';
-import ServerGroup from './ServerGroup';
-import ServerMap from './ServerMap';
-import ServerMotd from './ServerMotd';
-import ServerStats from './ServerStats';
+import Server from './Server.js';
+import ServerGroup from './ServerGroup.js';
+import ServerMap from './ServerMap.js';
+import ServerMotd from './ServerMotd.js';
+import ServerStats from './ServerStats.js';
 
 // Define associations
 ServerGroup.hasMany(Server, { foreignKey: 'server_group_id' });

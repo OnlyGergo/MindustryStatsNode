@@ -1,8 +1,8 @@
 import dgram from 'dgram';
-import { GameMode, ServerData } from '../../../common/models/serverData';
-import { readString } from '../utils/buffer';
-import {MINDUSTRY_TIMEOUT_MILLISECONDS} from "../const";
-import {createLogger} from "../logger";
+import { GameMode, ServerData } from '../../../common/models/serverData.js';
+import { readString } from '../utils/buffer.js';
+import {MINDUSTRY_TIMEOUT_MILLISECONDS} from '../const.js';
+import {createLogger} from '../logger.js';
 
 // Cache failed attempts to avoid excessive logging
 const failedServersCache = new Set<string>();
