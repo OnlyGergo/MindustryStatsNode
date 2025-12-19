@@ -8,6 +8,7 @@ import SortDropdown from "../SortDropdown.tsx";
 import Tooltip from "../Tooltip.tsx";
 import { useServerList } from "../../hooks/useServerList.ts";
 import {COMMIT, VERSION} from "../../../../common/version.ts";
+import { getConnectionStatusClasses } from "../../theme.ts";
 
 interface MasterPanelProps {
     isCollapsed: boolean;
@@ -64,43 +65,51 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
         sortOptions
     } = useServerList(rawServers);
 
+    const connectionStatusInfo = getConnectionStatusClasses(connectionStatus);
+
     return (
         <div className={`relative transition-all duration-300 ${
             isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-1/3'
         } min-w-0 bg-neutral-900/20 backdrop-blur-md border-r border-neutral-700/50 flex flex-col h-screen`}>
-            {/* Header */}
-            <div className="bg-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center justify-between flex-shrink-0">
+            {/* Header - Improved design with connection status */}
+            <div className="bg-gradient-to-r from-neutral-800/60 to-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
                 {!isCollapsed && (
-                    <div className="bg-neutral-700/60 backdrop-blur-md border border-orange-500/30 px-4 py-2 rounded-lg">
-                        <h1 className="text-xl font-bold text-orange-400">Mindustry Tracker</h1>
+                    <div className="flex items-center gap-3">
+                        {/* Logo/Icon */}
+                        <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-lg shadow-orange-500/20">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        {/* Title and status */}
+                        <div className="flex flex-col">
+                            <h1 className="text-lg sm:text-xl font-bold text-white">
+                                Mindustry <span className="text-orange-400">Tracker</span>
+                            </h1>
+                            <div className="flex items-center gap-1.5">
+                                <Tooltip content={connectionStatusInfo.tooltip} position="bottom" delay={100}>
+                                    <span className={`inline-block w-2 h-2 rounded-full ${connectionStatusInfo.dotColor}`}></span>
+                                </Tooltip>
+                                <span className="text-xs text-gray-500">{VERSION}</span>
+                            </div>
+                        </div>
                     </div>
                 )}
-                <button
-                    onClick={onToggleCollapse}
-                    className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50"
-                >
-                    <svg className={`w-4 h-4 transform transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
+                {/* Only show collapse button on desktop */}
+                {!isMobile && (
+                    <button
+                        onClick={onToggleCollapse}
+                        className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50"
+                    >
+                        <svg className={`w-4 h-4 transform transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                )}
             </div>
 
             {!isCollapsed && (
                 <>
-                    {/* Connection Status */}
-                    <div className="p-4 border-b border-neutral-700/50 flex-shrink-0">
-                        <span className={`px-3 py-1 rounded-full text-xs flex items-center border backdrop-blur-sm ${
-                            connectionStatus === 'connected' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                                connectionStatus === 'reconnecting' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
-                                    'bg-red-500/20 text-red-400 border-red-500/30'
-                        }`}>
-                            <span className="inline-block w-2 h-2 rounded-full bg-current mr-2"></span>
-                            {connectionStatus === 'connected' ? 'Connected' :
-                                connectionStatus === 'reconnecting' ? 'Reconnecting...' :
-                                    'Connection Error'}
-                        </span>
-                    </div>
-
                     {/* Stats */}
                     <div className="p-4 border-b border-neutral-700/50 flex-shrink-0">
                         <div className="grid grid-cols-2 gap-2 text-center">
@@ -219,7 +228,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
 
                     {/* Footer */}
                     <div className="p-4 border-t border-neutral-700/50 flex-shrink-0">
-                        <p className="text-xs text-gray-500">Last updated: {lastUpdated} | Version: {VERSION} | Commit: {COMMIT}</p>
+                        <p className="text-xs text-gray-500">Last updated: {lastUpdated} | Commit: {COMMIT}</p>
                     </div>
                 </>
             )}
