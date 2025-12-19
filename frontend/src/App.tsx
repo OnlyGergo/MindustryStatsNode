@@ -22,19 +22,16 @@ const App: React.FC = () => {
     const {connectionStatus, data} = useWebSocket();
     const { isMobile } = useResponsive();
 
-    // Auto-collapse on mobile
+    // On mobile, always show master panel by default when no server is selected
+    // and ensure it's not in collapsed mode (collapsed mode is only for desktop)
     useEffect(() => {
         if (isMobile) {
-            setIsMasterPanelCollapsed(true);
-        }
-    }, [isMobile]);
-
-    // Auto-hide master panel on mobile when server is selected
-    useEffect(() => {
-        if (isMobile && selectedServer) {
-            setShowMasterPanel(false);
-        } else if (isMobile && !selectedServer) {
-            setShowMasterPanel(true);
+            // On mobile, don't use collapsed mode - use show/hide instead
+            setIsMasterPanelCollapsed(false);
+            // Show master panel by default on mobile when no server selected
+            if (!selectedServer) {
+                setShowMasterPanel(true);
+            }
         }
     }, [isMobile, selectedServer]);
 
@@ -110,8 +107,10 @@ const App: React.FC = () => {
 
     const handleToggleCollapse = () => {
         if (isMobile) {
+            // On mobile, toggle show/hide
             setShowMasterPanel(!showMasterPanel);
         } else {
+            // On desktop, toggle collapse/expand
             setIsMasterPanelCollapsed(!isMasterPanelCollapsed);
         }
     };
@@ -125,10 +124,10 @@ const App: React.FC = () => {
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-orange-600/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
             </div>
 
-            {/* Master Panel */}
+            {/* Master Panel - on mobile, show full screen when showMasterPanel is true */}
             {(!isMobile || showMasterPanel) && (
                 <MasterPanel
-                    isCollapsed={isMasterPanelCollapsed}
+                    isCollapsed={isMobile ? false : isMasterPanelCollapsed}
                     onToggleCollapse={handleToggleCollapse}
                     connectionStatus={connectionStatus}
                     totalServers={totalServers}
@@ -146,7 +145,7 @@ const App: React.FC = () => {
                 />
             )}
 
-            {/* Detail Panel */}
+            {/* Detail Panel - on mobile, show only when showMasterPanel is false */}
             {(!isMobile || !showMasterPanel) && (
                 <DetailPanel
                     selectedServer={selectedServer}

@@ -58,7 +58,7 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({mapHistory}
             <input
                 type="text"
                 placeholder="Search maps or gamemodes..."
-                className="w-full p-3 mb-4 bg-neutral-700/50 border border-neutral-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all"
+                className="w-full p-2 sm:p-3 mb-3 sm:mb-4 bg-neutral-700/50 border border-neutral-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all text-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -69,13 +69,13 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({mapHistory}
                         <table className="min-w-full divide-y divide-neutral-700/50">
                             <thead className="bg-neutral-700/50">
                             <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     Map Name
                                 </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                                    Gamemode
+                                <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                    Mode
                                 </th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                <th scope="col" className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">
                                     From - To
                                 </th>
                             </tr>
@@ -83,23 +83,29 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({mapHistory}
                             <tbody className="bg-neutral-800/30 divide-y divide-neutral-700/50">
                             {paginatedHistory.map((item, index) => (
                                 <tr key={item.id || index} className="hover:bg-neutral-700/30 transition-colors">
-                                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${
+                                    <td className={`px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm font-medium ${
                                         hasMapChanged(item, index) ? 'text-orange-400 bg-orange-500/10' : 'text-white'
                                     }`}>
-                                        {String(removeColors(item.mapName))}
+                                        <div className="break-words max-w-[120px] sm:max-w-none">
+                                            {String(removeColors(item.mapName))}
+                                        </div>
                                         {hasMapChanged(item, index) && (
-                                            <span className="ml-2 text-xs text-orange-400">●</span>
+                                            <span className="ml-1 text-xs text-orange-400">●</span>
                                         )}
+                                        {/* Show date on mobile only */}
+                                        <div className="text-xs text-gray-500 mt-1 sm:hidden">
+                                            {formatDateTimeHuman(item.validFrom)}
+                                        </div>
                                     </td>
-                                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${
+                                    <td className={`px-3 sm:px-6 py-2 sm:py-4 text-xs sm:text-sm ${
                                         hasModeChanged(item, index) ? 'text-orange-400 bg-orange-500/10' : 'text-gray-300'
                                     }`}>
                                         {getGameModeName(item.gameMode)}
                                         {hasModeChanged(item, index) && (
-                                            <span className="ml-2 text-xs text-orange-400">●</span>
+                                            <span className="ml-1 text-xs text-orange-400">●</span>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                                    <td className="px-3 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-400 hidden sm:table-cell">
                                         {formatDateTimeHuman(item.validFrom)} - {item.validTo ? formatDateTimeHuman(item.validTo) : 'Ongoing'}
                                     </td>
                                 </tr>
@@ -108,31 +114,31 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({mapHistory}
                         </table>
                     </div>
 
-                    {/* Pagination Controls */}
+                    {/* Pagination Controls - Mobile friendly */}
                     {totalPages > 1 && (
-                        <div className="flex items-center justify-between mt-4">
-                            <div className="text-sm text-gray-400">
-                                Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredHistory.length)} of {filteredHistory.length}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 sm:mt-4 gap-2 sm:gap-0">
+                            <div className="text-xs sm:text-sm text-gray-400 text-center sm:text-left">
+                                {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredHistory.length)} of {filteredHistory.length}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex justify-center gap-2">
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className={`px-3 py-1 text-sm rounded-lg border transition-colors ${
+                                    className={`px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-colors ${
                                         currentPage === 1
                                             ? 'bg-neutral-700/30 text-gray-500 border-neutral-600/30 cursor-not-allowed'
                                             : 'bg-neutral-700/50 text-gray-300 border-neutral-600/50 hover:bg-neutral-600/50'
                                     }`}
                                 >
-                                    Previous
+                                    Prev
                                 </button>
-                                <span className="px-3 py-1 text-sm text-gray-400">
-                                    Page {currentPage} of {totalPages}
+                                <span className="px-2 py-1.5 text-xs sm:text-sm text-gray-400">
+                                    {currentPage}/{totalPages}
                                 </span>
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className={`px-3 py-1 text-sm rounded-lg border transition-colors ${
+                                    className={`px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-colors ${
                                         currentPage === totalPages
                                             ? 'bg-neutral-700/30 text-gray-500 border-neutral-600/30 cursor-not-allowed'
                                             : 'bg-neutral-700/50 text-gray-300 border-neutral-600/50 hover:bg-neutral-600/50'
@@ -145,7 +151,7 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({mapHistory}
                     )}
                 </>
             ) : (
-                <p className="text-gray-400 text-center py-8">No map history available or matching your search.</p>
+                <p className="text-gray-400 text-center py-6 sm:py-8 text-sm">No map history available or matching your search.</p>
             )}
         </div>
     );

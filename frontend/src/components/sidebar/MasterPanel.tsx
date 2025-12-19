@@ -69,20 +69,23 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
             isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-1/3'
         } min-w-0 bg-neutral-900/20 backdrop-blur-md border-r border-neutral-700/50 flex flex-col h-screen`}>
             {/* Header */}
-            <div className="bg-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center justify-between flex-shrink-0">
+            <div className="bg-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
                 {!isCollapsed && (
-                    <div className="bg-neutral-700/60 backdrop-blur-md border border-orange-500/30 px-4 py-2 rounded-lg">
-                        <h1 className="text-xl font-bold text-orange-400">Mindustry Tracker</h1>
+                    <div className="bg-neutral-700/60 backdrop-blur-md border border-orange-500/30 px-3 sm:px-4 py-2 rounded-lg">
+                        <h1 className="text-lg sm:text-xl font-bold text-orange-400">Mindustry Tracker</h1>
                     </div>
                 )}
-                <button
-                    onClick={onToggleCollapse}
-                    className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50"
-                >
-                    <svg className={`w-4 h-4 transform transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
+                {/* Only show collapse button on desktop */}
+                {!isMobile && (
+                    <button
+                        onClick={onToggleCollapse}
+                        className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50"
+                    >
+                        <svg className={`w-4 h-4 transform transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                )}
             </div>
 
             {!isCollapsed && (
