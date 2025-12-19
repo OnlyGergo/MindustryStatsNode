@@ -320,33 +320,55 @@ export async function getAggregatedHistory(
         }
     } else {
         // Aggregate using time buckets with MAX to preserve peaks
+        // Use a subquery to calculate bucket once, then aggregate
+        const bucketInterval = bucketMinutes >= 1440 ? 'day' : 
+                               bucketMinutes >= 60 ? 'hour' : 'minute';
+        
         if (startDate && endDate) {
             query = `
+                WITH bucketed AS (
+                    SELECT 
+                        CASE 
+                            WHEN :bucketMinutes >= 1440 THEN date_trunc('day', timestamp)
+                            WHEN :bucketMinutes >= 60 THEN date_trunc('hour', timestamp)
+                            ELSE date_trunc('minute', timestamp) - 
+                                (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
+                        END as bucket,
+                        players
+                    FROM server_stats
+                    WHERE server_id = :serverId
+                      AND timestamp >= to_timestamp(:startDate / 1000.0)
+                      AND timestamp <= to_timestamp(:endDate / 1000.0)
+                )
                 SELECT 
-                    extract(epoch from date_trunc('minute', timestamp) - 
-                        (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute') * 1000 as timestamp,
+                    extract(epoch from bucket) * 1000 as timestamp,
                     MAX(players) as players
-                FROM server_stats
-                WHERE server_id = :serverId
-                  AND timestamp >= to_timestamp(:startDate / 1000.0)
-                  AND timestamp <= to_timestamp(:endDate / 1000.0)
-                GROUP BY date_trunc('minute', timestamp) - 
-                    (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
-                ORDER BY timestamp
+                FROM bucketed
+                GROUP BY bucket
+                ORDER BY bucket
             `;
             replacements = { serverId, startDate, endDate, bucketMinutes };
         } else {
             query = `
+                WITH bucketed AS (
+                    SELECT 
+                        CASE 
+                            WHEN :bucketMinutes >= 1440 THEN date_trunc('day', timestamp)
+                            WHEN :bucketMinutes >= 60 THEN date_trunc('hour', timestamp)
+                            ELSE date_trunc('minute', timestamp) - 
+                                (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
+                        END as bucket,
+                        players
+                    FROM server_stats
+                    WHERE server_id = :serverId
+                      AND timestamp > NOW() - interval '${hoursBack} hours'
+                )
                 SELECT 
-                    extract(epoch from date_trunc('minute', timestamp) - 
-                        (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute') * 1000 as timestamp,
+                    extract(epoch from bucket) * 1000 as timestamp,
                     MAX(players) as players
-                FROM server_stats
-                WHERE server_id = :serverId
-                  AND timestamp > NOW() - interval '${hoursBack} hours'
-                GROUP BY date_trunc('minute', timestamp) - 
-                    (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
-                ORDER BY timestamp
+                FROM bucketed
+                GROUP BY bucket
+                ORDER BY bucket
             `;
             replacements = { serverId, bucketMinutes };
         }

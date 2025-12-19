@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState, useCallback} from 'react';
 import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
 
 // Register Chart.js components
@@ -35,6 +35,25 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
     const [chartData, setChartData] = useState<Array<{ timestamp: number; players: number }>>(history);
     const [loading, setLoading] = useState(false);
 
+    const [dateError, setDateError] = useState<string | null>(null);
+
+    // Validate custom date range
+    const validateDateRange = useCallback((): boolean => {
+        if (selectedRange !== 'custom') return true;
+        if (!customStartDate || !customEndDate) {
+            setDateError(null);
+            return false;
+        }
+        const startTs = new Date(customStartDate).getTime();
+        const endTs = new Date(customEndDate).getTime();
+        if (endTs <= startTs) {
+            setDateError('End date must be after start date');
+            return false;
+        }
+        setDateError(null);
+        return true;
+    }, [selectedRange, customStartDate, customEndDate]);
+
     // Fetch history data when range changes
     useEffect(() => {
         const fetchHistoryData = async () => {
@@ -42,6 +61,13 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
                 // Use the initial history data for 1 day (default)
                 setChartData(history);
                 return;
+            }
+
+            if (!validateDateRange()) {
+                if (selectedRange === 'custom') {
+                    setLoading(false);
+                    return;
+                }
             }
 
             setLoading(true);
@@ -52,10 +78,6 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
                     const startTs = new Date(customStartDate).getTime();
                     const endTs = new Date(customEndDate).getTime();
                     url = `/api/servers/${serverId}/history?startDate=${startTs}&endDate=${endTs}`;
-                } else if (selectedRange === 'custom') {
-                    // Don't fetch if custom is selected but dates aren't set
-                    setLoading(false);
-                    return;
                 }
 
                 const response = await fetch(url);
@@ -71,7 +93,7 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
         };
 
         fetchHistoryData();
-    }, [selectedRange, customStartDate, customEndDate, serverId, history]);
+    }, [selectedRange, customStartDate, customEndDate, serverId, history, validateDateRange]);
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -225,6 +247,13 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
                             className="bg-neutral-700/50 border border-neutral-600/50 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                         />
                     </div>
+                </div>
+            )}
+
+            {/* Date Range Error */}
+            {dateError && (
+                <div className="text-red-400 text-sm mb-4">
+                    {dateError}
                 </div>
             )}
 
