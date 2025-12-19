@@ -7,6 +7,7 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import path from "path";
+import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version";
 
 const logger = createLogger('ApiService');
 
@@ -81,7 +82,12 @@ export class ApiService {
         status: 'healthy',
         service: 'mindustry-stats',
         timestamp: new Date().toISOString(),
-        pid: process.pid
+        pid: process.pid,
+        build: {
+            commit: COMMIT,
+            buildDate: BUILD_DATE,
+            version: VERSION
+        }
       });
     });
 

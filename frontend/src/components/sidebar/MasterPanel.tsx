@@ -7,6 +7,7 @@ import ToggleButton from "../ToggleButton.tsx";
 import SortDropdown from "../SortDropdown.tsx";
 import Tooltip from "../Tooltip.tsx";
 import { useServerList } from "../../hooks/useServerList.ts";
+import {COMMIT, VERSION} from "../../../../common/version.ts";
 
 interface MasterPanelProps {
     isCollapsed: boolean;
@@ -218,7 +219,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
 
                     {/* Footer */}
                     <div className="p-4 border-t border-slate-700/50 flex-shrink-0">
-                        <p className="text-xs text-gray-500">Last updated: {lastUpdated}</p>
+                        <p className="text-xs text-gray-500">Last updated: {lastUpdated} | Version: {VERSION} | Build: {COMMIT}</p>
                     </div>
                 </>
             )}
