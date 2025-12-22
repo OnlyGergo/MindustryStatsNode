@@ -34,25 +34,30 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[] }> = ({motdHist
     }, [filteredHistory, currentPage]);
 
     // Detect changes between consecutive items
+    // Data is sorted newest-first, so compare with previous (newer) item
+    // to highlight when this entry differs from what came after it
     const hasNameChanged = (currentItem: ServerMotdData, index: number): boolean => {
         const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
-        if (globalIndex >= filteredHistory.length - 1) return false;
-        const nextItem = filteredHistory[globalIndex + 1];
-        return nextItem && removeColors(currentItem.serverName) !== removeColors(nextItem.serverName);
+        // Compare with the previous (newer) entry in the sorted list
+        if (globalIndex === 0) return false;
+        const previousItem = filteredHistory[globalIndex - 1];
+        return previousItem && removeColors(currentItem.serverName) !== removeColors(previousItem.serverName);
     };
 
     const hasDescriptionChanged = (currentItem: ServerMotdData, index: number): boolean => {
         const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
-        if (globalIndex >= filteredHistory.length - 1) return false;
-        const nextItem = filteredHistory[globalIndex + 1];
-        return nextItem && removeColors(currentItem.description) !== removeColors(nextItem.description);
+        // Compare with the previous (newer) entry in the sorted list
+        if (globalIndex === 0) return false;
+        const previousItem = filteredHistory[globalIndex - 1];
+        return previousItem && removeColors(currentItem.description) !== removeColors(previousItem.description);
     };
 
     const hasModeNameChanged = (currentItem: ServerMotdData, index: number): boolean => {
         const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
-        if (globalIndex >= filteredHistory.length - 1) return false;
-        const nextItem = filteredHistory[globalIndex + 1];
-        return nextItem && currentItem.modeName !== nextItem.modeName;
+        // Compare with the previous (newer) entry in the sorted list
+        if (globalIndex === 0) return false;
+        const previousItem = filteredHistory[globalIndex - 1];
+        return previousItem && currentItem.modeName !== previousItem.modeName;
     };
 
     // Reset to page 1 when search changes

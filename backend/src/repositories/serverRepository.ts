@@ -173,7 +173,7 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
             ping,
             online
         FROM server_stats
-        WHERE timestamp > NOW() - interval '${hoursBack} hours'
+        WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
         ORDER BY server_id, timestamp DESC),
             history_data AS (
         SELECT server_id, json_agg(
@@ -183,7 +183,7 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
             ORDER BY timestamp
             ) as history_json
         FROM server_stats
-        WHERE timestamp > NOW() - interval '${hoursBack} hours'
+        WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
         GROUP BY server_id)
         SELECT s.id,
                sg.name,
@@ -213,7 +213,8 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
                  LEFT JOIN server_groups sg ON s.server_group_id = sg.id
         ORDER BY sg.name, s.host, s.port
     `, {
-        type: "SELECT"
+        replacements: { hoursBack },
+        type: QueryTypes.SELECT
     })
 
     return result.map((row: any) => {
@@ -313,16 +314,14 @@ export async function getAggregatedHistory(
                     players
                 FROM server_stats
                 WHERE server_id = :serverId
-                  AND timestamp > NOW() - interval '${hoursBack} hours'
+                  AND timestamp > NOW() - interval '1 hour' * :hoursBack
                 ORDER BY timestamp
             `;
-            replacements = { serverId };
+            replacements = { serverId, hoursBack };
         }
     } else {
         // Aggregate using time buckets with MAX to preserve peaks
         // Use a subquery to calculate bucket once, then aggregate
-        const bucketInterval = bucketMinutes >= 1440 ? 'day' : 
-                               bucketMinutes >= 60 ? 'hour' : 'minute';
         
         if (startDate && endDate) {
             query = `
@@ -361,7 +360,7 @@ export async function getAggregatedHistory(
                         players
                     FROM server_stats
                     WHERE server_id = :serverId
-                      AND timestamp > NOW() - interval '${hoursBack} hours'
+                      AND timestamp > NOW() - interval '1 hour' * :hoursBack
                 )
                 SELECT 
                     extract(epoch from bucket) * 1000 as timestamp,
@@ -370,17 +369,17 @@ export async function getAggregatedHistory(
                 GROUP BY bucket
                 ORDER BY bucket
             `;
-            replacements = { serverId, bucketMinutes };
+            replacements = { serverId, bucketMinutes, hoursBack };
         }
     }
 
     const result = await sequelize.query(query, {
         replacements,
-        type: 'SELECT'
-    }) as Array<{ timestamp: string; players: number }>;
+        type: QueryTypes.SELECT
+    }) as Array<{ timestamp: number; players: number }>;
 
     return result.map((row) => ({
-        timestamp: parseFloat(row.timestamp),
+        timestamp: Number(row.timestamp),
         players: row.players
     }));
 }

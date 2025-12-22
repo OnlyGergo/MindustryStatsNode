@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState, useCallback} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
 
 // Register Chart.js components
@@ -34,43 +34,50 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
     const [customEndDate, setCustomEndDate] = useState<string>('');
     const [chartData, setChartData] = useState<Array<{ timestamp: number; players: number }>>(history);
     const [loading, setLoading] = useState(false);
-
+    const [fetchError, setFetchError] = useState<string | null>(null);
     const [dateError, setDateError] = useState<string | null>(null);
 
-    // Validate custom date range
-    const validateDateRange = useCallback((): boolean => {
-        if (selectedRange !== 'custom') return true;
-        if (!customStartDate || !customEndDate) {
-            setDateError(null);
-            return false;
-        }
-        const startTs = new Date(customStartDate).getTime();
-        const endTs = new Date(customEndDate).getTime();
-        if (endTs <= startTs) {
-            setDateError('End date must be after start date');
-            return false;
-        }
-        setDateError(null);
-        return true;
-    }, [selectedRange, customStartDate, customEndDate]);
+    // Get today's date for max attribute on date inputs
+    const today = new Date().toISOString().split('T')[0];
 
     // Fetch history data when range changes
     useEffect(() => {
         const fetchHistoryData = async () => {
-            if (selectedRange === '1d') {
-                // Use the initial history data for 1 day (default)
-                setChartData(history);
-                return;
-            }
-
-            if (!validateDateRange()) {
-                if (selectedRange === 'custom') {
-                    setLoading(false);
+            // Validate custom date range inline
+            if (selectedRange === 'custom') {
+                if (!customStartDate || !customEndDate) {
+                    setDateError(null);
                     return;
                 }
+                const startTs = new Date(customStartDate).getTime();
+                const endTs = new Date(customEndDate).getTime();
+                if (endTs <= startTs) {
+                    setDateError('End date must be after start date');
+                    return;
+                }
+                setDateError(null);
+            }
+
+            if (selectedRange === '1d') {
+                // For 1 day, validate that history prop actually spans ~24 hours
+                if (Array.isArray(history) && history.length > 0) {
+                    const timestamps = history.map((entry) => entry.timestamp);
+                    const minTimestamp = Math.min(...timestamps);
+                    const maxTimestamp = Math.max(...timestamps);
+                    const oneDayMs = 24 * 60 * 60 * 1000;
+
+                    if (maxTimestamp - minTimestamp <= oneDayMs) {
+                        setChartData(history);
+                        setFetchError(null);
+                        return;
+                    }
+                }
+                // If the provided history does not represent approximately 1 day,
+                // fall through and fetch 1-day data from the API.
             }
 
             setLoading(true);
+            setFetchError(null);
             try {
                 let url = `/api/servers/${serverId}/history?range=${selectedRange}`;
                 
@@ -84,16 +91,20 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
                 if (response.ok) {
                     const data = await response.json();
                     setChartData(data);
+                } else {
+                    console.error('Failed to fetch history data. Status:', response.status, response.statusText);
+                    setFetchError('Unable to load server history data. Please try again later.');
                 }
             } catch (error) {
                 console.error('Error fetching history data:', error);
+                setFetchError('An error occurred while loading server history data. Please try again later.');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchHistoryData();
-    }, [selectedRange, customStartDate, customEndDate, serverId, history, validateDateRange]);
+    }, [selectedRange, customStartDate, customEndDate, serverId, history]);
 
     useEffect(() => {
         if (!chartRef.current) return;
@@ -230,19 +241,23 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
             {selectedRange === 'custom' && (
                 <div className="flex gap-4 mb-4">
                     <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-400">From:</label>
+                        <label htmlFor="custom-start-date" className="text-sm text-gray-400">From:</label>
                         <input
+                            id="custom-start-date"
                             type="date"
                             value={customStartDate}
+                            max={today}
                             onChange={(e) => setCustomStartDate(e.target.value)}
                             className="bg-neutral-700/50 border border-neutral-600/50 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-400">To:</label>
+                        <label htmlFor="custom-end-date" className="text-sm text-gray-400">To:</label>
                         <input
+                            id="custom-end-date"
                             type="date"
                             value={customEndDate}
+                            max={today}
                             onChange={(e) => setCustomEndDate(e.target.value)}
                             className="bg-neutral-700/50 border border-neutral-600/50 rounded-lg px-3 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                         />
@@ -254,6 +269,13 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
             {dateError && (
                 <div className="text-red-400 text-sm mb-4">
                     {dateError}
+                </div>
+            )}
+
+            {/* Fetch Error */}
+            {fetchError && (
+                <div className="text-red-400 text-sm mb-4 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                    {fetchError}
                 </div>
             )}
 

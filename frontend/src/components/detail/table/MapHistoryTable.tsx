@@ -34,18 +34,22 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({mapHistory}
     }, [filteredHistory, currentPage]);
 
     // Detect changes between consecutive items
+    // Data is sorted newest-first, so compare with previous (newer) item
+    // to highlight when this entry differs from what came after it
     const hasMapChanged = (currentItem: ServerMapData, index: number): boolean => {
         const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
-        if (globalIndex >= filteredHistory.length - 1) return false;
-        const nextItem = filteredHistory[globalIndex + 1];
-        return nextItem && removeColors(currentItem.mapName) !== removeColors(nextItem.mapName);
+        // Compare with the previous (newer) entry in the sorted list
+        if (globalIndex === 0) return false;
+        const prevItem = filteredHistory[globalIndex - 1];
+        return prevItem && removeColors(currentItem.mapName) !== removeColors(prevItem.mapName);
     };
 
     const hasModeChanged = (currentItem: ServerMapData, index: number): boolean => {
         const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
-        if (globalIndex >= filteredHistory.length - 1) return false;
-        const nextItem = filteredHistory[globalIndex + 1];
-        return nextItem && currentItem.gameMode !== nextItem.gameMode;
+        // Compare with the previous (newer) entry in the sorted list
+        if (globalIndex === 0) return false;
+        const prevItem = filteredHistory[globalIndex - 1];
+        return prevItem && currentItem.gameMode !== prevItem.gameMode;
     };
 
     // Reset to page 1 when search changes

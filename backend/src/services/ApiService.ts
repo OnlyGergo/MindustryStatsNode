@@ -238,14 +238,16 @@ export class ApiService {
    * Get MOTD history with pagination (no caching for paginated requests)
    */
   private async getServerMotdHistory(id: number, page: number = 1, perPage: number = 20) {
-    return await serverRepository.getMotdHistory(id, page, perPage);
+    const result = await serverRepository.getMotdHistory(id, page, perPage);
+    return result.data;
   }
 
   /**
    * Get map history with pagination (no caching for paginated requests)
    */
   private async getServerMapHistory(id: number, page: number = 1, perPage: number = 20) {
-    return await serverRepository.getMapHistory(id, page, perPage);
+    const result = await serverRepository.getMapHistory(id, page, perPage);
+    return result.data;
   }
 
   /**
@@ -260,6 +262,13 @@ export class ApiService {
     // Calculate time range and aggregation bucket size
     let hoursBack: number;
     let bucketMinutes: number;
+
+    // Validate range parameter
+    const validRanges = ['1d', '7d', '14d', '3m', '12m'];
+    if (range && !validRanges.includes(range) && range !== 'custom') {
+      // Invalid range, use default
+      range = '1d';
+    }
 
     switch (range) {
       case '7d':

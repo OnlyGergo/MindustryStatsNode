@@ -9,7 +9,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ serverId, className }) => {
     const [copied, setCopied] = useState(false);
 
     const handleShare = async () => {
-        const shareUrl = `${window.location.origin}/server/${serverId}`;
+        const shareUrl = `${window.location.origin}${window.location.pathname}?serverId=${serverId}`;
         
         // Try native share first (works on mobile)
         if (navigator.share) {
