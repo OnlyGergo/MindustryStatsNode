@@ -1,3 +1,6 @@
+// Re-export from common module
+export { countryCodeToFlag } from '../../../common/utils';
+
 export const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString();
 };
@@ -37,19 +40,4 @@ export const formatDateTimeHuman = (date: Date): string => {
         });
         return `${dateStr} ${timeStr}`;
     }
-};
-
-/**
- * Convert a 2-letter country code to a flag emoji
- */
-export const countryCodeToFlag = (countryCode: string | null | undefined): string => {
-    if (!countryCode || countryCode.length !== 2) {
-        return '🌐'; // Globe emoji for unknown
-    }
-
-    const codePoints = countryCode
-        .toUpperCase()
-        .split('')
-        .map((char) => 127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
 };

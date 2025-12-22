@@ -51,7 +51,8 @@ const App: React.FC = () => {
                 
                 if (serverIdParam) {
                     const serverId = parseInt(serverIdParam, 10);
-                    if (!isNaN(serverId)) {
+                    // Validate serverId is a positive integer within reasonable bounds
+                    if (!isNaN(serverId) && serverId > 0 && serverId < 1000000) {
                         const servers = data.data as ServerWithHistory[];
                         const targetServer = servers.find(s => s.id === serverId);
                         

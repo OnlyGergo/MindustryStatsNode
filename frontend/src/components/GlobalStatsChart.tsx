@@ -37,8 +37,12 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({ onClose }) => {
             setLoading(true);
             setFetchError(null);
 
+            // Validate selectedRange is one of the expected values
+            const validRanges: DateRangeOption[] = ['1d', '7d', '14d', '3m', '12m'];
+            const range = validRanges.includes(selectedRange) ? selectedRange : '1d';
+
             try {
-                const response = await fetch(`/api/global/history?range=${selectedRange}`);
+                const response = await fetch(`/api/global/history?range=${range}`);
                 if (response.ok) {
                     const data = await response.json();
                     setChartData(data);

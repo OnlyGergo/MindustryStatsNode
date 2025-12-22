@@ -417,13 +417,21 @@ export async function getGlobalPlayerHistory(
     let query: string;
 
     if (bucketMinutes === 0) {
-        // No aggregation - return raw sums per timestamp
+        // No aggregation - but still use MAX per server at each timestamp to avoid counting duplicates
         query = `
+            WITH server_players AS (
+                SELECT 
+                    timestamp,
+                    server_id,
+                    MAX(players) as max_players
+                FROM server_stats
+                WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
+                GROUP BY timestamp, server_id
+            )
             SELECT 
                 extract(epoch from timestamp) * 1000 as timestamp,
-                SUM(players) as players
-            FROM server_stats
-            WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
+                SUM(max_players) as players
+            FROM server_players
             GROUP BY timestamp
             ORDER BY timestamp
         `;

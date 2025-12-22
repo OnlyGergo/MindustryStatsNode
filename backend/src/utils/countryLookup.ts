@@ -2,6 +2,9 @@ import ip3country from 'ip3country';
 import dns from 'dns';
 import { createLogger } from '../logger.js';
 
+// Re-export from common module for convenience
+export { countryCodeToFlag } from '../../../common/utils.js';
+
 const logger = createLogger('CountryLookup');
 
 let initialized = false;
@@ -62,19 +65,4 @@ export async function lookupCountry(hostOrIp: string): Promise<string | null> {
         logger.warn(`Error looking up country for ${hostOrIp}:`, error);
         return null;
     }
-}
-
-/**
- * Convert a 2-letter country code to a flag emoji
- */
-export function countryCodeToFlag(countryCode: string | null | undefined): string {
-    if (!countryCode || countryCode.length !== 2) {
-        return '🌐'; // Globe emoji for unknown
-    }
-
-    const codePoints = countryCode
-        .toUpperCase()
-        .split('')
-        .map((char) => 127397 + char.charCodeAt(0));
-    return String.fromCodePoint(...codePoints);
 }
