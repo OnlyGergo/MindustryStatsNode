@@ -211,6 +211,21 @@ export class ApiService {
       }
     });
 
+    // Global player history endpoint
+    this.app.get('/api/global/history', async (req, res) => {
+      try {
+        const { range } = req.query;
+        const history = await this.getGlobalHistory(range as string | undefined);
+
+        logger.debug(`Served global history with range ${range || '1d'}`);
+        res.json(history);
+
+      } catch (error) {
+        logger.error('Failed to fetch global history:', error);
+        res.status(500).json({ error: 'Failed to fetch global history' });
+      }
+    });
+
     // Expose web files
     this.app.use(express.static(path.join(process.cwd(), 'public')));
   }
@@ -320,6 +335,46 @@ export class ApiService {
       endDate
     );
 
+    return history;
+  }
+
+  /**
+   * Get global player history across all servers
+   */
+  private async getGlobalHistory(range?: string) {
+    // Calculate time range and aggregation bucket size
+    let hoursBack: number;
+    let bucketMinutes: number;
+
+    // Validate range parameter
+    const validRanges = ['1d', '7d', '14d', '3m', '12m'];
+    if (range && !validRanges.includes(range)) {
+      range = '1d';
+    }
+
+    switch (range) {
+      case '7d':
+        hoursBack = 168;
+        bucketMinutes = 60; // 1 hour buckets
+        break;
+      case '14d':
+        hoursBack = 336;
+        bucketMinutes = 120; // 2 hour buckets
+        break;
+      case '3m':
+        hoursBack = 2190;
+        bucketMinutes = 360; // 6 hour buckets
+        break;
+      case '12m':
+        hoursBack = 8760;
+        bucketMinutes = 1440; // 24 hour buckets
+        break;
+      default:
+        hoursBack = 24;
+        bucketMinutes = 0; // No aggregation for 1 day
+    }
+
+    const history = await serverRepository.getGlobalPlayerHistory(hoursBack, bucketMinutes);
     return history;
   }
 }

@@ -9,6 +9,7 @@ import { ServerCollectorService, RawServerData } from './services/ServerCollecto
 import { ServerProcessorService } from './services/ServerProcessorService.js';
 import { ApiService } from './services/ApiService.js';
 import { WebSocketService } from './services/WebSocketService.js';
+import { initCountryLookup } from './utils/countryLookup.js';
 import os from 'os';
 
 const logger = createLogger('Main');
@@ -52,6 +53,9 @@ class MindustryStatsApp {
 
       // Initialize database
       await initDatabase();
+
+      // Initialize country lookup for IP-to-country resolution
+      initCountryLookup();
 
       // Load configurations
       const baseConfig = loadBaseConfig();

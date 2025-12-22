@@ -11,6 +11,7 @@ import {
 import {ServerListElement} from '../models/ServerListElement.js';
 import {createLogger} from '../logger.js';
 import {QueryTypes} from "sequelize";
+import { lookupCountry } from '../utils/countryLookup.js';
 
 const logger = createLogger("Repository");
 
@@ -47,6 +48,25 @@ export async function updateServerLastSeen(
         { last_seen: new Date() },
         { where: { id: serverId } }
     );
+}
+
+// Update country code for a server based on its host IP
+export async function updateServerCountryCode(
+    serverId: number,
+    host: string
+): Promise<void> {
+    try {
+        const countryCode = await lookupCountry(host);
+        if (countryCode) {
+            await Server.update(
+                { country_code: countryCode },
+                { where: { id: serverId } }
+            );
+            logger.debug(`Updated country code for server ${serverId} to ${countryCode}`);
+        }
+    } catch (error) {
+        logger.warn(`Failed to update country code for server ${serverId}:`, error);
+    }
 }
 
 // Save server stats
@@ -189,6 +209,7 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
                sg.name,
                s.host,
                s.port,
+               s.country_code,
                s.updated_at                         as "lastUpdated",
                s.last_seen,
                stats.online,
@@ -226,7 +247,8 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
             history: row.history,
             online: row.online || false,
             lastSeen: row.last_seen,
-            lastUpdated: row.lastUpdated?.getTime() || Date.now()
+            lastUpdated: row.lastUpdated?.getTime() || Date.now(),
+            countryCode: row.country_code || null
         };
 
         // Only add currentData if we have stats
@@ -384,6 +406,71 @@ export async function getAggregatedHistory(
     }));
 }
 
+/**
+ * Get aggregated global player history (sum of all servers' players over time)
+ * Uses MAX per server within each time bucket, then sums across servers
+ */
+export async function getGlobalPlayerHistory(
+    hoursBack: number = 24,
+    bucketMinutes: number = 0
+): Promise<Array<{ timestamp: number; players: number }>> {
+    let query: string;
+
+    if (bucketMinutes === 0) {
+        // No aggregation - return raw sums per timestamp
+        query = `
+            SELECT 
+                extract(epoch from timestamp) * 1000 as timestamp,
+                SUM(players) as players
+            FROM server_stats
+            WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
+            GROUP BY timestamp
+            ORDER BY timestamp
+        `;
+    } else {
+        // Aggregate using time buckets - MAX per server, then SUM across servers
+        query = `
+            WITH bucketed AS (
+                SELECT 
+                    server_id,
+                    CASE 
+                        WHEN :bucketMinutes >= 1440 THEN date_trunc('day', timestamp)
+                        WHEN :bucketMinutes >= 60 THEN date_trunc('hour', timestamp)
+                        ELSE date_trunc('minute', timestamp) - 
+                            (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
+                    END as bucket,
+                    players
+                FROM server_stats
+                WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
+            ),
+            server_max AS (
+                SELECT 
+                    bucket,
+                    server_id,
+                    MAX(players) as max_players
+                FROM bucketed
+                GROUP BY bucket, server_id
+            )
+            SELECT 
+                extract(epoch from bucket) * 1000 as timestamp,
+                SUM(max_players) as players
+            FROM server_max
+            GROUP BY bucket
+            ORDER BY bucket
+        `;
+    }
+
+    const result = await sequelize.query(query, {
+        replacements: { hoursBack, bucketMinutes },
+        type: QueryTypes.SELECT
+    }) as Array<{ timestamp: number; players: number }>;
+
+    return result.map((row) => ({
+        timestamp: Number(row.timestamp),
+        players: Number(row.players)
+    }));
+}
+
 // Get detailed information about a specific server
 export async function getServer(
     serverId: number
@@ -477,13 +564,28 @@ export async function ensureServers(servers: ServerListElement[]): Promise<void>
                 const [host, portStr] = address.split(':');
                 const port = portStr ? parseInt(portStr, 10) : 6567;
 
-                await sequelize.query(
+                // Add server to database
+                const result = await sequelize.query(
                     `SELECT add_server_and_group(:name, :host, :port);`,
                     {
                         replacements: { name: server.name, host, port },
                         type: QueryTypes.SELECT
                     }
                 );
+
+                // Look up and update country code for the server
+                // Find the server ID and update country code if not already set
+                const serverRecord = await Server.findOne({
+                    where: { host, port }
+                });
+
+                if (serverRecord && !serverRecord.country_code) {
+                    const countryCode = await lookupCountry(host);
+                    if (countryCode) {
+                        await serverRecord.update({ country_code: countryCode });
+                        logger.debug(`Set country code for ${host}:${port} to ${countryCode}`);
+                    }
+                }
             }
         }
     } catch (error) {

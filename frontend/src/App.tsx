@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ServerWithHistory } from  '../../common/models/serverData';
 import MasterPanel from './components/sidebar/MasterPanel';
 import DetailPanel from './components/detail/DetailPanel';
@@ -18,6 +18,9 @@ const App: React.FC = () => {
     const [isMasterPanelCollapsed, setIsMasterPanelCollapsed] = useState<boolean>(false);
     const [showMasterPanel, setShowMasterPanel] = useState<boolean>(true);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    
+    // Track if we've handled the initial URL serverId
+    const initialServerIdHandled = useRef(false);
 
     const {connectionStatus, data} = useWebSocket();
     const { isMobile } = useResponsive();
@@ -40,8 +43,30 @@ const App: React.FC = () => {
             processServerData(data.data);
             setLastUpdated(new Date().toLocaleString());
             setLoading(false);
+            
+            // Handle URL-based server selection on initial data load
+            if (!initialServerIdHandled.current && data?.data) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const serverIdParam = urlParams.get('serverId');
+                
+                if (serverIdParam) {
+                    const serverId = parseInt(serverIdParam, 10);
+                    if (!isNaN(serverId)) {
+                        const servers = data.data as ServerWithHistory[];
+                        const targetServer = servers.find(s => s.id === serverId);
+                        
+                        if (targetServer) {
+                            setSelectedServer(targetServer);
+                            if (isMobile) {
+                                setShowMasterPanel(false);
+                            }
+                            initialServerIdHandled.current = true;
+                        }
+                    }
+                }
+            }
         }
-    }, [data]);
+    }, [data, isMobile]);
 
     const processServerData = (servers: ServerWithHistory[]) => {
         if (!servers || !Array.isArray(servers)) {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ServerGroup from './ServerGroup';
 import FlatServerList from './FlatServerList';
 import {ServerWithHistory} from "../../../../common/models/serverData.ts";
@@ -9,6 +9,7 @@ import Tooltip from "../Tooltip.tsx";
 import { useServerList } from "../../hooks/useServerList.ts";
 import {COMMIT, VERSION} from "../../../../common/version.ts";
 import { getConnectionStatusClasses } from "../../theme.ts";
+import GlobalStatsChart from "../GlobalStatsChart.tsx";
 
 interface MasterPanelProps {
     isCollapsed: boolean;
@@ -66,8 +67,15 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
     } = useServerList(rawServers);
 
     const connectionStatusInfo = getConnectionStatusClasses(connectionStatus);
+    const [showGlobalStats, setShowGlobalStats] = useState(false);
 
     return (
+        <>
+        {/* Global Stats Modal */}
+        {showGlobalStats && (
+            <GlobalStatsChart onClose={() => setShowGlobalStats(false)} />
+        )}
+        
         <div className={`relative transition-all duration-300 ${
             isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-1/3'
         } min-w-0 bg-neutral-900/20 backdrop-blur-md border-r border-neutral-700/50 flex flex-col h-screen`}>
@@ -121,8 +129,18 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                     <span className="text-lg font-bold text-white">{totalServers}</span>
                                 </div>
                             </div>
-                            <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 p-2 rounded-lg">
-                                <div className="text-gray-400 text-xs">Total Players</div>
+                            <div 
+                                className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 p-2 rounded-lg cursor-pointer hover:bg-neutral-700/30 hover:border-orange-500/30 transition-all group"
+                                onClick={() => setShowGlobalStats(true)}
+                            >
+                                <div className="text-gray-400 text-xs flex items-center justify-center gap-1">
+                                    Total Players
+                                    <Tooltip content="View global player history" position="top" delay={200}>
+                                        <svg className="w-3.5 h-3.5 text-gray-500 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        </svg>
+                                    </Tooltip>
+                                </div>
                                 <div className="text-lg font-bold text-orange-400 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">{totalPlayers}</div>
                             </div>
                         </div>
@@ -233,6 +251,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                 </>
             )}
         </div>
+        </>
     );
 };
 

@@ -39,6 +39,7 @@ export interface ServerWithHistory {
   lastUpdated?: number;
   online: boolean;
   consecutiveFailures?: number;
+  countryCode?: string | null;
 }
 
 export interface ServerMotdData {

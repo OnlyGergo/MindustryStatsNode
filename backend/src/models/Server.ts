@@ -10,6 +10,7 @@ class Server extends Model {
   declare created_at: Date;
   declare updated_at: Date;
   declare last_seen: Date | null;
+  declare country_code: string | null;
 }
 
 Server.init({
@@ -44,6 +45,10 @@ Server.init({
   },
   last_seen: {
     type: DataTypes.DATE,
+    allowNull: true
+  },
+  country_code: {
+    type: DataTypes.STRING(2),
     allowNull: true
   }
 }, {

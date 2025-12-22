@@ -1,5 +1,6 @@
 import React from 'react';
 import {formatUnsafeText, removeColors} from "../../util/mindustry.ts";
+import {countryCodeToFlag} from "../../util/general.ts";
 
 const ServerItem: React.FC<{
     server: any;
@@ -11,6 +12,8 @@ const ServerItem: React.FC<{
     const statusClass = server.online
         ? 'bg-green-500/20 text-green-400 border-green-500/30'
         : 'bg-red-500/20 text-red-400 border-red-500/30';
+    
+    const flagEmoji = countryCodeToFlag(server.countryCode);
 
     return (
         <div
@@ -23,8 +26,9 @@ const ServerItem: React.FC<{
         >
             <div className="flex flex-col flex-1 min-w-0 mr-4">
                 {serverData?.serverName && (
-                    <div className="text-sm font-bold text-white truncate mb-1">
-                        {String(removeColors(serverData.serverName))}
+                    <div className="text-sm font-bold text-white truncate mb-1 flex items-center gap-1.5">
+                        <span className="text-base" title={server.countryCode || 'Unknown'}>{flagEmoji}</span>
+                        <span>{String(removeColors(serverData.serverName))}</span>
                     </div>
                 )}
 
