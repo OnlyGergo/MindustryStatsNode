@@ -363,7 +363,7 @@ export class ApiService {
         break;
       case '3m':
         hoursBack = 2190;
-        bucketMinutes = 360; // 6 hour buckets
+        bucketMinutes = 480; // 8 hour buckets
         break;
       case '12m':
         hoursBack = 8760;
@@ -371,7 +371,7 @@ export class ApiService {
         break;
       default:
         hoursBack = 24;
-        bucketMinutes = 0; // No aggregation for 1 day
+        bucketMinutes = 10; // 10 minutes to avoid the duplication
     }
 
     const history = await serverRepository.getGlobalPlayerHistory(hoursBack, bucketMinutes);
