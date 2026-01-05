@@ -347,18 +347,15 @@ export async function getAggregatedHistory(
         }
     } else {
         // Aggregate using time buckets with MAX to preserve peaks
-        // Use a subquery to calculate bucket once, then aggregate
+        // Use epoch-based bucketing to properly respect bucketMinutes size
+        // This floors the epoch seconds to the nearest bucket boundary
+        const bucketSeconds = bucketMinutes * 60;
         
         if (startDate && endDate) {
             query = `
                 WITH bucketed AS (
                     SELECT 
-                        CASE 
-                            WHEN :bucketMinutes >= 1440 THEN date_trunc('day', timestamp)
-                            WHEN :bucketMinutes >= 60 THEN date_trunc('hour', timestamp)
-                            ELSE date_trunc('minute', timestamp) - 
-                                (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
-                        END as bucket,
+                        to_timestamp(floor(extract(epoch from timestamp) / :bucketSeconds) * :bucketSeconds) as bucket,
                         players
                     FROM server_stats
                     WHERE server_id = :serverId
@@ -373,17 +370,12 @@ export async function getAggregatedHistory(
                 GROUP BY bucket
                 ORDER BY bucket
             `;
-            replacements = { serverId, startDate, endDate, bucketMinutes };
+            replacements = { serverId, startDate, endDate, bucketSeconds };
         } else {
             query = `
                 WITH bucketed AS (
                     SELECT 
-                        CASE 
-                            WHEN :bucketMinutes >= 1440 THEN date_trunc('day', timestamp)
-                            WHEN :bucketMinutes >= 60 THEN date_trunc('hour', timestamp)
-                            ELSE date_trunc('minute', timestamp) - 
-                                (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
-                        END as bucket,
+                        to_timestamp(floor(extract(epoch from timestamp) / :bucketSeconds) * :bucketSeconds) as bucket,
                         players
                     FROM server_stats
                     WHERE server_id = :serverId
@@ -397,7 +389,7 @@ export async function getAggregatedHistory(
                 GROUP BY bucket
                 ORDER BY bucket
             `;
-            replacements = { serverId, bucketMinutes, hoursBack };
+            replacements = { serverId, bucketSeconds, hoursBack };
         }
     }
 
@@ -421,6 +413,7 @@ export async function getGlobalPlayerHistory(
     bucketMinutes: number = 0
 ): Promise<Array<{ timestamp: number; players: number }>> {
     let query: string;
+    let replacements: Record<string, unknown>;
 
     if (bucketMinutes === 0) {
         // No aggregation - but still use MAX per server at each timestamp to avoid counting duplicates
@@ -442,18 +435,16 @@ export async function getGlobalPlayerHistory(
             GROUP BY timestamp
             ORDER BY timestamp
         `;
+        replacements = { hoursBack };
     } else {
         // Aggregate using time buckets - MAX per server, then SUM across servers
+        // Use epoch-based bucketing to properly respect bucketMinutes size
+        const bucketSeconds = bucketMinutes * 60;
         query = `
             WITH bucketed AS (
                 SELECT 
                     server_id,
-                    CASE 
-                        WHEN :bucketMinutes >= 1440 THEN date_trunc('day', timestamp)
-                        WHEN :bucketMinutes >= 60 THEN date_trunc('hour', timestamp)
-                        ELSE date_trunc('minute', timestamp) - 
-                            (extract(minute from timestamp)::integer % :bucketMinutes) * interval '1 minute'
-                    END as bucket,
+                    to_timestamp(floor(extract(epoch from timestamp) / :bucketSeconds) * :bucketSeconds) as bucket,
                     players
                 FROM server_stats
                 WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
@@ -474,10 +465,11 @@ export async function getGlobalPlayerHistory(
             GROUP BY bucket
             ORDER BY bucket
         `;
+        replacements = { hoursBack, bucketSeconds };
     }
 
     const result = await sequelize.query(query, {
-        replacements: { hoursBack, bucketMinutes },
+        replacements,
         type: QueryTypes.SELECT
     }) as Array<{ timestamp: number; players: number }>;
 
