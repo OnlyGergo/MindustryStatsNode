@@ -6,6 +6,8 @@ set -e
 # Clean up from last time
 echo "Cleaning up..."
 rm -rf ./build
+rm -rf ./frontend/dist
+rm -rf ./backend/dist
 
 # Create build folders
 mkdir -p ./build/public/
