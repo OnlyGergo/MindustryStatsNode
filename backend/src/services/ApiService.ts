@@ -1,8 +1,8 @@
-import { createLogger } from '../logger.js';
-import { InMemoryCache } from '../utils/in-memory-queue.js';
-import { CACHE_KEYS, CACHE_TTL } from '../shared/constants.js';
+import {createLogger} from '../logger.js';
+import {InMemoryCache} from '../utils/in-memory-queue.js';
+import {CACHE_KEYS, CACHE_TTL} from '../shared/constants.js';
 import * as serverRepository from '../repositories/serverRepository.js';
-import { ApiServiceConfig } from '../shared/config.js';
+import {ApiServiceConfig} from '../shared/config.js';
 import express from 'express';
 import cors from 'cors';
 import http from 'http';
@@ -285,96 +285,75 @@ export class ApiService {
       range = '1d';
     }
 
-    switch (range) {
-      case '7d':
-        hoursBack = 168;
-        bucketMinutes = 60; // 1 hour buckets
-        break;
-      case '14d':
-        hoursBack = 336;
-        bucketMinutes = 120; // 2 hour buckets
-        break;
-      case '3m':
-        hoursBack = 2190;
-        bucketMinutes = 360; // 6 hour buckets
-        break;
-      case '12m':
-        hoursBack = 8760;
-        bucketMinutes = 1440; // 24 hour buckets
-        break;
-      default:
-        hoursBack = 24;
-        bucketMinutes = 0; // No aggregation for 1 day
-    }
-
     // For custom range, calculate from timestamps
     if (startDate && endDate) {
       const diffMs = endDate - startDate;
       const diffHours = diffMs / (1000 * 60 * 60);
       hoursBack = Math.ceil(diffHours);
-      
+
       // Determine bucket size based on time span
-      if (diffHours <= 24) {
-        bucketMinutes = 0;
-      } else if (diffHours <= 168) {
-        bucketMinutes = 60;
-      } else if (diffHours <= 336) {
-        bucketMinutes = 120;
-      } else if (diffHours <= 2190) {
-        bucketMinutes = 360;
-      } else {
-        bucketMinutes = 1440;
+      bucketMinutes = Math.round((diffHours * 60) / this.config.GRAPH_MAX_POINTS);
+    }
+    else
+    {
+      switch (range) {
+        case '7d':
+          hoursBack = 168;
+          break;
+        case '14d':
+          hoursBack = 336;
+          break;
+        case '3m':
+          hoursBack = 2190;
+          break;
+        case '12m':
+          hoursBack = 8760;
+          break;
+        default:
+          hoursBack = 24;
       }
+      bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
     }
 
-    const history = await serverRepository.getAggregatedHistory(
-      id, 
-      hoursBack, 
-      bucketMinutes,
-      startDate,
-      endDate
+    return await serverRepository.getAggregatedHistory(
+        id,
+        hoursBack,
+        bucketMinutes,
+        startDate,
+        endDate
     );
-
-    return history;
   }
 
   /**
    * Get global player history across all servers
    */
   private async getGlobalHistory(range?: string) {
-    // Calculate time range and aggregation bucket size
-    let hoursBack: number;
-    let bucketMinutes: number;
-
     // Validate range parameter
     const validRanges = ['1d', '7d', '14d', '3m', '12m'];
     if (range && !validRanges.includes(range)) {
       range = '1d';
     }
 
+    let hoursBack: number;
     switch (range) {
       case '7d':
         hoursBack = 168;
-        bucketMinutes = 60; // 1 hour buckets
         break;
       case '14d':
         hoursBack = 336;
-        bucketMinutes = 120; // 2 hour buckets
         break;
       case '3m':
         hoursBack = 2190;
-        bucketMinutes = 480; // 8 hour buckets
         break;
       case '12m':
         hoursBack = 8760;
-        bucketMinutes = 1440; // 24 hour buckets
         break;
       default:
         hoursBack = 24;
-        bucketMinutes = 10; // 10 minutes to avoid the duplication
     }
 
-    const history = await serverRepository.getGlobalPlayerHistory(hoursBack, bucketMinutes);
-    return history;
+    let bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
+
+    return await serverRepository.getGlobalPlayerHistory(hoursBack, bucketMinutes);
   }
 }

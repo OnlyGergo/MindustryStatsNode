@@ -82,7 +82,8 @@ class MindustryStatsApp {
       const apiConfig = {
         ...baseConfig,
         PORT: parseInt(process.env.PORT || '3000'),
-        CORS_ORIGIN: process.env.CORS_ORIGIN || '*'
+        CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
+        GRAPH_MAX_POINTS: parseInt(process.env.GRAPH_MAX_POINTS || '168')
       };
 
       const wsConfig = {
