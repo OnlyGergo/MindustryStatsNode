@@ -48,4 +48,10 @@ cp ./package.json ../build/
 cp ./package-lock.json ../build/
 cd ..
 
+# Zip the build folder
+echo "Creating zip archive..."
+cd ./build
+zip -r build.zip ./*
+cd ..
+
 echo "Build completed successfully!"
