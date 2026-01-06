@@ -22,7 +22,7 @@ const DATE_RANGE_OPTIONS: DateRange[] = [
 ];
 
 interface ServerHistoryChartProps {
-    history: Array<{ timestamp: number; players: number }>;
+    history: Array<{ timestamp: number; players: number | null }>;
     serverId: number;
 }
 
@@ -32,7 +32,7 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
     const [selectedRange, setSelectedRange] = useState<DateRangeOption>('1d');
     const [customStartDate, setCustomStartDate] = useState<string>('');
     const [customEndDate, setCustomEndDate] = useState<string>('');
-    const [chartData, setChartData] = useState<Array<{ timestamp: number; players: number }>>(history);
+    const [chartData, setChartData] = useState<Array<{ timestamp: number; players: number | null }>>(history);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [dateError, setDateError] = useState<string | null>(null);
@@ -134,7 +134,8 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
                     pointBackgroundColor: 'rgb(249, 115, 22)',
                     pointBorderColor: 'rgb(249, 115, 22)',
                     pointHoverBackgroundColor: 'rgb(251, 146, 60)',
-                    pointHoverBorderColor: 'rgb(251, 146, 60)'
+                    pointHoverBorderColor: 'rgb(251, 146, 60)',
+                    spanGaps: false // Show gaps when data is null
                 }]
             },
             options: {

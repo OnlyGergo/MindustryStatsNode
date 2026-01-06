@@ -27,7 +27,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({ onClose }) => {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<Chart | null>(null);
     const [selectedRange, setSelectedRange] = useState<DateRangeOption>('1d');
-    const [chartData, setChartData] = useState<Array<{ timestamp: number; players: number }>>([]);
+    const [chartData, setChartData] = useState<Array<{ timestamp: number; players: number | null }>>([]);
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -102,6 +102,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({ onClose }) => {
                     pointRadius: data.length > 100 ? 0 : 2,
                     pointHoverRadius: 4,
                     borderWidth: 2,
+                    spanGaps: false, // Show gaps when data is null
                 }]
             },
             options: {

@@ -25,7 +25,7 @@ export interface ServerData {
 
 export interface ServerHistory {
   timestamp: number;
-  players: number;
+  players: number | null;
 }
 
 export interface ServerWithHistory {
