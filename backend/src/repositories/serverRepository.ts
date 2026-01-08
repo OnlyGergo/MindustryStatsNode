@@ -194,7 +194,7 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
             online
         FROM server_stats
         WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
-          AND players > 0 AND players < 1000
+          AND players >= 0 AND players < 1000
         ORDER BY server_id, timestamp DESC),
             history_data AS (
         SELECT server_id, json_agg(
@@ -205,7 +205,7 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
             ) as history_json
         FROM server_stats
         WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
-          AND players > 0 AND players < 1000
+          AND players >= 0 AND players < 1000
         GROUP BY server_id)
         SELECT s.id,
                sg.name,
@@ -328,7 +328,7 @@ export async function getAggregatedHistory(
                 WHERE server_id = :serverId
                   AND timestamp >= to_timestamp(:startDate / 1000.0)
                   AND timestamp <= to_timestamp(:endDate / 1000.0)
-                  AND players > 0 AND players < 1000
+                  AND players >= 0 AND players < 1000
                 ORDER BY timestamp
             `;
             replacements = { serverId, startDate, endDate };
@@ -340,7 +340,7 @@ export async function getAggregatedHistory(
                 FROM server_stats
                 WHERE server_id = :serverId
                   AND timestamp > NOW() - interval '1 hour' * :hoursBack
-                  AND players > 0 AND players < 1000
+                  AND players >= 0 AND players < 1000
                 ORDER BY timestamp
             `;
             replacements = { serverId, hoursBack };
@@ -373,7 +373,7 @@ export async function getAggregatedHistory(
                     WHERE server_id = :serverId
                       AND timestamp >= to_timestamp(:startDate / 1000.0)
                       AND timestamp <= to_timestamp(:endDate / 1000.0)
-                      AND players > 0 AND players < 1000
+                      AND players >= 0 AND players < 1000
                 ),
                 aggregated AS (
                     SELECT bucket, MAX(players) as players
@@ -409,7 +409,7 @@ export async function getAggregatedHistory(
                     FROM server_stats
                     WHERE server_id = :serverId
                       AND timestamp > NOW() - interval '1 hour' * :hoursBack
-                      AND players > 0 AND players < 1000
+                      AND players >= 0 AND players < 1000
                 ),
                 aggregated AS (
                     SELECT bucket, MAX(players) as players
@@ -459,7 +459,7 @@ export async function getGlobalPlayerHistory(
                     MAX(players) as max_players
                 FROM server_stats
                 WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
-                  AND players > 0 AND players < 1000
+                  AND players >= 0 AND players < 1000
                 GROUP BY timestamp, server_id
             )
             SELECT 
@@ -495,7 +495,7 @@ export async function getGlobalPlayerHistory(
                     players
                 FROM server_stats
                 WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
-                  AND players > 0 AND players < 1000
+                  AND players >= 0 AND players < 1000
             ),
             server_max AS (
                 SELECT 
