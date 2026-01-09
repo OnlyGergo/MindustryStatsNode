@@ -105,7 +105,7 @@ BEGIN
                      uptime_7d
                  FROM combined_stats
              ),
-             -- New: Complete map data arrays
+             -- New: Complete map data arrays (get most recent 100, ordered oldest to newest)
              all_maps AS (
                  SELECT json_agg(
                                 json_build_object(
@@ -121,7 +121,7 @@ BEGIN
                           SELECT id, server_id, valid_from, valid_to, map_name, game_mode
                           FROM server_maps
                           WHERE server_id = server_id_param
-                          ORDER BY valid_from
+                          ORDER BY valid_from DESC
                           LIMIT 100
                       ) all_map_records
              ),
@@ -141,7 +141,7 @@ BEGIN
                           SELECT id, server_id, valid_from, valid_to, server_name, description, mode_name
                           FROM server_motds
                           WHERE server_id = server_id_param
-                          ORDER BY valid_from
+                          ORDER BY valid_from DESC
                           LIMIT 100
                       ) all_motd_records
              )
