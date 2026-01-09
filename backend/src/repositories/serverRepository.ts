@@ -3,7 +3,7 @@ import {Server, ServerGroup, ServerMap, ServerMotd, ServerStats} from '../models
 import {
     GameMode,
     ServerData,
-    ServerDetails,
+    ServerDetails, ServerHistory,
     ServerMapData,
     ServerMotdData,
     ServerWithHistory
@@ -313,7 +313,7 @@ export async function getAggregatedHistory(
     bucketMinutes: number = 0,
     startDate?: number,
     endDate?: number
-): Promise<Array<{ timestamp: number; players: number }>> {
+): Promise<Array<ServerHistory>> {
     let query: string;
     let replacements: Record<string, unknown>;
 
@@ -445,7 +445,7 @@ export async function getAggregatedHistory(
 export async function getGlobalPlayerHistory(
     hoursBack: number = 24,
     bucketMinutes: number = 0
-): Promise<Array<{ timestamp: number; players: number }>> {
+): Promise<Array<ServerHistory>> {
     let query: string;
     let replacements: Record<string, unknown>;
 
