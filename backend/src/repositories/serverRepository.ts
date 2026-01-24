@@ -85,12 +85,12 @@ export async function saveServerStats(
     await ServerStats.create({
         server_id: serverId,
         timestamp: new Date(),          // Clamp all to smallint max - Mindustry uses 32bit signed integers
-        players: clampToSmallInt(data.players),
-        max_players: clampToSmallInt(data.playerLimit),
-        wave: clampToSmallInt(data.wave),
-        version: clampToSmallInt(data.version),
+        players: data.players,
+        max_players: data.playerLimit,
+        wave: data.wave,
+        version: data.version,
         version_type: data.versionType,
-        ping: clampToSmallInt(data.ping),
+        ping: data.ping,
         online: data.online
     })
 }
