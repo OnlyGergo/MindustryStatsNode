@@ -1,9 +1,10 @@
-BEGIN;
--- 1. Add the column back
-ALTER TABLE public.server_stats ADD COLUMN id BIGSERIAL;
+SELECT
+       total_bytes / 1024 / 1024 AS total_mb,
+       index_bytes / 1024 / 1024 AS index_mb
+FROM hypertable_detailed_size('server_stats');
 
--- 2. Re-add the ID as the Primary Key (Sequelize's requirement)
--- Note: This will drop the (server_id, timestamp) PK we just made
-ALTER TABLE public.server_stats DROP CONSTRAINT server_stats_pkey;
-ALTER TABLE public.server_stats ADD PRIMARY KEY (id);
-COMMIT;
+REINDEX TABLE server_stats;
+
+
+
+SELECT * FROM timescaledb_information.chunks WHERE hypertable_name =

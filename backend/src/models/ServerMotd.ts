@@ -36,7 +36,7 @@ ServerMotd.init({
     allowNull: true
   },
   server_name: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.TEXT,
     allowNull: true
   },
   description: {
@@ -44,7 +44,7 @@ ServerMotd.init({
     allowNull: true
   },
   mode_name: {
-    type: DataTypes.STRING(100),
+    type: DataTypes.TEXT,
     allowNull: true
   }
 }, {

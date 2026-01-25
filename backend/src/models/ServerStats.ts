@@ -16,25 +16,22 @@ class ServerStats extends Model {
 }
 
 ServerStats.init({
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true
-  },
+  // removed the 'id' field entirely.
+  // server_id + timestamp now act as the unique identifier.
   server_id: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    primaryKey: true, // Mark as PK
     references: {
       model: 'servers',
       key: 'id'
-    },
-    primaryKey: true
+    }
   },
   timestamp: {
     type: DataTypes.DATE,
     allowNull: false,
-    defaultValue: DataTypes.NOW,
-    primaryKey: true
+    primaryKey: true, // Mark as PK
+    defaultValue: DataTypes.NOW
   },
   players: {
     type: DataTypes.INTEGER,
@@ -70,6 +67,8 @@ ServerStats.init({
   sequelize,
   tableName: 'server_stats',
   timestamps: false
+  // Sequelize automatically handles composite keys when
+  // multiple fields are marked as primaryKey: true
 });
 
 // Define association
