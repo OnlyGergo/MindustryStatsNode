@@ -1,4 +1,5 @@
 import dgram from 'dgram';
+import dns from 'dns/promises';
 import { GameMode, ServerData } from '../../../common/models/serverData.js';
 import { readString } from '../utils/buffer.js';
 import { MINDUSTRY_TIMEOUT_MILLISECONDS } from '../const.js';
@@ -16,15 +17,35 @@ export async function getServerData(host: string, port: number | string): Promis
     return null;
   }
 
+  let ipAddress: string;
+  // If host is an IP address, we can skip DNS lookup. This also allows us to handle IPv6 addresses if needed in the future.
+  if (/(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}/.test(host)) {
+    ipAddress = host;
+  } else {
+  try {
+    // Explicitly resolve DNS to IPv4.
+    // This prevents udp4 sockets from failing silently if Docker resolves an IPv6 address first.
+    // It also allows you to add SRV record resolution logic here later if needed.
+    const lookupResult = await dns.lookup(host, { family: 4 });
+    ipAddress = lookupResult.address;
+  } catch (err) {
+    logger.error(`DNS lookup failed for ${host}: ${(err as Error).message}`);
+    return null;
+  }
+  }
+
   return new Promise((resolve, reject) => {
     const socket = dgram.createSocket('udp4');
     const pingTime = Date.now();
     let timeout: NodeJS.Timeout;
 
-    socket.on('error', (err) => {
+    const cleanup = () => {
       clearTimeout(timeout);
       try { socket.close(); } catch {}
+    };
 
+    socket.on('error', (err) => {
+      cleanup();
       if (!failedServersCache.has(serverKey)) {
         logger.warn(`Socket error for ${serverKey}: ${err.message}`);
         failedServersCache.add(serverKey);
@@ -33,7 +54,7 @@ export async function getServerData(host: string, port: number | string): Promis
     });
 
     socket.on('message', (message) => {
-      clearTimeout(timeout);
+      cleanup();
       try {
         const buffer = Buffer.from(message);
         const offset = { value: 0 };
@@ -54,7 +75,6 @@ export async function getServerData(host: string, port: number | string): Promis
 
         failedServersCache.delete(serverKey);
 
-        socket.close();
         resolve({
           ping: Date.now() - pingTime,
           host,
@@ -72,24 +92,29 @@ export async function getServerData(host: string, port: number | string): Promis
           online: true
         });
       } catch (err) {
-        socket.close();
         reject(err);
       }
     });
 
-    // Directly send to host/port, bypassing connect() validation
-    const packet = Buffer.from([0xFE, 0x01]);
     timeout = setTimeout(() => {
-      try { socket.close(); } catch {}
+      cleanup();
       resolve(null);
     }, MINDUSTRY_TIMEOUT_MILLISECONDS);
 
-    socket.send(packet, numericPort, host, (err) => {
-      if (err) {
-        clearTimeout(timeout);
-        try { socket.close(); } catch {}
-        reject(err);
-      }
+    const packet = Buffer.from([0xFE, 0x01]);
+
+    // 1. Connect the socket FIRST. This registers the 5-tuple in Docker's NAT/conntrack
+    //    and passes stringent checks in firewalls like CrowdSec.
+    // NOTE: The signature is connect(port, address, callback)
+    socket.connect(numericPort, ipAddress, () => {
+      // 2. Send the packet. Because the socket is now connected,
+      //    we omit the port and address arguments here.
+      socket.send(packet, (err) => {
+        if (err) {
+          cleanup();
+          reject(err);
+        }
+      });
     });
   });
 }
