@@ -2,6 +2,7 @@ import { createLogger } from '../logger.js';
 import { InMemoryQueue, InMemoryCache } from '../utils/in-memory-queue.js';
 import { CACHE_KEYS, CACHE_TTL } from '../shared/constants.js';
 import { getServerData } from './mindustryService.js';
+import * as serverRepository from '../repositories/serverRepository.js';
 import { ServerData } from '../../../common/models/serverData.js';
 import { ServerCollectorConfig } from '../shared/config.js';
 
@@ -17,25 +18,18 @@ export interface RawServerData {
   error?: string;
 }
 
-/**
- * Server Collector Service
- * Uses p-queue to process discovery queue with concurrency control
- */
 export class ServerCollectorService {
-  private discoveryQueue: InMemoryQueue<any>;
   private rawDataQueue: InMemoryQueue<RawServerData>;
   private cache: InMemoryCache;
   private config: ServerCollectorConfig;
-  private collectionQueue: any; // Will be initialized as PQueue
+  private collectionQueue: any;
   private running = false;
 
   constructor(
-    discoveryQueue: InMemoryQueue<any>,
     rawDataQueue: InMemoryQueue<RawServerData>,
     cache: InMemoryCache,
     config: ServerCollectorConfig
   ) {
-    this.discoveryQueue = discoveryQueue;
     this.rawDataQueue = rawDataQueue;
     this.cache = cache;
     this.config = config;
@@ -45,17 +39,14 @@ export class ServerCollectorService {
     logger.info('Starting Server Collector Service...');
     this.running = true;
 
-    // Dynamically import p-queue (ES module)
     const { default: PQueue } = await import('p-queue');
-    
-    // Initialize p-queue for server collection with concurrency control
+
     this.collectionQueue = new PQueue({
       concurrency: this.config.COLLECTION_CONCURRENCY,
       interval: 1000,
       intervalCap: this.config.COLLECTION_CONCURRENCY * 2
     });
 
-    // Start workers that continuously process the discovery queue
     for (let i = 0; i < this.config.COLLECTION_CONCURRENCY; i++) {
       this.collectorWorker(i + 1);
     }
@@ -68,35 +59,37 @@ export class ServerCollectorService {
     logger.info('Server Collector Service stopped');
   }
 
-  /**
-   * Worker that processes discovery queue using p-queue
-   */
   private async collectorWorker(workerId: number): Promise<void> {
     logger.info(`Collector Worker ${workerId} started`);
 
     while (this.running) {
       try {
-        const discoveryData = await this.discoveryQueue.pop(this.config.QUEUE_POLL_TIMEOUT);
+        const servers = await serverRepository.getServers();
 
-        if (discoveryData) {
-          // Use p-queue to control concurrency
+        for (const server of servers) {
           await this.collectionQueue.add(async () => {
-            await this.processServerDiscovery(discoveryData);
+            await this.processServerDiscovery({
+              host: server.host,
+              port: server.port,
+              networkName: server.name,
+              timestamp: Date.now()
+            });
           });
         }
 
+        await new Promise(resolve =>
+          setTimeout(resolve, this.config.DATA_COLLECTION_INTERVAL_MS)
+        );
+
       } catch (error) {
         logger.error(`Worker ${workerId} error:`, error);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
 
     logger.info(`Collector Worker ${workerId} stopped`);
   }
 
-  /**
-   * Process a single server discovery request
-   */
   private async processServerDiscovery(discoveryData: { host: string; port: number; networkName?: string; timestamp: number }): Promise<void> {
     const { host, port, networkName } = discoveryData;
     const serverKey = `${host}:${port}`;

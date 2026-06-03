@@ -623,41 +623,78 @@ export async function getServer(
     return serverWithDetails;
 }
 
-// Could be more efficient by querying and comparing.... but it runs once every 5 hours so it's fine
-export async function ensureServers(servers: ServerListElement[]): Promise<void> {
+export interface ServerInput {
+    name: string;
+    host: string;
+    port: number;
+}
+
+export async function batchUpsertServers(servers: ServerInput[]): Promise<void> {
+    if (servers.length === 0) return;
+
     try {
+        const names = servers.map(s => s.name);
+        const hosts = servers.map(s => s.host);
+        const ports = servers.map(s => s.port);
+
+        await sequelize.query(`
+            WITH server_data AS (
+                SELECT 
+                    unnest(:names) as group_name,
+                    unnest(:hosts) as server_host,
+                    unnest(:ports) as server_port
+            ),
+            grouped AS (
+                INSERT INTO server_groups (name)
+                SELECT DISTINCT group_name FROM server_data
+                ON CONFLICT (name) DO NOTHING
+                RETURNING name, id
+            )
+            INSERT INTO servers (host, port, server_group_id)
+            SELECT 
+                sd.server_host,
+                sd.server_port,
+                COALESCE(g.id, (SELECT id FROM server_groups WHERE name = sd.group_name))
+            FROM server_data sd
+            LEFT JOIN grouped g ON g.name = sd.group_name
+            ON CONFLICT (host, port) DO UPDATE SET
+                server_group_id = EXCLUDED.server_group_id,
+                updated_at = NOW()
+        `, {
+            replacements: { names, hosts, ports },
+            type: QueryTypes.SELECT
+        });
+
+        const serversByHost = new Map<string, Set<number>>();
         for (const server of servers) {
-            for (const address of server.address) {
-                // Split host to address and port
-                const [host, portStr] = address.split(':');
-                const port = portStr ? parseInt(portStr, 10) : 6567;
+            const host = server.host;
+            if (!serversByHost.has(host)) {
+                serversByHost.set(host, new Set());
+            }
+            serversByHost.get(host)!.add(server.port);
+        }
 
-                // Add server to database
-                const result = await sequelize.query(
-                    `SELECT add_server_and_group(:name, :host, :port);`,
-                    {
-                        replacements: { name: server.name, host, port },
-                        type: QueryTypes.SELECT
-                    }
-                );
+        // Todo do this inside the loop above, and upsert the update - or batch
+        for (const [host, portsSet] of serversByHost) {
+            const serversWithoutCountry = await Server.findAll({
+                where: {
+                    host,
+                    country_code: null
+                }
+            });
 
-                // Look up and update country code for the server
-                // Find the server ID and update country code if not already set
-                const serverRecord = await Server.findOne({
-                    where: { host, port }
-                });
-
-                if (serverRecord && !serverRecord.country_code) {
+            for (const serverRecord of serversWithoutCountry) {
+                if (portsSet.has(serverRecord.port)) {
                     const countryCode = await lookupCountry(host);
                     if (countryCode) {
                         await serverRecord.update({ country_code: countryCode });
-                        logger.debug(`Set country code for ${host}:${port} to ${countryCode}`);
+                        logger.debug(`Set country code for ${host}:${serverRecord.port} to ${countryCode}`);
                     }
                 }
             }
         }
     } catch (error) {
-        logger.error('Error calling function:', error);
+        logger.error('Error batch upserting servers:', error);
         throw error;
     }
 }

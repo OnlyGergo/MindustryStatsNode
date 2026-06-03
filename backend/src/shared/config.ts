@@ -19,7 +19,7 @@ export interface ServerDiscoveryConfig extends BaseServiceConfig {
 export interface ServerCollectorConfig extends BaseServiceConfig {
   COLLECTION_CONCURRENCY: number;
   MINDUSTRY_TIMEOUT_MS: number;
-  QUEUE_POLL_TIMEOUT: number;
+  DATA_COLLECTION_INTERVAL_MS: number;
 }
 
 export interface ServerProcessorConfig extends BaseServiceConfig {

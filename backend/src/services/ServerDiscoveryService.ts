@@ -1,5 +1,4 @@
 import { createLogger } from '../logger.js';
-import { InMemoryQueue } from '../utils/in-memory-queue.js';
 import { SERVERS_SOURCE } from '../const.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import { ServerListElement } from '../models/ServerListElement.js';
@@ -9,17 +8,14 @@ const logger = createLogger('ServerDiscovery');
 
 /**
  * Server Discovery Service
- * Periodically fetches server lists and queues them for collection
+ * Periodically fetches server lists and saves them to database
  */
 export class ServerDiscoveryService {
-  private discoveryQueue: InMemoryQueue<any>;
   private config: ServerDiscoveryConfig;
   private serverListRefreshInterval?: NodeJS.Timeout;
-  private collectionQueueInterval?: NodeJS.Timeout;
   private running = false;
 
-  constructor(discoveryQueue: InMemoryQueue<any>, config: ServerDiscoveryConfig) {
-    this.discoveryQueue = discoveryQueue;
+  constructor(config: ServerDiscoveryConfig) {
     this.config = config;
   }
 
@@ -29,7 +25,6 @@ export class ServerDiscoveryService {
 
     // Initial server list refresh
     await this.refreshServerList();
-    await this.queueAllServersForCollection();
 
     // Schedule periodic server list refresh (daily)
     this.serverListRefreshInterval = setInterval(async () => {
@@ -40,28 +35,14 @@ export class ServerDiscoveryService {
       }
     }, this.config.SERVER_LIST_INTERVAL_MS);
 
-    // Schedule periodic server collection queuing (every 5 minutes)
-    const DATA_COLLECTION_INTERVAL = parseInt(process.env.DATA_COLLECTION_INTERVAL_MS || '300000');
-    this.collectionQueueInterval = setInterval(async () => {
-      try {
-        await this.queueAllServersForCollection();
-      } catch (error) {
-        logger.error('Error in scheduled server collection queuing:', error);
-      }
-    }, DATA_COLLECTION_INTERVAL);
-
     logger.info(`Server Discovery Service started`);
     logger.info(`- Server list refresh: every ${this.config.SERVER_LIST_INTERVAL_MS / 1000} seconds`);
-    logger.info(`- Server collection queuing: every ${DATA_COLLECTION_INTERVAL / 1000} seconds`);
   }
 
   async stop(): Promise<void> {
     this.running = false;
     if (this.serverListRefreshInterval) {
       clearInterval(this.serverListRefreshInterval);
-    }
-    if (this.collectionQueueInterval) {
-      clearInterval(this.collectionQueueInterval);
     }
     logger.info('Server Discovery Service stopped');
   }
@@ -75,6 +56,8 @@ export class ServerDiscoveryService {
     logger.info('Refreshing servers...');
 
     try {
+      const allDiscoveredServers: Array<{name: string, host: string, port: number}> = [];
+
       for (const url of SERVERS_SOURCE) {
         logger.info(`Fetching servers from: ${url}`);
 
@@ -86,8 +69,6 @@ export class ServerDiscoveryService {
 
         const servers: ServerListElement[] = await response.json();
         groupsCount += servers.length;
-
-        await serverRepository.ensureServers(servers);
 
         for (const serverGroup of servers) {
           for (const address of serverGroup.address) {
@@ -103,51 +84,23 @@ export class ServerDiscoveryService {
               port = 6567;
             }
 
-            await this.discoveryQueue.push({
-              host: host,
-              port: port,
-              networkName: serverGroup.name,
-              timestamp: Date.now()
+            allDiscoveredServers.push({
+              name: serverGroup.name,
+              host,
+              port
             });
           }
         }
       }
+
+      // Batch upsert all discovered servers to database
+      await serverRepository.batchUpsertServers(allDiscoveredServers);
 
       const timeTaken = (Date.now() - startTime) / 1000;
       logger.info(`Found ${groupsCount} total server groups in ${timeTaken.toFixed(2)} seconds.`);
 
     } catch (error) {
       logger.error('Error refreshing server list:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Queue all servers for collection
-   */
-  private async queueAllServersForCollection(): Promise<void> {
-    const startTime = Date.now();
-    logger.info('Queuing all servers for collection...');
-
-    try {
-      const allServers = await serverRepository.getServers();
-
-      let queuedCount = 0;
-      for (const server of allServers) {
-        await this.discoveryQueue.push({
-          host: server.host,
-          port: server.port,
-          networkName: server.name,
-          timestamp: Date.now()
-        });
-        queuedCount++;
-      }
-
-      const timeTaken = (Date.now() - startTime) / 1000;
-      logger.info(`Queued ${queuedCount} servers for collection in ${timeTaken.toFixed(2)} seconds.`);
-
-    } catch (error) {
-      logger.error('Error queuing servers for collection:', error);
       throw error;
     }
   }

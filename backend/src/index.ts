@@ -34,7 +34,6 @@ class MindustryStatsApp {
   private wsService!: WebSocketService;
 
   // Shared resources
-  private discoveryQueue!: InMemoryQueue<any>;
   private rawDataQueue!: InMemoryQueue<RawServerData>;
   private cache!: InMemoryCache;
   private updatesPubSub!: InMemoryPubSub;
@@ -66,11 +65,11 @@ class MindustryStatsApp {
       };
 
       const collectorConfig = {
-        ...baseConfig,
-        COLLECTION_CONCURRENCY: parseInt(process.env.COLLECTION_CONCURRENCY || getDefaultConcurrency().toString()),
-        MINDUSTRY_TIMEOUT_MS: parseInt(process.env.MINDUSTRY_TIMEOUT_MS || '1000'),
-        QUEUE_POLL_TIMEOUT: parseInt(process.env.QUEUE_POLL_TIMEOUT || '5')
-      };
+    ...baseConfig,
+    COLLECTION_CONCURRENCY: parseInt(process.env.COLLECTION_CONCURRENCY || getDefaultConcurrency().toString()),
+    MINDUSTRY_TIMEOUT_MS: parseInt(process.env.MINDUSTRY_TIMEOUT_MS || '1000'),
+    DATA_COLLECTION_INTERVAL_MS: parseInt(process.env.DATA_COLLECTION_INTERVAL_MS || '300000')
+  };
 
       const processorConfig = {
         ...baseConfig,
@@ -93,15 +92,13 @@ class MindustryStatsApp {
       };
 
       // Initialize shared resources
-      this.discoveryQueue = new InMemoryQueue('discovery');
       this.rawDataQueue = new InMemoryQueue('rawData');
       this.cache = new InMemoryCache();
       this.updatesPubSub = new InMemoryPubSub('server_updates');
 
       // Initialize services
-      this.discoveryService = new ServerDiscoveryService(this.discoveryQueue, discoveryConfig);
+      this.discoveryService = new ServerDiscoveryService(discoveryConfig);
       this.collectorService = new ServerCollectorService(
-        this.discoveryQueue,
         this.rawDataQueue,
         this.cache,
         collectorConfig
