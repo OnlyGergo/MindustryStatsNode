@@ -7,6 +7,7 @@ Very easy
 Very simple
 
 Not crazy overbuilt, but somewhat performant
+Currently, at 3rd June 2026, in around a year the program has gathered 4.5GB of data (45M server_stats, 1.4M server_maps, 20M server_motd) including 571 Mindustry servers picked up
 
 # AI Disclaimer
 `backend` is mostly by me, with the help of AI
