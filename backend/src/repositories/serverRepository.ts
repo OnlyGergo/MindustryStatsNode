@@ -638,28 +638,23 @@ export async function batchUpsertServers(servers: ServerInput[]): Promise<void> 
         const ports = servers.map(s => s.port);
 
         await sequelize.query(`
-            WITH server_data AS (
-                SELECT 
-                    unnest(:names) as group_name,
-                    unnest(:hosts) as server_host,
-                    unnest(:ports) as server_port
-            ),
-            grouped AS (
-                INSERT INTO server_groups (name)
-                SELECT DISTINCT group_name FROM server_data
-                ON CONFLICT (name) DO NOTHING
-                RETURNING name, id
-            )
-            INSERT INTO servers (host, port, server_group_id)
-            SELECT 
-                sd.server_host,
-                sd.server_port,
-                COALESCE(g.id, (SELECT id FROM server_groups WHERE name = sd.group_name))
+            WITH server_data AS (SELECT unnest(:names) as group_name,
+                                        unnest(:hosts) as server_host,
+                                        unnest(:ports) as server_port),
+                 grouped AS (
+                     INSERT INTO server_groups (name)
+                         SELECT DISTINCT group_name FROM server_data
+                         ON CONFLICT (name) DO NOTHING
+                         RETURNING name, id)
+            INSERT
+            INTO servers (host, port, server_group_id)
+            SELECT sd.server_host,
+                   sd.server_port,
+                   g.id
             FROM server_data sd
-            LEFT JOIN grouped g ON g.name = sd.group_name
-            ON CONFLICT (host, port) DO UPDATE SET
-                server_group_id = EXCLUDED.server_group_id,
-                updated_at = NOW()
+                     LEFT JOIN grouped g ON g.name = sd.group_name
+            ON CONFLICT (host, port) DO UPDATE SET server_group_id = EXCLUDED.server_group_id,
+                                                   updated_at      = NOW()
         `, {
             replacements: { names, hosts, ports },
             type: QueryTypes.SELECT
