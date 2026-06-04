@@ -1,6 +1,6 @@
 // Cache key patterns
 export const CACHE_KEYS = {
-  SERVER_DATA: (host: string, port: number) => `server:data:${host}:${port}`,
+  SERVER_DATA: (serverId: number) => `server:data:${serverId}`,
   SERVER_DETAILS: (id: number) => `server:details:${id}`,
   MOTD_HISTORY: (id: number) => `server:motd:${id}`,
   MAP_HISTORY: (id: number) => `server:map:${id}`,

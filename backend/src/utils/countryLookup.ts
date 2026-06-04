@@ -78,3 +78,17 @@ export async function lookupCountry(hostOrIp: string): Promise<string | null> {
         return null;
     }
 }
+
+export function lookupCountryFromIPSync(ip: string): string | null {
+    try {
+        if (!initialized) {
+            initCountryLookup();
+        }
+
+        const countryCode = ip3country.lookupStr(ip);
+        return countryCode || null;
+    } catch (error) {
+        logger.warn(`Error looking up country for ${ip}:`, error);
+        return null;
+    }
+}

@@ -40,12 +40,11 @@ export class ServerProcessorService {
     this.serverDataCache.clear();
 
     for (const server of servers) {
-      const serverKey = `${server.host}:${server.port}`;
       server.online = false;
       if (server.currentData) {
         server.currentData.online = false;
       }
-      this.serverDataCache.set(serverKey, server);
+      this.serverDataCache.set(CACHE_KEYS.SERVER_DATA(server.id), server);
     }
 
     await this.cache.set(CACHE_KEYS.ALL_SERVERS, Array.from(this.serverDataCache.values()), CACHE_TTL.ALL_SERVERS);
@@ -111,18 +110,17 @@ export class ServerProcessorService {
    * Process raw server data
    */
   private async processRawServerData(rawData: RawServerData): Promise<void> {
-    const { host, port, data, timestamp, online } = rawData;
-    const serverKey = `${host}:${port}`;
+    const { host, port, data, timestamp, online, cacheKey } = rawData;
 
     try {
-      let serverEntry = this.serverDataCache.get(serverKey);
+      let serverEntry = this.serverDataCache.get(cacheKey);
 
       if (!serverEntry) {
         const servers = await serverRepository.getServers();
         const dbServer = servers.find(s => s.host === host && s.port === port);
 
         if (!dbServer) {
-          logger.warn(`Server ${serverKey} not found in database, skipping processing`);
+          logger.warn(`Server ${cacheKey} not found in database, skipping processing`);
           return;
         }
 
@@ -135,10 +133,11 @@ export class ServerProcessorService {
           lastSeen: timestamp,
           lastUpdated: timestamp,
           online: false,
-          consecutiveFailures: 0
+          consecutiveFailures: 0,
+          countryCode: rawData?.data?.countryCode
         };
 
-        this.serverDataCache.set(serverKey, serverEntry);
+        this.serverDataCache.set(cacheKey, serverEntry);
       }
 
       if (data && online) {
@@ -152,6 +151,7 @@ export class ServerProcessorService {
         serverEntry.lastSeen = timestamp;
         serverEntry.online = true;
         serverEntry.consecutiveFailures = 0;
+        serverEntry.countryCode = rawData?.data?.countryCode;
 
         serverEntry.history.push({
           timestamp,
@@ -162,7 +162,7 @@ export class ServerProcessorService {
           serverEntry.history = serverEntry.history.slice(-this.config.MAX_HISTORY_POINTS);
         }
 
-        logger.debug(`Updated server ${serverKey}: ${data.players}/${data.playerLimit} players`);
+        logger.debug(`Updated server ${cacheKey}: ${data.players}/${data.playerLimit} players`);
 
       } else {
         serverEntry.online = false;
@@ -186,11 +186,10 @@ export class ServerProcessorService {
           online: false,
         });
 
-        logger.debug(`Server ${serverKey} marked as offline`);
+        logger.debug(`Server ${cacheKey} marked as offline`);
       }
 
-      const serverCacheKey = CACHE_KEYS.SERVER_DATA(host, port);
-      await this.cache.set(serverCacheKey, serverEntry, CACHE_TTL.SERVER_DATA);
+      await this.cache.set(cacheKey, serverEntry, CACHE_TTL.SERVER_DATA);
 
       await this.updatesPubSub.publish({
         type: 'server_update',
@@ -199,7 +198,7 @@ export class ServerProcessorService {
       });
 
     } catch (error) {
-      logger.error(`Error processing server data for ${serverKey}:`, error);
+      logger.error(`Error processing server data for ${cacheKey}:`, error);
     }
   }
 

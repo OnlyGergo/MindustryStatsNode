@@ -4,6 +4,7 @@ import { GameMode, ServerData } from '../../../common/models/serverData.js';
 import { readString } from '../utils/buffer.js';
 import { MINDUSTRY_TIMEOUT_MILLISECONDS } from '../const.js';
 import { createLogger } from '../logger.js';
+import {lookupCountryFromIPSync} from "../utils/countryLookup.js";
 
 const failedServersCache = new Set<string>();
 const logger = createLogger('Mindustry Service');
@@ -43,9 +44,8 @@ async function resolveHost(host: string): Promise<string> {
 /**
  * Pings a Mindustry server to fetch status, map, and player metrics.
  */
-export async function getServerData(host: string, port: number | string): Promise<ServerData | null> {
+export async function getServerData(host: string, port: number | string, serverKey: string): Promise<ServerData | null> {
   const numericPort = typeof port === 'string' ? parseInt(port, 10) : port;
-  const serverKey = `${host}:${numericPort}`;
 
   if (isNaN(numericPort) || numericPort < 0 || numericPort > 65535) {
     logger.error(`Invalid port provided for ${host}: ${port}`);
@@ -57,7 +57,7 @@ export async function getServerData(host: string, port: number | string): Promis
   try {
     ipAddress = await resolveHost(host);
   } catch (err) {
-    logger.error((err as Error).message);
+    logger.warn((err as Error).message);
     return null;
   }
 
@@ -124,7 +124,8 @@ export async function getServerData(host: string, port: number | string): Promis
           playerLimit,
           description,
           modeName,
-          online: true
+          online: true,
+          countryCode: lookupCountryFromIPSync(ipAddress)
         });
       } catch (err) {
         logger.error(`Failed to parse packet from ${serverKey}: ${(err as Error).message}`);

@@ -21,6 +21,7 @@ export interface ServerData {
   description: string | null;
   modeName: string | null;
   online: boolean;
+  countryCode?: string | null;
 }
 
 export interface ServerHistory {

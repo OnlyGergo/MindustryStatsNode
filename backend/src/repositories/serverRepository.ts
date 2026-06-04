@@ -11,8 +11,7 @@ import {
 } from '../../../common/models/serverData.js';
 import {ServerListElement} from '../models/ServerListElement.js';
 import {createLogger} from '../logger.js';
-import {QueryTypes} from "sequelize";
-import { lookupCountry } from '../utils/countryLookup.js';
+import {Op, QueryTypes, Transaction} from "sequelize";
 
 const logger = createLogger("Repository");
 
@@ -50,31 +49,6 @@ export async function updateServerLastSeen(
         { last_seen: new Date() },
         { where: { id: serverId } }
     );
-}
-
-// Update country code for a server based on its host IP
-export async function updateServerCountryCode(
-    serverId: number,
-    host: string
-): Promise<void> {
-    try {
-        const countryCode = await lookupCountry(host);
-        if (countryCode) {
-            await Server.update(
-                { country_code: countryCode },
-                { where: { id: serverId } }
-            );
-            logger.debug(`Updated country code for server ${serverId} to ${countryCode}`);
-        }
-    } catch (error) {
-        logger.warn(`Failed to update country code for server ${serverId}:`, error);
-    }
-}
-
-// Clamp values to smallint max (32767) to prevent overflow
-function clampToSmallInt(value: number | null | undefined): number | null | undefined {
-    if (value == null) return value;
-    return Math.min(value, 32767);
 }
 
 // Save server stats
@@ -633,61 +607,45 @@ export async function batchUpsertServers(servers: ServerInput[]): Promise<void> 
     if (servers.length === 0) return;
 
     try {
-        const names = servers.map(s => s.name);
-        const hosts = servers.map(s => s.host);
-        const ports = servers.map(s => s.port);
+
+        // Deduplicate based on (name, host, port)
+        const deduplicated = servers.reduce((acc, current) => {
+            const key = `${current.name}|${current.host}|${current.port}`;
+            if (!acc.has(key)) {
+                acc.set(key, current);
+            }
+            return acc;
+        }, new Map<string, ServerInput>());
+
+        // Convert to a format PostgreSQL can handle better
+        const serverData = Array.from(deduplicated.values()).map((s, idx) => ({
+            idx,
+            name: s.name,
+            host: s.host,
+            port: s.port
+        }));
 
         await sequelize.query(`
-            WITH server_data AS (SELECT unnest(:names) as group_name,
-                                        unnest(:hosts) as server_host,
-                                        unnest(:ports) as server_port),
+            WITH server_data AS (
+                SELECT * FROM jsonb_to_recordset(:serverData::jsonb)
+                                  AS x(idx int, name text, host text, port int)
+            ),
                  grouped AS (
                      INSERT INTO server_groups (name)
-                         SELECT DISTINCT group_name FROM server_data
+                         SELECT DISTINCT name FROM server_data
                          ON CONFLICT (name) DO NOTHING
-                         RETURNING name, id)
-            INSERT
-            INTO servers (host, port, server_group_id)
-            SELECT sd.server_host,
-                   sd.server_port,
-                   g.id
+                 )
+            INSERT INTO servers (host, port, server_group_id)
+            SELECT sd.host, sd.port, g.id
             FROM server_data sd
-                     LEFT JOIN grouped g ON g.name = sd.group_name
-            ON CONFLICT (host, port) DO UPDATE SET server_group_id = EXCLUDED.server_group_id,
-                                                   updated_at      = NOW()
+                     LEFT JOIN server_groups g ON g.name = sd.name
+            ON CONFLICT (host, port, server_group_id) DO UPDATE
+                SET server_group_id = EXCLUDED.server_group_id,
+                    updated_at = NOW()
         `, {
-            replacements: { names, hosts, ports },
-            type: QueryTypes.SELECT
+            replacements: { serverData: JSON.stringify(serverData) },
+            type: QueryTypes.INSERT
         });
-
-        const serversByHost = new Map<string, Set<number>>();
-        for (const server of servers) {
-            const host = server.host;
-            if (!serversByHost.has(host)) {
-                serversByHost.set(host, new Set());
-            }
-            serversByHost.get(host)!.add(server.port);
-        }
-
-        // Todo do this inside the loop above, and upsert the update - or batch
-        for (const [host, portsSet] of serversByHost) {
-            const serversWithoutCountry = await Server.findAll({
-                where: {
-                    host,
-                    country_code: null
-                }
-            });
-
-            for (const serverRecord of serversWithoutCountry) {
-                if (portsSet.has(serverRecord.port)) {
-                    const countryCode = await lookupCountry(host);
-                    if (countryCode) {
-                        await serverRecord.update({ country_code: countryCode });
-                        logger.debug(`Set country code for ${host}:${serverRecord.port} to ${countryCode}`);
-                    }
-                }
-            }
-        }
     } catch (error) {
         logger.error('Error batch upserting servers:', error);
         throw error;
