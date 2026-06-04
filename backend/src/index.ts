@@ -11,6 +11,7 @@ import { ApiService } from './services/ApiService.js';
 import { WebSocketService } from './services/WebSocketService.js';
 import { initCountryLookup } from './utils/countryLookup.js';
 import os from 'os';
+import { VERSION, COMMIT, BUILD_DATE } from '../../common/version.js';
 
 const logger = createLogger('Main');
 
@@ -48,7 +49,8 @@ class MindustryStatsApp {
    */
   async start(): Promise<void> {
     try {
-      logger.info('=== Starting Mindustry Stats Unified Application ===');
+      logger.info('=========== Starting Mindustry Stats Unified Application ===========');
+      logger.info(`Version ${VERSION} | Commit ${COMMIT} | Build Date: ${BUILD_DATE}`)
 
       // Initialize database
       await initDatabase();
