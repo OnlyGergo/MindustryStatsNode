@@ -57,6 +57,36 @@ export class InMemoryQueue<T = any> {
   }
 
   /**
+   * Pop all items currently in the queue, waiting for at least one item if the queue is empty
+   * Returns an empty array if timeout expires without any items
+   * @param timeoutSeconds
+   */
+  async popAll(timeoutSeconds: number = 0): Promise<T[]> {
+    // If there are items available, drain and return them immediately
+    if (this.queue.length > 0) {
+      return this.queue.splice(0);
+    }
+
+    // If no timeout specified, return null
+    if (timeoutSeconds === 0) {
+      return [];
+    }
+
+    // Wait for an item to become available or timeout
+    return new Promise<T[]>((resolve) => {
+      this.pop(timeoutSeconds).then((item) => {
+        if (item === null) {
+          resolve([]);
+        } else {
+          // Drain any additional items that may have arrived
+          const items = [item, ...this.queue.splice(0)];
+          resolve(items);
+        }
+      });
+    });
+  }
+
+  /**
    * Get the current length of the queue
    */
   async length(): Promise<number> {

@@ -2,14 +2,12 @@ import sequelize from '../config/database.js';
 import {Server, ServerGroup, ServerMap, ServerMotd, ServerStats} from '../models/index.js';
 import {
     GameMode,
-    ServerData,
     ServerDetails,
     ServerHistory,
     ServerMapData,
     ServerMotdData,
     ServerWithHistory
 } from '../../../common/models/serverData.js';
-import {ServerListElement} from '../models/ServerListElement.js';
 import {createLogger} from '../logger.js';
 import {Op, QueryTypes, Transaction} from "sequelize";
 
@@ -39,107 +37,6 @@ export async function getServers(): Promise<ServerRecord[]> {
         serverRecord.name = serverGroupMap.get(server.server_group_id) || 'Unknown';
         return serverRecord;
     });
-}
-
-// Update last_seen timestamp for a server
-export async function updateServerLastSeen(
-    serverId: number
-): Promise<void> {
-    await Server.update(
-        { last_seen: new Date() },
-        { where: { id: serverId } }
-    );
-}
-
-// Save server stats
-export async function saveServerStats(
-    serverId: number,
-    data: ServerData
-): Promise<void> {
-    await ServerStats.create({
-        server_id: serverId,
-        timestamp: new Date(),          // Clamp all to smallint max - Mindustry uses 32bit signed integers
-        players: data.players,
-        max_players: data.playerLimit,
-        wave: data.wave,
-        version: data.version,
-        version_type: data.versionType,
-        ping: data.ping,
-        online: data.online
-    })
-}
-
-// Check and save MOTD if changed
-export async function saveMotdIfChanged(
-    serverId: number,
-    data: ServerData
-): Promise<void> {
-    const lastMotd = await ServerMotd.findOne({
-        where: {
-            server_id: serverId,
-            valid_to: null
-        },
-        order: [['valid_from', 'DESC']]
-    })
-
-    // Check if MOTD has changed
-    const motdChanged = !lastMotd ||
-        lastMotd.server_name !== data.serverName ||
-        lastMotd.description !== data.description ||
-        lastMotd.mode_name !== data.modeName;
-
-    if (motdChanged) {
-        // Set the previous MOTD's valid_to date if it exists
-        if (lastMotd) {
-            await lastMotd.update({
-                valid_to: new Date()
-            });
-        }
-
-        // Insert the new MOTD
-        await ServerMotd.create({
-            server_id: serverId,
-            valid_from: new Date(),
-            server_name: data.serverName,
-            description: data.description,
-            mode_name: data.modeName
-        });
-    }
-}
-
-// Check and save Map if changed
-export async function saveMapIfChanged(
-    serverId: number,
-    data: ServerData
-): Promise<void> {
-    // Get the most recent map for this server
-    const lastMap = await ServerMap.findOne({
-        where: {
-            server_id: serverId,
-            valid_to: null
-        }
-    })
-
-    // Check if map has changed
-    const mapChanged = !lastMap ||
-        lastMap.map_name !== data.mapName;
-
-    if (mapChanged) {
-        // Update the previous map's valid_to date if it exists
-        if (lastMap) {
-            await lastMap.update({
-                valid_to: new Date()
-            });
-        }
-
-        // Insert the new map
-        await ServerMap.create({
-            server_id: serverId,
-            valid_from: new Date(),
-            map_name: data.mapName,
-            game_mode: data.mode
-        })
-    }
 }
 
 // Get all servers with their latest stats
@@ -650,4 +547,79 @@ export async function batchUpsertServers(servers: ServerInput[]): Promise<void> 
         logger.error('Error batch upserting servers:', error);
         throw error;
     }
+}
+
+export async function bulkUpdateLastSeen(serverIds: number[]): Promise<void> {
+    if (!serverIds.length) return;
+
+    await Server.update(
+        { last_seen: new Date() },
+        { where: { id: { [Op.in]: serverIds } } }
+    );
+}
+
+export async function bulkSaveServerStats(statsBatch: any[]): Promise<void> {
+    if (!statsBatch.length) return;
+
+    // Sequelize bulkCreate is highly optimized and compiles to a single INSERT statement
+    await ServerStats.bulkCreate(statsBatch);
+}
+
+export async function bulkSaveMotds(newMotds: any[]): Promise<void> {
+    if (!newMotds.length) return;
+
+    const serverIds = newMotds.map(m => m.server_id);
+    const now = new Date();
+
+    // Use a transaction to ensure we don't end up with duplicate null valid_to records
+    await sequelize.transaction(async (t: Transaction) => {
+        // Close the old active MOTDs for these specific servers
+        await ServerMotd.update(
+            { valid_to: now },
+            {
+                where: {
+                    server_id: { [Op.in]: serverIds },
+                    valid_to: null
+                },
+                transaction: t
+            }
+        );
+
+        // Insert the new ones
+        const motdsToInsert = newMotds.map(m => ({
+            ...m,
+            valid_from: now
+        }));
+
+        await ServerMotd.bulkCreate(motdsToInsert, { transaction: t });
+    });
+}
+
+export async function bulkSaveMaps(newMaps: any[]): Promise<void> {
+    if (!newMaps.length) return;
+
+    const serverIds = newMaps.map(m => m.server_id);
+    const now = new Date();
+
+    await sequelize.transaction(async (t: Transaction) => {
+        // Close the old active Maps
+        await ServerMap.update(
+            { valid_to: now },
+            {
+                where: {
+                    server_id: { [Op.in]: serverIds },
+                    valid_to: null
+                },
+                transaction: t
+            }
+        );
+
+        // Insert the new ones
+        const mapsToInsert = newMaps.map(m => ({
+            ...m,
+            valid_from: now
+        }));
+
+        await ServerMap.bulkCreate(mapsToInsert, { transaction: t });
+    });
 }

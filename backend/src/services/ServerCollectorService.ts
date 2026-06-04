@@ -5,6 +5,7 @@ import { getServerData } from './mindustryService.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import { ServerData } from '../../../common/models/serverData.js';
 import { ServerCollectorConfig } from '../shared/config.js';
+import {ServerRecord} from "../repositories/serverRepository.js";
 
 const logger = createLogger('ServerCollector');
 
@@ -17,6 +18,7 @@ export interface RawServerData {
   online: boolean;
   error?: string;
   cacheKey: string;
+  serverId: number;
 }
 
 export class ServerCollectorService {
@@ -45,7 +47,7 @@ export class ServerCollectorService {
 
     this.collectionQueue = new PQueue({
       concurrency: this.config.COLLECTION_CONCURRENCY,
-      interval: 1000,
+      interval: this.config.SERVER_COLLECTION_INTERVAL_MS,
       intervalCap: this.config.COLLECTION_CONCURRENCY * 2
     });
 
@@ -63,7 +65,8 @@ export class ServerCollectorService {
     }, this.config.DATA_COLLECTION_INTERVAL_MS);
 
     logger.info(`Server Collector Service started`);
-    logger.info(`- Refresh: every ${this.config.DATA_COLLECTION_INTERVAL_MS / 1000} seconds`);
+    logger.info(`- Refresh Server Lists: every ${this.config.DATA_COLLECTION_INTERVAL_MS / 1000} seconds`);
+    logger.info(`- Refresh Server Data: every ${this.config.SERVER_COLLECTION_INTERVAL_MS / 1000} seconds`);
     logger.info(`- With ${this.config.COLLECTION_CONCURRENCY} workers`);
   }
 
@@ -73,13 +76,7 @@ export class ServerCollectorService {
     for (const server of servers) {
       logger.debug(`Added server ${server.id} (${server.name}) to collection queue`);
       this.collectionQueue.add(async () => {
-        await this.processServerDiscovery({
-          host: server.host,
-          port: server.port,
-          networkName: server.name,
-          timestamp: Date.now(),
-          serverKey: CACHE_KEYS.SERVER_DATA(server.id)
-        });
+        await this.processServerDiscovery(server);
       });
     }
 
@@ -94,22 +91,24 @@ export class ServerCollectorService {
     logger.info('Server Discovery Service stopped');
   }
 
-  private async processServerDiscovery(discoveryData: { host: string; port: number; networkName?: string; timestamp: number, serverKey: string }): Promise<void> {
-    const { host, port, networkName, serverKey } = discoveryData;
+  private async processServerDiscovery(serverRecord: ServerRecord): Promise<void> {
+    const { host, port, name, id: serverId } = serverRecord;
+    const serverKey = CACHE_KEYS.SERVER_DATA(serverId);
 
     try {
-      logger.debug(`Querying server: ${serverKey} (${networkName || 'Unknown Network'})`);
+      logger.debug(`Querying server: ${serverKey} (${name || 'Unknown Network'})`);
 
       const serverData = await getServerData(host, port, serverKey);
 
       const rawData: RawServerData = {
         host,
         port,
-        networkName,
+        networkName: name,
         data: serverData,
         timestamp: Date.now(),
         online: serverData !== null,
-        cacheKey: serverKey
+        cacheKey: serverKey,
+        serverId: serverId
       };
 
       await this.cache.set(serverKey, rawData, CACHE_TTL.SERVER_DATA);
@@ -117,23 +116,24 @@ export class ServerCollectorService {
       await this.rawDataQueue.push(rawData);
 
       if (serverData) {
-        logger.debug(`Successfully queried ${serverKey} (${networkName}): ${serverData.players}/${serverData.playerLimit} players`);
+        logger.debug(`Successfully queried ${serverKey} (${name}): ${serverData.players}/${serverData.playerLimit} players`);
       } else {
-        logger.debug(`Server ${serverKey} (${networkName}) is offline or unreachable`);
+        logger.debug(`Server ${serverKey} (${name}) is offline or unreachable`);
       }
 
     } catch (error) {
-      logger.warn(`Error processing server ${serverKey} (${networkName || 'Unknown'}):`, error);
+      logger.warn(`Error processing server ${serverKey} (${name || 'Unknown'}):`, error);
 
       const rawData: RawServerData = {
         host,
         port,
-        networkName,
+        networkName: name,
         data: null,
         timestamp: Date.now(),
         online: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-        cacheKey: serverKey
+        cacheKey: serverKey,
+        serverId: serverId,
       };
 
       await this.rawDataQueue.push(rawData);

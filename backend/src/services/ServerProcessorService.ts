@@ -8,23 +8,20 @@ import { RawServerData } from './ServerCollectorService.js';
 
 const logger = createLogger('ServerProcessor');
 
-/**
- * Server Processor Service
- * Processes raw server data and updates cache/database
- */
 export class ServerProcessorService {
   private rawDataQueue: InMemoryQueue<RawServerData>;
   private cache: InMemoryCache;
   private updatesPubSub: InMemoryPubSub;
   private config: ServerProcessorConfig;
   private serverDataCache: Map<string, ServerWithHistory> = new Map();
+  private processLoop?: NodeJS.Timeout;
   private running = false;
 
   constructor(
-    rawDataQueue: InMemoryQueue<RawServerData>,
-    cache: InMemoryCache,
-    updatesPubSub: InMemoryPubSub,
-    config: ServerProcessorConfig
+      rawDataQueue: InMemoryQueue<RawServerData>,
+      cache: InMemoryCache,
+      updatesPubSub: InMemoryPubSub,
+      config: ServerProcessorConfig
   ) {
     this.rawDataQueue = rawDataQueue;
     this.cache = cache;
@@ -34,21 +31,16 @@ export class ServerProcessorService {
 
   async initialize(): Promise<void> {
     logger.info('Initializing data storage...');
-
     const servers = await serverRepository.getAllServersWithHistory(this.config.MAX_HISTORY_HOURS);
-
     this.serverDataCache.clear();
 
     for (const server of servers) {
       server.online = false;
-      if (server.currentData) {
-        server.currentData.online = false;
-      }
+      if (server.currentData) server.currentData.online = false;
       this.serverDataCache.set(CACHE_KEYS.SERVER_DATA(server.id), server);
     }
 
     await this.cache.set(CACHE_KEYS.ALL_SERVERS, Array.from(this.serverDataCache.values()), CACHE_TTL.ALL_SERVERS);
-
     logger.info(`Initialized data storage with ${this.serverDataCache.size} servers`);
   }
 
@@ -56,149 +48,140 @@ export class ServerProcessorService {
     logger.info('Starting Server Processor Service...');
     this.running = true;
 
-    this.processorLoop().catch(error => {
-      logger.error('Fatal error in processorLoop:', error);
-      // Don't crash the process, but log the error
-    });
-
-    logger.info('Server Processor Service started');
+    // Schedule periodic batch database uploads
+    // todo, setInterval doesn't wait for previous run to finish...
+    this.processLoop = setInterval(async () => {
+      try {
+        const processQueue = await this.rawDataQueue.popAll();
+        if (processQueue.length > 0) {
+          await this.processBatch(processQueue);
+        }
+      } catch (error) {
+        logger.error('Error in scheduled server list refresh:', error);
+      }
+    }, this.config.QUEUE_POLL_TIMEOUT_MS);
   }
 
   async stop(): Promise<void> {
     this.running = false;
+    if (this.processLoop) {
+      clearInterval(this.processLoop);
+    }
     logger.info('Server Processor Service stopped');
   }
 
-  /**
-   * Main processing loop for server data
-   */
-  private async processorLoop(): Promise<void> {
-    logger.info('Starting processing loop...');
+  private async processBatch(batch: RawServerData[]): Promise<void> {
+    const statsToInsert: any[] = [];
+    const motdsToUpdate: any[] = [];
+    const mapsToUpdate: any[] = [];
+    const onlineServerIds: number[] = [];
 
-    let cacheUpdateCounter = 0;
-    const CACHE_UPDATE_INTERVAL = 60;
-
-    while (this.running) {
-      try {
-        const rawData = await this.rawDataQueue.pop(this.config.QUEUE_POLL_TIMEOUT);
-
-        if (rawData) {
-          await this.processRawServerData(rawData);
-          cacheUpdateCounter++;
-
-          if (cacheUpdateCounter >= CACHE_UPDATE_INTERVAL) {
-            try {
-              await this.updateComprehensiveCache();
-              cacheUpdateCounter = 0;
-            } catch (cacheError) {
-              logger.error('Failed to update comprehensive cache:', cacheError);
-              // Do not reset counter, so we retry on next iteration
-            }
-          }
-        }
-
-      } catch (error) {
-        logger.error('Error in processing loop:', error);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-
-    logger.info('Processing loop stopped');
-  }
-
-  /**
-   * Process raw server data
-   */
-  private async processRawServerData(rawData: RawServerData): Promise<void> {
-    const { host, port, data, timestamp, online, cacheKey } = rawData;
-
-    try {
+    // Process memory states and prepare DB payloads
+    for (const rawData of batch) {
+      const { host, port, data, timestamp, online, cacheKey } = rawData;
       let serverEntry = this.serverDataCache.get(cacheKey);
 
+      // Skip unknown servers (or fetch them like your original code, omitted here for brevity)
       if (!serverEntry) {
-        const servers = await serverRepository.getServers();
-        const dbServer = servers.find(s => s.host === host && s.port === port);
+        serverEntry = await serverRepository.getServer(rawData.serverId)
 
-        if (!dbServer) {
-          logger.warn(`Server ${cacheKey} not found in database, skipping processing`);
-          return;
+        // This should never happen, can only really be caused by a bug or memory corruption
+        if (!serverEntry) {
+          logger.error(`Error in processing server entry, failed to acquire server data: ${rawData.serverId}`);
+          continue;
         }
-
-        serverEntry = {
-          id: dbServer.id,
-          name: dbServer.name,
-          host: dbServer.host,
-          port: dbServer.port,
-          history: [],
-          lastSeen: timestamp,
-          lastUpdated: timestamp,
-          online: false,
-          consecutiveFailures: 0,
-          countryCode: rawData?.data?.countryCode
-        };
-
-        this.serverDataCache.set(cacheKey, serverEntry);
       }
 
       if (data && online) {
-        await serverRepository.saveServerStats(serverEntry.id, data);
-        await serverRepository.saveMotdIfChanged(serverEntry.id, data);
-        await serverRepository.saveMapIfChanged(serverEntry.id, data);
-        await serverRepository.updateServerLastSeen(serverEntry.id);
+        // Compare new data against our memory cache to see if MOTD/Map ACTUALLY changed
+        const currentData = serverEntry.currentData;
 
+        const motdChanged = !currentData ||
+            currentData.serverName !== data.serverName ||
+            currentData.description !== data.description ||
+            currentData.modeName !== data.modeName;
+
+        const mapChanged = !currentData ||
+            currentData.mapName !== data.mapName;
+
+        // Queue up MOTD update only if changed
+        if (motdChanged) {
+          motdsToUpdate.push({
+            server_id: serverEntry.id,
+            server_name: data.serverName,
+            description: data.description,
+            mode_name: data.modeName
+          });
+        }
+
+        // Queue up Map update only if changed
+        if (mapChanged) {
+          mapsToUpdate.push({
+            server_id: serverEntry.id,
+            map_name: data.mapName,
+            game_mode: data.mode
+          });
+        }
+
+        // Always queue stats and last seen
+        statsToInsert.push({
+          server_id: serverEntry.id,
+          timestamp: timestamp,
+          players: data.players,
+          max_players: data.playerLimit,
+          wave: data.wave,
+          version: data.version,
+          version_type: data.versionType,
+          ping: data.ping,
+          online: true
+        });
+        onlineServerIds.push(serverEntry.id);
+
+        // Update in-memory state
         serverEntry.currentData = data;
         serverEntry.lastUpdated = timestamp;
         serverEntry.lastSeen = timestamp;
         serverEntry.online = true;
         serverEntry.consecutiveFailures = 0;
-        serverEntry.countryCode = rawData?.data?.countryCode;
-
-        serverEntry.history.push({
-          timestamp,
-          players: data.players ?? 0
-        });
+        serverEntry.history.push({ timestamp, players: data.players ?? 0 });
 
         if (serverEntry.history.length > this.config.MAX_HISTORY_POINTS) {
           serverEntry.history = serverEntry.history.slice(-this.config.MAX_HISTORY_POINTS);
         }
-
-        logger.debug(`Updated server ${cacheKey}: ${data.players}/${data.playerLimit} players`);
-
       } else {
+        // Handle offline server state
         serverEntry.online = false;
         serverEntry.lastUpdated = timestamp;
         serverEntry.consecutiveFailures = (serverEntry.consecutiveFailures || 0) + 1;
 
-        await serverRepository.saveServerStats(serverEntry.id, {
-          ping: null,
-          host: host,
-          port: port,
-          serverName: null,
-          mapName: null,
-          players: null,
-          wave: null,
-          version: null,
-          versionType: null,
-          mode: null,
-          playerLimit: null,
-          description: null,
-          modeName: null,
+        statsToInsert.push({
+          server_id: serverEntry.id,
+          timestamp: timestamp,
           online: false,
+          host: host,
+          port: port
         });
-
-        logger.debug(`Server ${cacheKey} marked as offline`);
       }
 
+      // Cache update & pubsub for each server (keeps realtime responsive)
       await this.cache.set(cacheKey, serverEntry, CACHE_TTL.SERVER_DATA);
+      await this.updatesPubSub.publish({ type: 'server_update', server: serverEntry, timestamp });
+    }
 
-      await this.updatesPubSub.publish({
-        type: 'server_update',
-        server: serverEntry,
-        timestamp: timestamp
-      });
+    try {
+      logger.debug(`Saving batch of ${batch.length} servers (Stats: ${statsToInsert.length}, MOTDs: ${motdsToUpdate.length}, Maps: ${mapsToUpdate.length})`);
 
+      // Run all independent queries in parallel using Promise.all
+      await Promise.all([
+        serverRepository.bulkSaveServerStats(statsToInsert),
+        serverRepository.bulkUpdateLastSeen(onlineServerIds),
+        serverRepository.bulkSaveMotds(motdsToUpdate),
+        serverRepository.bulkSaveMaps(mapsToUpdate)
+      ]);
+
+      logger.debug(`Processed batch of ${batch.length} servers (Stats: ${statsToInsert.length}, MOTDs: ${motdsToUpdate.length}, Maps: ${mapsToUpdate.length})`);
     } catch (error) {
-      logger.error(`Error processing server data for ${cacheKey}:`, error);
+      logger.error('Database batch write failed:', error);
     }
   }
 

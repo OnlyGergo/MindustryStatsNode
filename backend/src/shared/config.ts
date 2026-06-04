@@ -20,12 +20,13 @@ export interface ServerCollectorConfig extends BaseServiceConfig {
   COLLECTION_CONCURRENCY: number;
   MINDUSTRY_TIMEOUT_MS: number;
   DATA_COLLECTION_INTERVAL_MS: number;
+  SERVER_COLLECTION_INTERVAL_MS: number;
 }
 
 export interface ServerProcessorConfig extends BaseServiceConfig {
   MAX_HISTORY_HOURS: number;
   MAX_HISTORY_POINTS: number;
-  QUEUE_POLL_TIMEOUT: number;
+  QUEUE_POLL_TIMEOUT_MS: number;
 }
 
 export interface ApiServiceConfig extends BaseServiceConfig {

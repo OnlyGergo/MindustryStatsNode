@@ -70,14 +70,15 @@ class MindustryStatsApp {
         ...baseConfig,
         COLLECTION_CONCURRENCY: parseInt(process.env.COLLECTION_CONCURRENCY || getDefaultConcurrency().toString()),
         MINDUSTRY_TIMEOUT_MS: parseInt(process.env.MINDUSTRY_TIMEOUT_MS || '1000'),
-        DATA_COLLECTION_INTERVAL_MS: parseInt(process.env.DATA_COLLECTION_INTERVAL_MS || '300000')
+        DATA_COLLECTION_INTERVAL_MS: parseInt(process.env.DATA_COLLECTION_INTERVAL_MS || '300000'),
+        SERVER_COLLECTION_INTERVAL_MS: parseInt(process.env.SERVER_COLLECTION_INTERVAL_MS || '1000')
       };
 
       const processorConfig = {
         ...baseConfig,
         MAX_HISTORY_HOURS: parseInt(process.env.MAX_HISTORY_HOURS || '36'),
         MAX_HISTORY_POINTS: parseInt(process.env.MAX_HISTORY_POINTS || '864'),
-        QUEUE_POLL_TIMEOUT: parseInt(process.env.QUEUE_POLL_TIMEOUT || '5')
+        QUEUE_POLL_TIMEOUT_MS: parseInt(process.env.QUEUE_POLL_TIMEOUT_MS || '10000')
       };
 
       const apiConfig = {
