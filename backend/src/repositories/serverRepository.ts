@@ -537,7 +537,6 @@ export async function bulkSaveMotds(newMotds: any[]): Promise<void> {
             };
         });
 
-        console.log(historyToInsert.toString());
         await ServerMotdHistory.bulkCreate(historyToInsert, { transaction: t });
     });
 }
