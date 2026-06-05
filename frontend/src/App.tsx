@@ -55,8 +55,7 @@ const App: React.FC = () => {
                 const serverId = parseInt(serverIdParam, 10);
                 // Validate serverId is a positive integer within reasonable bounds
                 if (!isNaN(serverId) && serverId > 0 && serverId < 1000000) {
-                    const servers = data;
-                    const targetServer = servers.find(s => s.id === serverId);
+                    const targetServer = data.find(s => s.id === serverId);
 
                     if (targetServer) {
                         setSelectedServer(targetServer);

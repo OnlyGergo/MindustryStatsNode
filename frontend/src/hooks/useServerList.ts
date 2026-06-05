@@ -76,7 +76,7 @@ export const useServerList = (rawServers: ServerElement[]) => {
           return a.online ? -1 : 1;
         }
 
-        let comparison = 0;
+        let comparison: number;
         if (typeof aValue === 'string' && typeof bValue === 'string') {
           comparison = aValue.localeCompare(bValue);
         } else {
