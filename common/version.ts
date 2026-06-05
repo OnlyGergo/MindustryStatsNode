@@ -1,3 +1,3 @@
-export const VERSION = 'v3.1-rc1';
-export const COMMIT = 'edbfd9d';
-export const BUILD_DATE = 'Fri  9 Jan 11:12:40 GMT 2026';
+export const VERSION = 'v4.0';
+export const COMMIT = '9d1acef';
+export const BUILD_DATE = 'Fri Jun  5 19:05:50 GMTST 2026';

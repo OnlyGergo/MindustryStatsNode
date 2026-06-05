@@ -25,12 +25,12 @@ function getDefaultConcurrency(): number {
  * Unified Mindustry Stats Application
  * Orchestrates all services in a single process
  */
-class MindustryStatsApp {
+export class MindustryStatsApp {
   // Services
-  private discoveryService!: ServerDiscoveryService;
-  private collectorService!: ServerCollectorService;
-  private processorService!: ServerProcessorService;
-  private apiService!: ApiService;
+  public discoveryService!: ServerDiscoveryService;
+  public collectorService!: ServerCollectorService;
+  public processorService!: ServerProcessorService;
+  public apiService!: ApiService;
 
   // Shared resources
   private rawDataQueue!: InMemoryQueue<RawServerData>;
@@ -162,9 +162,6 @@ class MindustryStatsApp {
         await this.collectorService.stop();
         await this.discoveryService.stop();
 
-        // Final cache update
-        await this.processorService.updateComprehensiveCache();
-
         logger.info('Graceful shutdown complete');
         process.exit(0);
       } catch (error) {
@@ -179,5 +176,5 @@ class MindustryStatsApp {
 }
 
 // Start the application
-const app = new MindustryStatsApp();
-app.start();
+export const mindustryApp = new MindustryStatsApp();
+mindustryApp.start();

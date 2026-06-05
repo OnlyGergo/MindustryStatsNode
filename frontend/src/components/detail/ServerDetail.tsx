@@ -6,9 +6,9 @@ import { removeColors, getGameModeName } from "../../util/mindustry.ts";
 import { formatDate } from "../../util/general.ts";
 import CopyButton from "../CopyButton.tsx";
 import ShareButton from "../ShareButton.tsx";
-import {ServerDetails} from "../../../../common/models/serverData.ts";
+import {ServerDetails, ServerElement} from "../../../../common/models/serverData.ts";
 
-const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
+const ServerDetail: React.FC<{ server: ServerElement }> = ({ server }) => {
     const [details, setDetails] = useState<ServerDetails | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -176,7 +176,7 @@ const ServerDetail: React.FC<{ server: any }> = ({ server }) => {
                 <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
                     <h2 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4">Player History</h2>
                     <div className="h-64 sm:h-96">
-                        <ServerHistoryChart history={server.history} serverId={server.id} />
+                        <ServerHistoryChart {...server} />
                     </div>
                 </div>
 

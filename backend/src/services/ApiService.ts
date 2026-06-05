@@ -1,6 +1,5 @@
 import {createLogger} from '../logger.js';
 import {InMemoryCache} from '../utils/in-memory-queue.js';
-import {CACHE_KEYS} from '../shared/constants.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import {ApiServiceConfig} from '../shared/config.js';
 import express from 'express';
@@ -9,6 +8,8 @@ import http from 'http';
 import path from "path";
 import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version.js";
 import apicache from 'apicache';
+import {encodeServerElements, ServerElement} from "../../../common/models/serverData";
+import {mindustryApp} from "../index";
 
 const logger = createLogger('ApiService');
 const cache = apicache.middleware;
@@ -18,13 +19,13 @@ const cache = apicache.middleware;
  * Exposes REST API endpoints with caching
  */
 export class ApiService {
-  private cache: InMemoryCache;
+  private serverDataCache: InMemoryCache;
   private config: ApiServiceConfig;
   private app!: express.Application;
   private httpServer!: http.Server;
 
-  constructor(cache: InMemoryCache, config: ApiServiceConfig) {
-    this.cache = cache;
+  constructor(serverDataCache: InMemoryCache, config: ApiServiceConfig) {
+    this.serverDataCache = serverDataCache;
     this.config = config;
   }
 
@@ -38,6 +39,9 @@ export class ApiService {
       credentials: true
     }));
     this.app.use(express.json());
+
+    // Expose web files
+    this.app.use(express.static(path.join(process.cwd(), 'public')));
 
     this.setupRoutes();
 
@@ -195,9 +199,9 @@ export class ApiService {
       }
     });
 
-    this.app.get('/api/servers', cache("3 minutes"), async (req, res) => {
+    this.app.get('/api/servers', cache("1 minutes"), async (req, res) => {
       try {
-        const servers = await this.cache.get(CACHE_KEYS.ALL_SERVERS);
+        const servers: ServerElement[] = mindustryApp.processorService.getCachedServerElements();
 
         if (!servers) {
           res.status(503).json({ error: 'Server data not available' });
@@ -205,7 +209,7 @@ export class ApiService {
         }
 
         logger.debug(`Served ${servers.length} servers from cache`);
-        res.json(servers);
+        res.json(encodeServerElements(servers));
 
       } catch (error) {
         logger.error('Error fetching servers:', error);
@@ -227,9 +231,6 @@ export class ApiService {
         res.status(500).json({ error: 'Failed to fetch global history' });
       }
     });
-
-    // Expose web files
-    this.app.use(express.static(path.join(process.cwd(), 'public')));
   }
 
   /**

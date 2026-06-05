@@ -3,6 +3,7 @@
  * This file contains all color, spacing, and styling constants
  * to make theming consistent and maintainable.
  */
+import {FetchStatus} from "./hooks/useApi.ts";
 
 // Primary brand colors
 export const theme = {
@@ -118,14 +119,14 @@ export const classes = {
 } as const;
 
 // Connection status helpers
-export const getConnectionStatusClasses = (status: string) => {
+export const getConnectionStatusClasses = (status: FetchStatus) => {
     switch (status) {
-        case 'connected':
+        case 'success':
             return {
                 dotColor: 'bg-green-400',
                 tooltip: 'Connected',
             };
-        case 'reconnecting':
+        case 'loading':
             return {
                 dotColor: 'bg-yellow-400 animate-pulse',
                 tooltip: 'Reconnecting...',

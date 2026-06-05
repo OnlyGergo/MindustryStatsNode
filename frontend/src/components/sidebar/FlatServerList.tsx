@@ -1,11 +1,11 @@
 import React from 'react';
 import ServerItem from './ServerItem';
-import { ServerWithHistory } from '../../../../common/models/serverData';
+import { ServerElement } from '../../../../common/models/serverData';
 
 interface FlatServerListProps {
-  servers: ServerWithHistory[];
-  onServerSelect: (server: ServerWithHistory) => void;
-  selectedServer: ServerWithHistory | null;
+  servers: ServerElement[];
+  onServerSelect: (server: ServerElement) => void;
+  selectedServer: ServerElement | null;
 }
 
 const FlatServerList: React.FC<FlatServerListProps> = ({

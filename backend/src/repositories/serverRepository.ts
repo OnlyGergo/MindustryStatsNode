@@ -6,7 +6,7 @@ import {
     ServerHistory,
     ServerMapData,
     ServerMotdData,
-    ServerWithHistory
+    ServerElement
 } from '../../../common/models/serverData.js';
 import {createLogger} from '../logger.js';
 import {Op, QueryTypes, Transaction} from "sequelize";
@@ -40,7 +40,7 @@ export async function getServers(): Promise<ServerRecord[]> {
 }
 
 // Get all servers with their latest stats
-export async function getAllServersWithHistory(hoursBack: number = 36): Promise<ServerWithHistory[]> {
+export async function getAllServerElements(hoursBack: number = 36): Promise<ServerElement[]> {
     const result = await sequelize.query(`
         WITH latest_motds AS (
             SELECT DISTINCT ON (h.server_id)
@@ -72,27 +72,15 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
                  WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
                    AND players >= 0 AND players < 100
                  ORDER BY server_id, timestamp DESC
-             ),
-             history_data AS (
-                 SELECT server_id, json_agg(
-                         json_build_object('timestamp', extract (epoch from timestamp) * 1000, 'players', players)
-                         ORDER BY timestamp
-                                   ) as history_json
-                 FROM server_stats
-                 WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
-                   AND players >= 0 AND players < 100
-                 GROUP BY server_id
              )
         SELECT s.id, sg.name, s.host, s.port, s.country_code, s.updated_at as "lastUpdated", s.last_seen,
                stats.online, stats.timestamp, stats.players, stats.max_players as "playerLimit",
                stats.wave, stats.version, stats.version_type as "versionType", stats.ping,
-               motds."serverName", motds.description, maps."modeName", maps."mapName", maps.mode,
-               COALESCE(h.history_json, '[]'::json) as history
+               motds."serverName", motds.description, maps."modeName", maps."mapName", maps.mode
         FROM servers s
                  LEFT JOIN latest_stats stats ON s.id = stats.server_id
                  LEFT JOIN latest_motds motds ON s.id = motds.server_id
                  LEFT JOIN latest_maps maps ON s.id = maps.server_id
-                 LEFT JOIN history_data h ON s.id = h.server_id
                  LEFT JOIN server_groups sg ON s.server_group_id = sg.id
         ORDER BY sg.name, s.host, s.port
     `, {
@@ -101,12 +89,11 @@ export async function getAllServersWithHistory(hoursBack: number = 36): Promise<
     });
 
     return result.map((row: any) => {
-        const serverWithHistory: ServerWithHistory = {
+        const serverWithHistory: ServerElement = {
             id: row.id,
             name: row.name,
             host: row.host,
             port: row.port,
-            history: row.history,
             online: row.online || false,
             lastSeen: row.last_seen,
             lastUpdated: row.lastUpdated?.getTime() || Date.now(),
@@ -314,7 +301,7 @@ export async function getGlobalPlayerHistory(hoursBack: number = 24, bucketMinut
 }
 
 // Get detailed information about a specific server
-export async function getServer(serverId: number): Promise<ServerWithHistory & ServerDetails | undefined> {
+export async function getServer(serverId: number): Promise<ServerElement & ServerDetails | undefined> {
     const [result]: any = await sequelize.query(`SELECT * FROM get_server_details($1)`, {
         bind: [serverId],
         type: "SELECT"
@@ -341,12 +328,11 @@ export async function getServer(serverId: number): Promise<ServerWithHistory & S
         modeName: motd.modeName
     }));
 
-    const serverWithDetails: ServerWithHistory & ServerDetails = {
+    const serverWithDetails: ServerElement & ServerDetails = {
         id: result.detail_id,
         name: result.detail_name,
         host: result.detail_host,
         port: result.detail_port,
-        history: [],
         online: result.detail_online || false,
         lastUpdated: result.detail_last_updated?.getTime() || Date.now(),
         playerPeaks: {

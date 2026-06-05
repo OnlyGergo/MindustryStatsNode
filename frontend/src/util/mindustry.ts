@@ -1,4 +1,4 @@
-import {ServerWithHistory} from "../../../common/models/serverData.ts";
+import {ServerElement} from "../../../common/models/serverData.ts";
 
 export function removeColors(text: string | null) {
     if (text === null) return null;
@@ -22,7 +22,7 @@ export function getGameModeName(mode: number | null): string {
     return ['Survival', 'Sandbox', 'Attack', 'PvP', 'Editor'][mode || 0] || 'Unknown';
 }
 
-export function isHub(server: ServerWithHistory) {
+export function isHub(server: ServerElement) {
         const nameLower = server.name?.toLowerCase() || '';
         const motdLower = server.currentData?.description?.toLowerCase() || '';
         const modeLower = server.currentData?.modeName?.toLowerCase() || '';

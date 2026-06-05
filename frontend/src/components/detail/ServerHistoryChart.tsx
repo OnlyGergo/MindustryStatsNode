@@ -1,5 +1,6 @@
-import React, {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
+import {ServerElement, ServerHistory} from "../../../../common/models/serverData.ts";
 
 // Register Chart.js components
 Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler);
@@ -21,18 +22,13 @@ const DATE_RANGE_OPTIONS: DateRange[] = [
     { label: 'Custom', value: 'custom' },
 ];
 
-interface ServerHistoryChartProps {
-    history: Array<{ timestamp: number; players: number | null }>;
-    serverId: number;
-}
-
-const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, serverId }) => {
+const ServerHistoryChart = ({id}: ServerElement) => {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<Chart | null>(null);
     const [selectedRange, setSelectedRange] = useState<DateRangeOption>('1d');
     const [customStartDate, setCustomStartDate] = useState<string>('');
     const [customEndDate, setCustomEndDate] = useState<string>('');
-    const [chartData, setChartData] = useState<Array<{ timestamp: number; players: number | null }>>(history);
+    const [chartData, setChartData] = useState<Array<ServerHistory>>([]);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [dateError, setDateError] = useState<string | null>(null);
@@ -58,33 +54,15 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
                 setDateError(null);
             }
 
-            if (selectedRange === '1d') {
-                // For 1 day, validate that history prop actually spans ~24 hours
-                if (Array.isArray(history) && history.length > 0) {
-                    const timestamps = history.map((entry) => entry.timestamp);
-                    const minTimestamp = Math.min(...timestamps);
-                    const maxTimestamp = Math.max(...timestamps);
-                    const oneDayMs = 24 * 60 * 60 * 1000;
-
-                    if (maxTimestamp - minTimestamp <= oneDayMs) {
-                        setChartData(history);
-                        setFetchError(null);
-                        return;
-                    }
-                }
-                // If the provided history does not represent approximately 1 day,
-                // fall through and fetch 1-day data from the API.
-            }
-
             setLoading(true);
             setFetchError(null);
             try {
-                let url = `/api/servers/${serverId}/history?range=${selectedRange}`;
+                let url = `/api/servers/${id}/history?range=${selectedRange}`;
                 
                 if (selectedRange === 'custom' && customStartDate && customEndDate) {
                     const startTs = new Date(customStartDate).getTime();
                     const endTs = new Date(customEndDate).getTime();
-                    url = `/api/servers/${serverId}/history?startDate=${startTs}&endDate=${endTs}`;
+                    url = `/api/servers/${id}/history?startDate=${startTs}&endDate=${endTs}`;
                 }
 
                 const response = await fetch(url);
@@ -104,7 +82,7 @@ const ServerHistoryChart: React.FC<ServerHistoryChartProps> = ({ history, server
         };
 
         fetchHistoryData();
-    }, [selectedRange, customStartDate, customEndDate, serverId, history]);
+    }, [selectedRange, customStartDate, customEndDate, id]);
 
     useEffect(() => {
         if (!chartRef.current) return;

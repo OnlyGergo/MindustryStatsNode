@@ -1,28 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ServerWithHistory } from  '../../common/models/serverData';
+import { ServerElement } from  '../../common/models/serverData';
 import MasterPanel from './components/sidebar/MasterPanel';
 import DetailPanel from './components/detail/DetailPanel';
-import useWebSocket from './hooks/useWebSocket';
+import useApi from './hooks/useApi.ts';
 import { useResponsive } from './hooks/useResponsive';
 import {isHub} from "./util/mindustry.ts";
 
 const App: React.FC = () => {
-    const [serverGroups, setServerGroups] = useState<Record<string, ServerWithHistory[]>>({});
+    const [serverGroups, setServerGroups] = useState<Record<string, ServerElement[]>>({});
     const [lastUpdated, setLastUpdated] = useState<string>('Loading...');
     const [totalServers, setTotalServers] = useState<number>(0);
     const [onlineServers, setOnlineServers] = useState<number>(0);
     const [totalPlayers, setTotalPlayers] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<boolean>(false);
-    const [selectedServer, setSelectedServer] = useState<ServerWithHistory | null>(null);
+    const [selectedServer, setSelectedServer] = useState<ServerElement | null>(null);
     const [isMasterPanelCollapsed, setIsMasterPanelCollapsed] = useState<boolean>(false);
     const [showMasterPanel, setShowMasterPanel] = useState<boolean>(true);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-    
+
     // Track if we've handled the initial URL serverId
     const initialServerIdHandled = useRef(false);
 
-    const {connectionStatus, data} = useWebSocket();
+    const {connectionStatus, data} = useApi();
     const { isMobile } = useResponsive();
 
     // On mobile, always show master panel by default when no server is selected
@@ -39,44 +39,45 @@ const App: React.FC = () => {
     }, [isMobile, selectedServer]);
 
     useEffect(() => {
-        if (data && data.type === 'init' || data?.type === 'update') {
-            processServerData(data.data);
-            setLastUpdated(new Date().toLocaleString());
-            setLoading(false);
-            
-            // Handle URL-based server selection on initial data load
-            if (!initialServerIdHandled.current && data?.data) {
-                const urlParams = new URLSearchParams(window.location.search);
-                const serverIdParam = urlParams.get('serverId');
-                
-                if (serverIdParam) {
-                    const serverId = parseInt(serverIdParam, 10);
-                    // Validate serverId is a positive integer within reasonable bounds
-                    if (!isNaN(serverId) && serverId > 0 && serverId < 1000000) {
-                        const servers = data.data as ServerWithHistory[];
-                        const targetServer = servers.find(s => s.id === serverId);
-                        
-                        if (targetServer) {
-                            setSelectedServer(targetServer);
-                            if (isMobile) {
-                                setShowMasterPanel(false);
-                            }
-                            initialServerIdHandled.current = true;
+        if (!data) {
+            return;
+        }
+        processServerData(data);
+        setLastUpdated(new Date().toLocaleString());
+        setLoading(false);
+
+        // Handle URL-based server selection on initial data load
+        if (!initialServerIdHandled.current && data) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const serverIdParam = urlParams.get('serverId');
+
+            if (serverIdParam) {
+                const serverId = parseInt(serverIdParam, 10);
+                // Validate serverId is a positive integer within reasonable bounds
+                if (!isNaN(serverId) && serverId > 0 && serverId < 1000000) {
+                    const servers = data;
+                    const targetServer = servers.find(s => s.id === serverId);
+
+                    if (targetServer) {
+                        setSelectedServer(targetServer);
+                        if (isMobile) {
+                            setShowMasterPanel(false);
                         }
+                        initialServerIdHandled.current = true;
                     }
                 }
             }
         }
     }, [data, isMobile]);
 
-    const processServerData = (servers: ServerWithHistory[]) => {
+    const processServerData = (servers: ServerElement[] | null) => {
         if (!servers || !Array.isArray(servers)) {
             setError(true);
             return;
         }
 
         // Group servers by name
-        const groups: Record<string, ServerWithHistory[]> = {};
+        const groups: Record<string, ServerElement[]> = {};
         servers.forEach(server => {
             if (!groups[server.name]) {
                 groups[server.name] = [];
@@ -93,7 +94,7 @@ const App: React.FC = () => {
         });
 
         // Sort the groups according to player count (desc)
-        const sortedGroups: Record<string, ServerWithHistory[]> = Object.fromEntries(
+        const sortedGroups: Record<string, ServerElement[]> = Object.fromEntries(
             Object.entries(groups).sort((a, b) => {
                 const aPlayers = a[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
                 const bPlayers = b[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
@@ -117,7 +118,7 @@ const App: React.FC = () => {
         setExpandedGroups(newExpanded);
     };
 
-    const handleServerSelect = (server: ServerWithHistory) => {
+    const handleServerSelect = (server: ServerElement) => {
         setSelectedServer(server);
         if (isMobile) {
             setShowMasterPanel(false);

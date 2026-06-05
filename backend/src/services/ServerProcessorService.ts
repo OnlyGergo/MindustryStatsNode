@@ -2,7 +2,7 @@ import { createLogger } from '../logger.js';
 import { InMemoryQueue, InMemoryCache } from '../utils/in-memory-queue.js';
 import { CACHE_KEYS, CACHE_TTL } from '../shared/constants.js';
 import * as serverRepository from '../repositories/serverRepository.js';
-import { ServerWithHistory } from '../../../common/models/serverData.js';
+import { ServerElement } from '../../../common/models/serverData.js';
 import { ServerProcessorConfig } from '../shared/config.js';
 import { RawServerData } from './ServerCollectorService.js';
 
@@ -12,7 +12,7 @@ export class ServerProcessorService {
   private rawDataQueue: InMemoryQueue<RawServerData>;
   private cache: InMemoryCache;
   private config: ServerProcessorConfig;
-  private serverDataCache: Map<string, ServerWithHistory> = new Map();
+  public serverDataCache: Map<string, ServerElement> = new Map();
   private processLoop?: NodeJS.Timeout;
   private running = false;
 
@@ -28,7 +28,7 @@ export class ServerProcessorService {
 
   async initialize(): Promise<void> {
     logger.info('Initializing data storage...');
-    const servers = await serverRepository.getAllServersWithHistory(this.config.MAX_HISTORY_HOURS);
+    const servers = await serverRepository.getAllServerElements(this.config.MAX_HISTORY_HOURS);
     this.serverDataCache.clear();
 
     for (const server of servers) {
@@ -140,11 +140,6 @@ export class ServerProcessorService {
         serverEntry.lastSeen = timestamp;
         serverEntry.online = true;
         serverEntry.consecutiveFailures = 0;
-        serverEntry.history.push({ timestamp, players: data.players ?? 0 });
-
-        if (serverEntry.history.length > this.config.MAX_HISTORY_POINTS) {
-          serverEntry.history = serverEntry.history.slice(-this.config.MAX_HISTORY_POINTS);
-        }
       } else {
         // Handle offline server state
         serverEntry.online = false;
@@ -184,14 +179,9 @@ export class ServerProcessorService {
   /**
    * Update the comprehensive server cache (public for shutdown)
    */
-  async updateComprehensiveCache(): Promise<void> {
-    try {
-      const allServers = Array.from(this.serverDataCache.values());
-      await this.cache.set(CACHE_KEYS.ALL_SERVERS, allServers, CACHE_TTL.ALL_SERVERS);
-      logger.debug(`Updated comprehensive cache with ${allServers.length} servers`);
-    } catch (error) {
-      logger.error('Error updating comprehensive cache:', error);
-    }
+  getCachedServerElements(): ServerElement[] {
+    //todo should this have a TTL - this risks stale data, though they are timestamped
+    return Array.from(this.serverDataCache.values());
   }
 
   getServerCount(): number {

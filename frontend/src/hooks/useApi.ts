@@ -1,79 +1,58 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import {decodeServerElements, ServerElement} from "../../../common/models/serverData.ts";
 
-interface WebSocketMessage {
-    type: string;
-    data: any;
-    timestamp?: number;
-}
-
-type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'error';
+// We adapted the status to fit HTTP requests instead of persistent sockets
+export type FetchStatus = 'loading' | 'success' | 'error';
 
 const useApi = () => {
-    const [data, setData] = useState<WebSocketMessage | null>(null);
-    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
-    const socketRef = useRef<WebSocket | null>(null);
-    const reconnectAttemptsRef = useRef(0);
-    const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    const connectWebSocket = () => {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
-
-        // Clear any pending reconnect
-        if (reconnectTimeoutRef.current) {
-            clearTimeout(reconnectTimeoutRef.current);
-            reconnectTimeoutRef.current = null;
-        }
-
-        socketRef.current = new WebSocket(wsUrl);
-
-        socketRef.current.onopen = () => {
-            console.log('WebSocket connected');
-            setConnectionStatus('connected');
-            reconnectAttemptsRef.current = 0;
-        };
-
-        socketRef.current.onmessage = (event) => {
-            try {
-                const parsedData = JSON.parse(event.data);
-                setData(parsedData);
-            } catch (err) {
-                console.error('Error processing WebSocket message:', err);
-            }
-        };
-
-        socketRef.current.onclose = () => {
-            console.log('WebSocket disconnected');
-            setConnectionStatus('reconnecting');
-
-            // Exponential backoff with maximum delay
-            const delay = Math.min(1000 * Math.pow(1.5, reconnectAttemptsRef.current), 30000);
-            reconnectAttemptsRef.current++;
-
-            reconnectTimeoutRef.current = setTimeout(connectWebSocket, delay);
-        };
-
-        socketRef.current.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            setConnectionStatus('error');
-        };
-    };
+    const [data, setData] = useState<ServerElement[] | null>(null);
+    const [connectionStatus, setStatus] = useState<FetchStatus>('loading');
+    const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
-        connectWebSocket();
+        // This is a React safety flag. It prevents React from trying to update
+        // the state if the user navigates away from the page before the fetch finishes.
+        let isMounted = true;
 
-        return () => {
-            if (socketRef.current) {
-                socketRef.current.close();
-            }
+        const fetchServerStats = async () => {
+            try {
+                // Fetch from your cached HTTP endpoint
+                const response = await fetch('/api/servers');
 
-            if (reconnectTimeoutRef.current) {
-                clearTimeout(reconnectTimeoutRef.current);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const jsonData = decodeServerElements(await response.json());
+
+                if (isMounted) {
+                    setData(jsonData);
+                    setStatus('success');
+                    setError(null); // Clear any previous errors
+                }
+            } catch (err) {
+                console.error('Error fetching server stats:', err);
+                if (isMounted) {
+                    setStatus('error');
+                    setError(err instanceof Error ? err : new Error('Unknown error'));
+                }
             }
         };
-    }, []);
 
-    return { data, connectionStatus };
+        // 1. Fetch immediately when the component loads
+        fetchServerStats().then(() => {});
+
+        // 2. Poll every 10 seconds (10000ms) to sync perfectly with your backend/Cloudflare cache
+        const pollInterval = setInterval(fetchServerStats, 10000);
+
+        // 3. Cleanup function: React runs this when the component unmounts/is destroyed
+        return () => {
+            isMounted = false;
+            clearInterval(pollInterval);
+        };
+    }, []); // The empty array ensures this setup only runs once when mounted
+
+    return { data, connectionStatus, error };
 };
 
 export default useApi;

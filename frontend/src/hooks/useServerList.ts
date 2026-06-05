@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ServerWithHistory } from '../../../common/models/serverData';
+import { ServerElement } from '../../../common/models/serverData';
 import { isHub } from '../util/mindustry';
 
 export type SortCriteria = 'ping' | 'playerCount' | 'name';
@@ -8,7 +8,7 @@ export type SortDirection = 'asc' | 'desc';
 export interface SortOption {
   key: SortCriteria;
   label: string;
-  getValue: (server: ServerWithHistory) => number | string;
+  getValue: (server: ServerElement) => number | string;
 }
 
 const SORT_OPTIONS: SortOption[] = [
@@ -29,7 +29,7 @@ const SORT_OPTIONS: SortOption[] = [
   }
 ];
 
-export const useServerList = (rawServers: ServerWithHistory[]) => {
+export const useServerList = (rawServers: ServerElement[]) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isGrouped, setIsGrouped] = useState<boolean>(true);
   const [hideInactiveEnabled, setHideInactiveEnabled] = useState<boolean>(true);
@@ -95,7 +95,7 @@ export const useServerList = (rawServers: ServerWithHistory[]) => {
 
     if (isGrouped) {
       // Group servers by name
-      const groups: Record<string, ServerWithHistory[]> = {};
+      const groups: Record<string, ServerElement[]> = {};
       serversWithHidden.forEach(server => {
         if (!groups[server.name]) {
           groups[server.name] = [];
@@ -104,7 +104,7 @@ export const useServerList = (rawServers: ServerWithHistory[]) => {
       });
 
       // Sort groups by total player count (descending)
-      const sortedGroups: Record<string, ServerWithHistory[]> = Object.fromEntries(
+      const sortedGroups: Record<string, ServerElement[]> = Object.fromEntries(
         Object.entries(groups).sort((a, b) => {
           const aPlayers = a[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
           const bPlayers = b[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);

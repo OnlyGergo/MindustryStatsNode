@@ -1,9 +1,9 @@
 import React from 'react';
-import { ServerWithHistory } from '../../../../common/models/serverData';
+import { ServerElement } from '../../../../common/models/serverData';
 import ServerDetail from './ServerDetail';
 
 interface DetailPanelProps {
-    selectedServer: ServerWithHistory | null;
+    selectedServer: ServerElement | null;
     isMobile: boolean;
     showMasterPanel: boolean;
     onBackToMaster?: () => void;

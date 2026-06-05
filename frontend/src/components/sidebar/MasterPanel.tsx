@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ServerGroup from './ServerGroup';
 import FlatServerList from './FlatServerList';
-import {ServerWithHistory} from "../../../../common/models/serverData.ts";
+import {ServerElement} from "../../../../common/models/serverData.ts";
 import SearchBar from "../SearchBar.tsx";
 import ToggleButton from "../ToggleButton.tsx";
 import SortDropdown from "../SortDropdown.tsx";
@@ -10,19 +10,20 @@ import { useServerList } from "../../hooks/useServerList.ts";
 import {COMMIT, VERSION} from "../../../../common/version.ts";
 import { getConnectionStatusClasses } from "../../theme.ts";
 import GlobalStatsChart from "../GlobalStatsChart.tsx";
+import {FetchStatus} from "../../hooks/useApi.ts";
 
 interface MasterPanelProps {
     isCollapsed: boolean;
     onToggleCollapse: () => void;
-    connectionStatus: string;
+    connectionStatus: FetchStatus;
     totalServers: number;
     onlineServers: number;
     totalPlayers: number;
-    serverGroups: Record<string, ServerWithHistory[]>;
+    serverGroups: Record<string, ServerElement[]>;
     expandedGroups: Set<string>;
     onToggleGroup: (groupName: string) => void;
-    onServerSelect: (server: ServerWithHistory) => void;
-    selectedServer: ServerWithHistory | null;
+    onServerSelect: (server: ServerElement) => void;
+    selectedServer: ServerElement | null;
     loading: boolean;
     error: boolean;
     lastUpdated: string;
