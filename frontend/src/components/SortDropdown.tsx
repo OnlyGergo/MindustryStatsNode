@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { SortCriteria, SortDirection, SortOption } from '../hooks/useServerList';
+import React, {useEffect, useRef, useState} from 'react';
+import {SortCriteria, SortDirection, SortOption} from '../hooks/useServerList';
 
 interface SortDropdownProps {
   sortOptions: SortOption[];

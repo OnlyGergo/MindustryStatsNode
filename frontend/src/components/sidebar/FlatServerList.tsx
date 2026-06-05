@@ -1,6 +1,6 @@
 import React from 'react';
 import ServerItem from './ServerItem';
-import { ServerElement } from '../../../../common/models/serverData';
+import {ServerElement} from '../../../../common/models/serverData';
 
 interface FlatServerListProps {
   servers: ServerElement[];

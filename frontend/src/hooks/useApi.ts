@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import {useEffect, useState} from 'react';
 import {decodeServerElements, ServerElement} from "../../../common/models/serverData.ts";
 
 // We adapted the status to fit HTTP requests instead of persistent sockets

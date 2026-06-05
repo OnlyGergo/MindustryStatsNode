@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { removeColors } from "../../../util/mindustry.ts";
-import { formatDateTimeHuman } from "../../../util/general.ts";
+import React, {useMemo, useState} from 'react';
+import {removeColors} from "../../../util/mindustry.ts";
+import {formatDateTimeHuman} from "../../../util/general.ts";
 import {ServerMotdData} from "../../../../../common/models/serverData.ts";
 
 const ITEMS_PER_PAGE = 10;

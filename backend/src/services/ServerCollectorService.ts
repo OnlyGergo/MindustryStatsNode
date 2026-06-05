@@ -1,11 +1,11 @@
-import { createLogger } from '../logger.js';
-import { InMemoryQueue, InMemoryCache } from '../utils/in-memory-queue.js';
-import { CACHE_KEYS, CACHE_TTL } from '../shared/constants.js';
-import { getServerData } from './mindustryService.js';
+import {createLogger} from '../logger.js';
+import {InMemoryCache, InMemoryQueue} from '../utils/in-memory-queue.js';
+import {CACHE_KEYS, CACHE_TTL} from '../shared/constants.js';
+import {getServerData} from './mindustryService.js';
 import * as serverRepository from '../repositories/serverRepository.js';
-import { ServerData } from '../../../common/models/serverData.js';
-import { ServerCollectorConfig } from '../shared/config.js';
-import {ServerRecord} from "../repositories/serverRepository.js";
+import {ServerRecord} from '../repositories/serverRepository.js';
+import {ServerData} from '../../../common/models/serverData.js';
+import {ServerCollectorConfig} from '../shared/config.js';
 
 const logger = createLogger('ServerCollector');
 

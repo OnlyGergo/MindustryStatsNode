@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ServerElement } from  '../../common/models/serverData';
+import React, {useEffect, useRef, useState} from 'react';
+import {ServerElement} from '../../common/models/serverData';
 import MasterPanel from './components/sidebar/MasterPanel';
 import DetailPanel from './components/detail/DetailPanel';
 import useApi from './hooks/useApi.ts';
-import { useResponsive } from './hooks/useResponsive';
+import {useResponsive} from './hooks/useResponsive';
 import {isHub} from "./util/mindustry.ts";
 
 const App: React.FC = () => {

@@ -1,4 +1,4 @@
-import { Model, DataTypes } from 'sequelize';
+import {DataTypes, Model} from 'sequelize';
 import sequelize from '../config/database.js';
 import ServerGroup from './ServerGroup.js';
 

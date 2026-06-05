@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, {useEffect, useState} from 'react';
 import ServerHistoryChart from './ServerHistoryChart.tsx';
 import MapHistoryTable from './table/MapHistoryTable.tsx';
 import MotdHistoryTable from './table/MotdHistoryTable.tsx';
-import { removeColors, getGameModeName } from "../../util/mindustry.ts";
-import { formatDate } from "../../util/general.ts";
+import {getGameModeName, removeColors} from "../../util/mindustry.ts";
+import {formatDate} from "../../util/general.ts";
 import CopyButton from "../CopyButton.tsx";
 import ShareButton from "../ShareButton.tsx";
 import {ServerDetails, ServerElement} from "../../../../common/models/serverData.ts";

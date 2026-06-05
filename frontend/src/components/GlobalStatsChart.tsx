@@ -1,5 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
+import React, {useEffect, useRef, useState} from 'react';
+import {
+    CategoryScale,
+    Chart,
+    Filler,
+    Legend,
+    LinearScale,
+    LineController,
+    LineElement,
+    PointElement,
+    Tooltip
+} from 'chart.js';
 
 // Register Chart.js components
 Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler);

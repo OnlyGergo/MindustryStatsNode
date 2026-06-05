@@ -1,5 +1,5 @@
 import React from 'react';
-import { ServerElement } from '../../../../common/models/serverData';
+import {ServerElement} from '../../../../common/models/serverData';
 import ServerDetail from './ServerDetail';
 
 interface DetailPanelProps {

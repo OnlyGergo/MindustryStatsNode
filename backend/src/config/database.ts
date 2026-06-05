@@ -1,5 +1,5 @@
-import { Sequelize } from 'sequelize';
-import { env } from './env.js';
+import {Sequelize} from 'sequelize';
+import {env} from './env.js';
 import {createLogger} from '../logger.js';
 
 const logger = createLogger("Database");

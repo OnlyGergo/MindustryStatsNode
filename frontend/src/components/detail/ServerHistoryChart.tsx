@@ -1,5 +1,15 @@
 import {useEffect, useRef, useState} from 'react';
-import { Chart, LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
+import {
+    CategoryScale,
+    Chart,
+    Filler,
+    Legend,
+    LinearScale,
+    LineController,
+    LineElement,
+    PointElement,
+    Tooltip
+} from 'chart.js';
 import {ServerElement, ServerHistory} from "../../../../common/models/serverData.ts";
 
 // Register Chart.js components

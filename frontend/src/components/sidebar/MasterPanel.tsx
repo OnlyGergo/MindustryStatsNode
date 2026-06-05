@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import ServerGroup from './ServerGroup';
 import FlatServerList from './FlatServerList';
 import {ServerElement} from "../../../../common/models/serverData.ts";
@@ -6,9 +6,9 @@ import SearchBar from "../SearchBar.tsx";
 import ToggleButton from "../ToggleButton.tsx";
 import SortDropdown from "../SortDropdown.tsx";
 import Tooltip from "../Tooltip.tsx";
-import { useServerList } from "../../hooks/useServerList.ts";
+import {useServerList} from "../../hooks/useServerList.ts";
 import {COMMIT, VERSION} from "../../../../common/version.ts";
-import { getConnectionStatusClasses } from "../../theme.ts";
+import {getConnectionStatusClasses} from "../../theme.ts";
 import GlobalStatsChart from "../GlobalStatsChart.tsx";
 import {FetchStatus} from "../../hooks/useApi.ts";
 

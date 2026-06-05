@@ -3,10 +3,10 @@ import {Server, ServerGroup, ServerMapHistory, ServerMotdHistory, ServerStats} f
 import {
     GameMode,
     ServerDetails,
+    ServerElement,
     ServerHistory,
     ServerMapData,
-    ServerMotdData,
-    ServerElement
+    ServerMotdData
 } from '../../../common/models/serverData.js';
 import {createLogger} from '../logger.js';
 import {Op, QueryTypes, Transaction} from "sequelize";

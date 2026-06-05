@@ -1,6 +1,6 @@
 import ip3country from 'ip3country';
 import dns from 'dns';
-import { createLogger } from '../logger.js';
+import {createLogger} from '../logger.js';
 
 /**
  * Convert a 2-letter country code to a flag emoji

@@ -1,9 +1,9 @@
 import dgram from 'dgram';
 import dns from 'dns/promises';
-import { GameMode, ServerData } from '../../../common/models/serverData.js';
-import { readString } from '../utils/buffer.js';
-import { MINDUSTRY_TIMEOUT_MILLISECONDS } from '../const.js';
-import { createLogger } from '../logger.js';
+import {GameMode, ServerData} from '../../../common/models/serverData.js';
+import {readString} from '../utils/buffer.js';
+import {MINDUSTRY_TIMEOUT_MILLISECONDS} from '../const.js';
+import {createLogger} from '../logger.js';
 import {lookupCountryFromIPSync} from "../utils/countryLookup.js";
 
 const failedServersCache = new Set<string>();

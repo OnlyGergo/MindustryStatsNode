@@ -1,8 +1,8 @@
-import { createLogger } from '../logger.js';
-import { SERVERS_SOURCE } from '../const.js';
+import {createLogger} from '../logger.js';
+import {SERVERS_SOURCE} from '../const.js';
 import * as serverRepository from '../repositories/serverRepository.js';
-import { ServerListElement } from '../models/ServerListElement.js';
-import { ServerDiscoveryConfig } from '../shared/config.js';
+import {ServerListElement} from '../models/ServerListElement.js';
+import {ServerDiscoveryConfig} from '../shared/config.js';
 
 const logger = createLogger('ServerDiscovery');
 

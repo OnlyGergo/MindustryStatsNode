@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { removeColors, getGameModeName } from "../../../util/mindustry.ts";
+import React, {useMemo, useState} from 'react';
+import {getGameModeName, removeColors} from "../../../util/mindustry.ts";
 import {ServerMapData} from "../../../../../common/models/serverData.ts";
 import {formatDateTimeHuman} from "../../../util/general.ts";
 

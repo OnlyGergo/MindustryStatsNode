@@ -1,10 +1,10 @@
-import { createLogger } from '../logger.js';
-import { InMemoryQueue, InMemoryCache } from '../utils/in-memory-queue.js';
-import { CACHE_KEYS, CACHE_TTL } from '../shared/constants.js';
+import {createLogger} from '../logger.js';
+import {InMemoryCache, InMemoryQueue} from '../utils/in-memory-queue.js';
+import {CACHE_KEYS, CACHE_TTL} from '../shared/constants.js';
 import * as serverRepository from '../repositories/serverRepository.js';
-import { ServerElement } from '../../../common/models/serverData.js';
-import { ServerProcessorConfig } from '../shared/config.js';
-import { RawServerData } from './ServerCollectorService.js';
+import {ServerElement} from '../../../common/models/serverData.js';
+import {ServerProcessorConfig} from '../shared/config.js';
+import {RawServerData} from './ServerCollectorService.js';
 
 const logger = createLogger('ServerProcessor');
 

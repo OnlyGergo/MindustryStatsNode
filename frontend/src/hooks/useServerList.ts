@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { ServerElement } from '../../../common/models/serverData';
-import { isHub } from '../util/mindustry';
+import {useMemo, useState} from 'react';
+import {ServerElement} from '../../../common/models/serverData';
+import {isHub} from '../util/mindustry';
 
 export type SortCriteria = 'ping' | 'playerCount' | 'name';
 export type SortDirection = 'asc' | 'desc';
