@@ -113,7 +113,7 @@ class MindustryStatsApp {
         processorConfig
       );
       this.apiService = new ApiService(this.cache, apiConfig);
-      this.wsService = new WebSocketService(this.cache, this.updatesPubSub, wsConfig);
+      this.wsService = new WebSocketService(this.updatesPubSub, wsConfig);
 
       // Initialize processor data storage
       await this.processorService.initialize();

@@ -1,6 +1,6 @@
 import {createLogger} from '../logger.js';
 import {InMemoryCache} from '../utils/in-memory-queue.js';
-import {CACHE_KEYS, CACHE_TTL} from '../shared/constants.js';
+import {CACHE_KEYS} from '../shared/constants.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import {ApiServiceConfig} from '../shared/config.js';
 import express from 'express';
@@ -8,8 +8,10 @@ import cors from 'cors';
 import http from 'http';
 import path from "path";
 import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version.js";
+import apicache from 'apicache';
 
 const logger = createLogger('ApiService');
+const cache = apicache.middleware;
 
 /**
  * API Service
@@ -77,7 +79,7 @@ export class ApiService {
 
   private setupRoutes(): void {
     // Health check endpoint
-    this.app.get('/health', async (req, res) => {
+    this.app.get('/health', cache("3 minutes"), async (req, res) => {
       res.json({
         status: 'healthy',
         service: 'mindustry-stats',
@@ -92,7 +94,7 @@ export class ApiService {
     });
 
     // API Routes
-    this.app.get('/api/servers/:id/details', async (req, res) => {
+    this.app.get('/api/servers/:id/details', cache("3 minutes"), async (req, res) => {
       try {
         const { id } = req.params;
         const idNumber = parseInt(id, 10);
@@ -102,7 +104,7 @@ export class ApiService {
           return;
         }
 
-        const server = await this.getServerDetails(idNumber);
+        const server = await serverRepository.getServer(idNumber);
 
         if (!server) {
           res.status(404).json({ error: 'Server not found' });
@@ -118,7 +120,7 @@ export class ApiService {
       }
     });
 
-    this.app.get('/api/servers/:id/motd-history', async (req, res) => {
+    this.app.get('/api/servers/:id/motd-history', cache("3 minutes"), async (req, res) => {
       try {
         const { id } = req.params;
         const { page = '1', perPage = '20' } = req.query;
@@ -142,7 +144,7 @@ export class ApiService {
       }
     });
 
-    this.app.get('/api/servers/:id/map-history', async (req, res) => {
+    this.app.get('/api/servers/:id/map-history', cache("3 minutes"), async (req, res) => {
       try {
         const { id } = req.params;
         const { page = '1', perPage = '20' } = req.query;
@@ -166,7 +168,7 @@ export class ApiService {
       }
     });
 
-    this.app.get('/api/servers/:id/history', async (req, res) => {
+    this.app.get('/api/servers/:id/history', cache("5 minutes"), async (req, res) => {
       try {
         const { id } = req.params;
         const { range, startDate, endDate } = req.query;
@@ -193,7 +195,7 @@ export class ApiService {
       }
     });
 
-    this.app.get('/api/servers', async (req, res) => {
+    this.app.get('/api/servers', cache("3 minutes"), async (req, res) => {
       try {
         const servers = await this.cache.get(CACHE_KEYS.ALL_SERVERS);
 
@@ -212,7 +214,7 @@ export class ApiService {
     });
 
     // Global player history endpoint
-    this.app.get('/api/global/history', async (req, res) => {
+    this.app.get('/api/global/history', cache("3 minutes"), async (req, res) => {
       try {
         const { range } = req.query;
         const history = await this.getGlobalHistory(range as string | undefined);
@@ -228,25 +230,6 @@ export class ApiService {
 
     // Expose web files
     this.app.use(express.static(path.join(process.cwd(), 'public')));
-  }
-
-  /**
-   * Get server details with caching
-   */
-  private async getServerDetails(id: number) {
-    const cacheKey = CACHE_KEYS.SERVER_DETAILS(id);
-
-    let server = await this.cache.get(cacheKey);
-
-    if (!server) {
-      server = await serverRepository.getServer(id);
-
-      if (server) {
-        await this.cache.set(cacheKey, server, CACHE_TTL.SERVER_DETAILS);
-      }
-    }
-
-    return server;
   }
 
   /**
