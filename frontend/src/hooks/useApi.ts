@@ -8,7 +8,7 @@ interface WebSocketMessage {
 
 type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'error';
 
-const useWebSocket = () => {
+const useApi = () => {
     const [data, setData] = useState<WebSocketMessage | null>(null);
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
     const socketRef = useRef<WebSocket | null>(null);
@@ -76,4 +76,4 @@ const useWebSocket = () => {
     return { data, connectionStatus };
 };
 
-export default useWebSocket;
+export default useApi;

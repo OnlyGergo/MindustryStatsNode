@@ -2,13 +2,12 @@
 
 import { createLogger } from './logger.js';
 import { initDatabase } from './config/database.js';
-import { InMemoryQueue, InMemoryPubSub, InMemoryCache } from './utils/in-memory-queue.js';
+import { InMemoryQueue, InMemoryCache } from './utils/in-memory-queue.js';
 import { loadBaseConfig } from './shared/config.js';
 import { ServerDiscoveryService } from './services/ServerDiscoveryService.js';
 import { ServerCollectorService, RawServerData } from './services/ServerCollectorService.js';
 import { ServerProcessorService } from './services/ServerProcessorService.js';
 import { ApiService } from './services/ApiService.js';
-import { WebSocketService } from './services/WebSocketService.js';
 import { initCountryLookup } from './utils/countryLookup.js';
 import os from 'os';
 import { VERSION, COMMIT, BUILD_DATE } from '../../common/version.js';
@@ -32,12 +31,10 @@ class MindustryStatsApp {
   private collectorService!: ServerCollectorService;
   private processorService!: ServerProcessorService;
   private apiService!: ApiService;
-  private wsService!: WebSocketService;
 
   // Shared resources
   private rawDataQueue!: InMemoryQueue<RawServerData>;
   private cache!: InMemoryCache;
-  private updatesPubSub!: InMemoryPubSub;
 
   // Cache cleanup interval
   private cacheCleanupInterval?: NodeJS.Timeout;
@@ -88,16 +85,9 @@ class MindustryStatsApp {
         GRAPH_MAX_POINTS: parseInt(process.env.GRAPH_MAX_POINTS || '168')
       };
 
-      const wsConfig = {
-        ...baseConfig,
-        WS_PATH: process.env.WS_PATH || '/ws',
-        CORS_ORIGIN: process.env.CORS_ORIGIN || '*'
-      };
-
       // Initialize shared resources
       this.rawDataQueue = new InMemoryQueue('rawData');
       this.cache = new InMemoryCache();
-      this.updatesPubSub = new InMemoryPubSub('server_updates');
 
       // Initialize services
       this.discoveryService = new ServerDiscoveryService(discoveryConfig);
@@ -109,11 +99,9 @@ class MindustryStatsApp {
       this.processorService = new ServerProcessorService(
         this.rawDataQueue,
         this.cache,
-        this.updatesPubSub,
         processorConfig
       );
       this.apiService = new ApiService(this.cache, apiConfig);
-      this.wsService = new WebSocketService(this.updatesPubSub, wsConfig);
 
       // Initialize processor data storage
       await this.processorService.initialize();
@@ -126,9 +114,6 @@ class MindustryStatsApp {
       // Initialize API service (creates HTTP server but doesn't start listening)
       await this.apiService.start();
       
-      // Attach WebSocket to the same HTTP server
-      await this.wsService.start(this.apiService.getHttpServer());
-      
       // Start the shared HTTP server
       await this.apiService.listen();
 
@@ -140,7 +125,6 @@ class MindustryStatsApp {
 
       logger.info('=== All services started successfully ===');
       logger.info(`API & WebSocket Server: http://localhost:${apiConfig.PORT}`);
-      logger.info(`WebSocket Path: ws://localhost:${apiConfig.PORT}${wsConfig.WS_PATH}`);
       logger.info(`Collection Concurrency: ${collectorConfig.COLLECTION_CONCURRENCY}`);
       logger.info(`Server Count: ${this.processorService.getServerCount()}`);
 
@@ -173,7 +157,6 @@ class MindustryStatsApp {
 
       // Stop all services
       try {
-        await this.wsService.stop();
         await this.apiService.stop();
         await this.processorService.stop();
         await this.collectorService.stop();

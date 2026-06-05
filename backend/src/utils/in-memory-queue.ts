@@ -102,34 +102,6 @@ export class InMemoryQueue<T = any> {
 }
 
 /**
- * In-memory pub/sub implementation using EventEmitter
- * Replaces Redis-based ValkeyPubSub
- */
-export class InMemoryPubSub {
-  private static emitter = new EventEmitter();
-  
-  constructor(private channel: string) {}
-
-  /**
-   * Publish data to the channel
-   */
-  async publish(data: any): Promise<void> {
-    InMemoryPubSub.emitter.emit(this.channel, data);
-  }
-
-  /**
-   * Subscribe to the channel.
-   * Returns an unsubscribe function to remove the listener.
-   */
-  subscribe(callback: (data: any) => void): () => void {
-    InMemoryPubSub.emitter.on(this.channel, callback);
-    return () => {
-      InMemoryPubSub.emitter.removeListener(this.channel, callback);
-    };
-  }
-}
-
-/**
  * In-memory cache implementation using Map
  * Replaces Redis-based ValkeyCache
  */

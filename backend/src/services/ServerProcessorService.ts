@@ -1,5 +1,5 @@
 import { createLogger } from '../logger.js';
-import { InMemoryQueue, InMemoryPubSub, InMemoryCache } from '../utils/in-memory-queue.js';
+import { InMemoryQueue, InMemoryCache } from '../utils/in-memory-queue.js';
 import { CACHE_KEYS, CACHE_TTL } from '../shared/constants.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import { ServerWithHistory } from '../../../common/models/serverData.js';
@@ -11,7 +11,6 @@ const logger = createLogger('ServerProcessor');
 export class ServerProcessorService {
   private rawDataQueue: InMemoryQueue<RawServerData>;
   private cache: InMemoryCache;
-  private updatesPubSub: InMemoryPubSub;
   private config: ServerProcessorConfig;
   private serverDataCache: Map<string, ServerWithHistory> = new Map();
   private processLoop?: NodeJS.Timeout;
@@ -20,12 +19,10 @@ export class ServerProcessorService {
   constructor(
       rawDataQueue: InMemoryQueue<RawServerData>,
       cache: InMemoryCache,
-      updatesPubSub: InMemoryPubSub,
       config: ServerProcessorConfig
   ) {
     this.rawDataQueue = rawDataQueue;
     this.cache = cache;
-    this.updatesPubSub = updatesPubSub;
     this.config = config;
   }
 
@@ -165,7 +162,6 @@ export class ServerProcessorService {
 
       // Cache update & pubsub for each server (keeps realtime responsive)
       await this.cache.set(cacheKey, serverEntry, CACHE_TTL.SERVER_DATA);
-      await this.updatesPubSub.publish({ type: 'server_update', server: serverEntry, timestamp });
     }
 
     try {
