@@ -2,16 +2,15 @@ import { Model, DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 import Server from './Server.js';
 
-class ServerMap extends Model {
+class ServerMapHistory extends Model {
     declare id: number;
     declare server_id: number;
+    declare map_id: number;
     declare valid_from: Date;
     declare valid_to: Date | null;
-    declare map_name: string;
-    declare game_mode: number;
 }
 
-ServerMap.init({
+ServerMapHistory.init({
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
@@ -34,21 +33,17 @@ ServerMap.init({
         type: DataTypes.DATE,
         allowNull: true
     },
-    map_name: {
-        type: DataTypes.STRING(255),
+    map_id: {
+        type: DataTypes.INTEGER,
         allowNull: false
-    },
-    game_mode: {
-        type: DataTypes.SMALLINT,
-        allowNull: true
     }
 }, {
     sequelize,
-    tableName: 'server_maps',
+    tableName: 'server_maps_history',
     timestamps: false
 });
 
 // Define association
-ServerMap.belongsTo(Server, { foreignKey: 'server_id' });
+ServerMapHistory.belongsTo(Server, { foreignKey: 'server_id' });
 
-export default ServerMap;
+export default ServerMapHistory;
