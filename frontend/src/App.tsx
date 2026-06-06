@@ -39,31 +39,24 @@ const App: React.FC = () => {
     }, [isMobile, selectedServer]);
 
     useEffect(() => {
-        if (!data) {
-            return;
-        }
+        if (!data) return;
         processServerData(data);
         setLastUpdated(new Date().toLocaleString());
         setLoading(false);
+    }, [data]);
 
-        // Handle URL-based server selection on initial data load
-        if (!initialServerIdHandled.current && data) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const serverIdParam = urlParams.get('serverId');
-
-            if (serverIdParam) {
-                const serverId = parseInt(serverIdParam, 10);
-                // Validate serverId is a positive integer within reasonable bounds
-                if (!isNaN(serverId) && serverId > 0 && serverId < 1000000) {
-                    const targetServer = data.find(s => s.id === serverId);
-
-                    if (targetServer) {
-                        setSelectedServer(targetServer);
-                        if (isMobile) {
-                            setShowMasterPanel(false);
-                        }
-                        initialServerIdHandled.current = true;
-                    }
+    useEffect(() => {
+        if (!initialServerIdHandled.current || !data) return;
+        const urlParams = new URLSearchParams(window.location.search);
+        const serverIdParam = urlParams.get('serverId');
+        if (serverIdParam) {
+            const serverId = parseInt(serverIdParam, 10);
+            if (!isNaN(serverId) && serverId > 0 && serverId < 1000000) {
+                const targetServer = data.find(s => s.id === serverId);
+                if (targetServer) {
+                    setSelectedServer(targetServer);
+                    if (isMobile) setShowMasterPanel(false);
+                    initialServerIdHandled.current = true;
                 }
             }
         }
@@ -93,15 +86,15 @@ const App: React.FC = () => {
         });
 
         // Sort the groups according to player count (desc)
-        const sortedGroups: Record<string, ServerElement[]> = Object.fromEntries(
+        const sortedGroups = new Map(
             Object.entries(groups).sort((a, b) => {
-                const aPlayers = a[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
-                const bPlayers = b[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
-                return bPlayers - aPlayers; // descending order
+                const aPlayers = a[1].reduce((sum, s) => sum + (isHub(s) ? 0 : (s.currentData?.players || 0)), 0);
+                const bPlayers = b[1].reduce((sum, s) => sum + (isHub(s) ? 0 : (s.currentData?.players || 0)), 0);
+                return bPlayers - aPlayers;
             })
         );
 
-        setServerGroups(sortedGroups);
+        setServerGroups(Object.fromEntries(sortedGroups));
         setTotalServers(servers.length);
         setOnlineServers(servers.filter(s => s.online).length);
         setTotalPlayers(servers.reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0));

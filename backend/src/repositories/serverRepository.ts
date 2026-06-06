@@ -389,7 +389,7 @@ export async function batchUpsertServers(servers: ServerInput[]): Promise<void> 
 
         // Deduplicate based on (name, host, port)
         const deduplicated = servers.reduce((acc, current) => {
-            const key = `${current.name}|${current.host}|${current.port}`;
+            const key = `${current.host}|${current.port}`;
             if (!acc.has(key)) {
                 acc.set(key, current);
             }
@@ -418,7 +418,7 @@ export async function batchUpsertServers(servers: ServerInput[]): Promise<void> 
             SELECT sd.host, sd.port, g.id
             FROM server_data sd
                      LEFT JOIN server_groups g ON g.name = sd.name
-            ON CONFLICT (host, port, server_group_id) DO UPDATE
+            ON CONFLICT (host, port) DO UPDATE
                 SET server_group_id = EXCLUDED.server_group_id,
                     updated_at = NOW()
         `, {
