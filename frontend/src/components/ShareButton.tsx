@@ -1,21 +1,29 @@
 import React, {useState} from 'react';
 
 interface ShareButtonProps {
-    serverId: number;
+    serverId?: number;
+    networkId?: number;
     className?: string;
 }
 
-const ShareButton: React.FC<ShareButtonProps> = ({ serverId, className }) => {
+const ShareButton: React.FC<ShareButtonProps> = ({ serverId, networkId, className }) => {
     const [copied, setCopied] = useState(false);
 
     const handleShare = async () => {
-        const shareUrl = `${window.location.origin}${window.location.pathname}?serverId=${serverId}`;
+        let shareUrl: string;
+        if (networkId) {
+            shareUrl = `${window.location.origin}/network/${networkId}`;
+        } else if (serverId) {
+            shareUrl = `${window.location.origin}/server/${serverId}`;
+        } else {
+            return;
+        }
         
         // Try native share first (works on mobile)
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: 'Mindustry Server',
+                    title: networkId ? 'Mindustry Network' : 'Mindustry Server',
                     url: shareUrl
                 });
                 return;

@@ -45,6 +45,15 @@ export class ApiService {
 
     this.setupRoutes();
 
+    // SPA catch-all: serve index.html for any non-API routes (enables deep linking)
+    this.app.get('*', (req, res) => {
+      if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+      } else {
+        res.status(404).json({ error: 'Not found' });
+      }
+    });
+
     // Create HTTP server but don't start it yet - will be started by main app
     this.httpServer = http.createServer(this.app);
     
@@ -214,6 +223,75 @@ export class ApiService {
       } catch (error) {
         logger.error('Error fetching servers:', error);
         res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Network player history endpoint
+    this.app.get('/api/networks/:id/history', cache("5 minutes"), async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { range } = req.query;
+        const idNumber = parseInt(id, 10);
+
+        if (isNaN(idNumber)) {
+          res.status(400).json({ error: 'Invalid network ID number' });
+          return;
+        }
+
+        let hoursBack: number;
+        switch (range) {
+          case '7d':
+            hoursBack = 168;
+            break;
+          case '14d':
+            hoursBack = 336;
+            break;
+          case '3m':
+            hoursBack = 2190;
+            break;
+          case '12m':
+            hoursBack = 8760;
+            break;
+          default:
+            hoursBack = 24;
+        }
+
+        const bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
+        const history = await serverRepository.getNetworkPlayerHistory(idNumber, hoursBack, bucketMinutes);
+
+        logger.debug(`Served network history for network ID ${idNumber} with range ${range || '1d'}`);
+        res.json(history);
+
+      } catch (error) {
+        logger.error('Failed to fetch network history:', error);
+        res.status(500).json({ error: 'Failed to fetch network history' });
+      }
+    });
+
+    // Network details endpoint
+    this.app.get('/api/networks/:id/details', cache("3 minutes"), async (req, res) => {
+      try {
+        const { id } = req.params;
+        const idNumber = parseInt(id, 10);
+
+        if (isNaN(idNumber)) {
+          res.status(400).json({ error: 'Invalid network ID number' });
+          return;
+        }
+
+        const details = await serverRepository.getNetworkDetails(idNumber);
+
+        if (!details) {
+          res.status(404).json({ error: 'Network not found' });
+          return;
+        }
+
+        logger.debug(`Served network details for network ID ${idNumber}`);
+        res.json(details);
+
+      } catch (error) {
+        logger.error('Failed to fetch network details:', error);
+        res.status(500).json({ error: 'Failed to fetch network details' });
       }
     });
 

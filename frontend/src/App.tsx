@@ -1,5 +1,6 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {ServerElement} from '../../common/models/serverData';
+import React, {useEffect, useState} from 'react';
+import {useNavigate, useParams, useLocation, Routes, Route} from 'react-router-dom';
+import {ServerElement, NetworkDetails} from '../../common/models/serverData';
 import MasterPanel from './components/sidebar/MasterPanel';
 import DetailPanel from './components/detail/DetailPanel';
 import useApi from './hooks/useApi.ts';
@@ -15,28 +16,30 @@ const App: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<boolean>(false);
     const [selectedServer, setSelectedServer] = useState<ServerElement | null>(null);
+    const [selectedNetwork, setSelectedNetwork] = useState<NetworkDetails | null>(null);
     const [isMasterPanelCollapsed, setIsMasterPanelCollapsed] = useState<boolean>(false);
     const [showMasterPanel, setShowMasterPanel] = useState<boolean>(true);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-    // Track if we've handled the initial URL serverId
-    const initialServerIdHandled = useRef(false);
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { serverId, networkId } = useParams<{ serverId?: string; networkId?: string }>();
 
     const {connectionStatus, data} = useApi();
     const { isMobile } = useResponsive();
 
-    // On mobile, always show master panel by default when no server is selected
+    // On mobile, always show master panel by default when no server/network is selected
     // and ensure it's not in collapsed mode (collapsed mode is only for desktop)
     useEffect(() => {
         if (isMobile) {
             // On mobile, don't use collapsed mode - use show/hide instead
             setIsMasterPanelCollapsed(false);
-            // Show master panel by default on mobile when no server selected
-            if (!selectedServer) {
+            // Show master panel by default on mobile when nothing selected
+            if (!selectedServer && !selectedNetwork) {
                 setShowMasterPanel(true);
             }
         }
-    }, [isMobile, selectedServer]);
+    }, [isMobile, selectedServer, selectedNetwork]);
 
     useEffect(() => {
         if (!data) return;
@@ -45,22 +48,64 @@ const App: React.FC = () => {
         setLoading(false);
     }, [data]);
 
+    // Handle URL routing on mount and when data changes
     useEffect(() => {
-        if (!initialServerIdHandled.current || !data) return;
-        const urlParams = new URLSearchParams(window.location.search);
-        const serverIdParam = urlParams.get('serverId');
-        if (serverIdParam) {
-            const serverId = parseInt(serverIdParam, 10);
-            if (!isNaN(serverId) && serverId > 0 && serverId < 1000000) {
-                const targetServer = data.find(s => s.id === serverId);
+        if (!data) return;
+
+        // Handle serverId from URL
+        if (serverId) {
+            const parsedServerId = parseInt(serverId, 10);
+            if (!isNaN(parsedServerId) && parsedServerId > 0 && parsedServerId < 1000000) {
+                const targetServer = data.find(s => s.id === parsedServerId);
                 if (targetServer) {
                     setSelectedServer(targetServer);
+                    setSelectedNetwork(null);
                     if (isMobile) setShowMasterPanel(false);
-                    initialServerIdHandled.current = true;
                 }
             }
         }
-    }, [data, isMobile]);
+
+        // Handle networkId from URL
+        if (networkId) {
+            const parsedNetworkId = parseInt(networkId, 10);
+            if (!isNaN(parsedNetworkId) && parsedNetworkId > 0) {
+                // Find the network name from server groups
+                const groupName = Object.keys(serverGroups).find(name =>
+                    serverGroups[name].length > 0 && serverGroups[name][0].groupId === parsedNetworkId
+                );
+                if (groupName) {
+                    const servers = serverGroups[groupName];
+                    const activeServers = servers.filter(s => s.online).length;
+                    const topServer = servers
+                        .filter(s => s.online && s.currentData)
+                        .sort((a, b) => (b.currentData?.players || 0) - (a.currentData?.players || 0))[0];
+
+                    const networkDetails: NetworkDetails = {
+                        id: parsedNetworkId,
+                        name: groupName,
+                        playerPeaks: {
+                            allTime: 0,
+                            daily: 0,
+                            weekly: 0
+                        },
+                        topServer: topServer ? {
+                            id: topServer.id,
+                            host: topServer.host,
+                            port: topServer.port,
+                            players: topServer.currentData?.players || 0,
+                            name: topServer.name
+                        } : null,
+                        activeServers,
+                        totalServers: servers.length
+                    };
+
+                    setSelectedNetwork(networkDetails);
+                    setSelectedServer(null);
+                    if (isMobile) setShowMasterPanel(false);
+                }
+            }
+        }
+    }, [data, serverId, networkId, serverGroups, isMobile, location.pathname]);
 
     const processServerData = (servers: ServerElement[] | null) => {
         if (!servers || !Array.isArray(servers)) {
@@ -112,6 +157,28 @@ const App: React.FC = () => {
 
     const handleServerSelect = (server: ServerElement) => {
         setSelectedServer(server);
+        setSelectedNetwork(null);
+        navigate(`/server/${server.id}`);
+        if (isMobile) {
+            setShowMasterPanel(false);
+        }
+    };
+
+    const handleNetworkSelect = (groupId: number, groupName: string) => {
+        setSelectedNetwork({
+            id: groupId,
+            name: groupName,
+            playerPeaks: {
+                allTime: 0,
+                daily: 0,
+                weekly: 0
+            },
+            topServer: null,
+            activeServers: 0,
+            totalServers: 0
+        });
+        setSelectedServer(null);
+        navigate(`/network/${groupId}`);
         if (isMobile) {
             setShowMasterPanel(false);
         }
@@ -121,6 +188,7 @@ const App: React.FC = () => {
         setShowMasterPanel(true);
         if (isMobile) {
             setSelectedServer(null);
+            setSelectedNetwork(null);
         }
     };
 
@@ -135,45 +203,130 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-900 to-stone-950 text-white flex overflow-hidden">
-            {/* Animated background elements */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-orange-600/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
-            </div>
+        <Routes>
+            <Route path="/" element={
+                <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-900 to-stone-950 text-white flex overflow-hidden">
+                    {/* Animated background elements */}
+                    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
+                        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-orange-600/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+                    </div>
 
-            {/* Master Panel - on mobile, show full screen when showMasterPanel is true */}
-            {(!isMobile || showMasterPanel) && (
-                <MasterPanel
-                    isCollapsed={isMobile ? false : isMasterPanelCollapsed}
-                    onToggleCollapse={handleToggleCollapse}
-                    connectionStatus={connectionStatus}
-                    totalServers={totalServers}
-                    onlineServers={onlineServers}
-                    totalPlayers={totalPlayers}
-                    serverGroups={serverGroups}
-                    expandedGroups={expandedGroups}
-                    onToggleGroup={toggleGroupExpanded}
-                    onServerSelect={handleServerSelect}
-                    selectedServer={selectedServer}
-                    loading={loading}
-                    error={error}
-                    lastUpdated={lastUpdated}
-                    isMobile={isMobile}
-                />
-            )}
+                    {/* Master Panel - on mobile, show full screen when showMasterPanel is true */}
+                    {(!isMobile || showMasterPanel) && (
+                        <MasterPanel
+                            isCollapsed={isMobile ? false : isMasterPanelCollapsed}
+                            onToggleCollapse={handleToggleCollapse}
+                            connectionStatus={connectionStatus}
+                            totalServers={totalServers}
+                            onlineServers={onlineServers}
+                            totalPlayers={totalPlayers}
+                            serverGroups={serverGroups}
+                            expandedGroups={expandedGroups}
+                            onToggleGroup={toggleGroupExpanded}
+                            onServerSelect={handleServerSelect}
+                            onNetworkSelect={handleNetworkSelect}
+                            selectedServer={selectedServer}
+                            selectedNetworkId={selectedNetwork?.id || null}
+                            loading={loading}
+                            error={error}
+                            lastUpdated={lastUpdated}
+                            isMobile={isMobile}
+                        />
+                    )}
 
-            {/* Detail Panel - on mobile, show only when showMasterPanel is false */}
-            {(!isMobile || !showMasterPanel) && (
-                <DetailPanel
-                    selectedServer={selectedServer}
-                    isMobile={isMobile}
-                    showMasterPanel={showMasterPanel}
-                    onBackToMaster={handleBackToMaster}
-                />
-            )}
-        </div>
+                    {/* Detail Panel - on mobile, show only when showMasterPanel is false */}
+                    {(!isMobile || !showMasterPanel) && (
+                        <DetailPanel
+                            selectedServer={selectedServer}
+                            selectedNetwork={selectedNetwork}
+                            isMobile={isMobile}
+                            showMasterPanel={showMasterPanel}
+                            onBackToMaster={handleBackToMaster}
+                        />
+                    )}
+                </div>
+            } />
+            <Route path="/server/:serverId" element={
+                <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-900 to-stone-950 text-white flex overflow-hidden">
+                    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
+                        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-orange-600/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+                    </div>
+                    {(!isMobile || showMasterPanel) && (
+                        <MasterPanel
+                            isCollapsed={isMobile ? false : isMasterPanelCollapsed}
+                            onToggleCollapse={handleToggleCollapse}
+                            connectionStatus={connectionStatus}
+                            totalServers={totalServers}
+                            onlineServers={onlineServers}
+                            totalPlayers={totalPlayers}
+                            serverGroups={serverGroups}
+                            expandedGroups={expandedGroups}
+                            onToggleGroup={toggleGroupExpanded}
+                            onServerSelect={handleServerSelect}
+                            onNetworkSelect={handleNetworkSelect}
+                            selectedServer={selectedServer}
+                            selectedNetworkId={selectedNetwork?.id || null}
+                            loading={loading}
+                            error={error}
+                            lastUpdated={lastUpdated}
+                            isMobile={isMobile}
+                        />
+                    )}
+                    {(!isMobile || !showMasterPanel) && (
+                        <DetailPanel
+                            selectedServer={selectedServer}
+                            selectedNetwork={selectedNetwork}
+                            isMobile={isMobile}
+                            showMasterPanel={showMasterPanel}
+                            onBackToMaster={handleBackToMaster}
+                        />
+                    )}
+                </div>
+            } />
+            <Route path="/network/:networkId" element={
+                <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-900 to-stone-950 text-white flex overflow-hidden">
+                    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
+                        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-orange-600/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+                    </div>
+                    {(!isMobile || showMasterPanel) && (
+                        <MasterPanel
+                            isCollapsed={isMobile ? false : isMasterPanelCollapsed}
+                            onToggleCollapse={handleToggleCollapse}
+                            connectionStatus={connectionStatus}
+                            totalServers={totalServers}
+                            onlineServers={onlineServers}
+                            totalPlayers={totalPlayers}
+                            serverGroups={serverGroups}
+                            expandedGroups={expandedGroups}
+                            onToggleGroup={toggleGroupExpanded}
+                            onServerSelect={handleServerSelect}
+                            onNetworkSelect={handleNetworkSelect}
+                            selectedServer={selectedServer}
+                            selectedNetworkId={selectedNetwork?.id || null}
+                            loading={loading}
+                            error={error}
+                            lastUpdated={lastUpdated}
+                            isMobile={isMobile}
+                        />
+                    )}
+                    {(!isMobile || !showMasterPanel) && (
+                        <DetailPanel
+                            selectedServer={selectedServer}
+                            selectedNetwork={selectedNetwork}
+                            isMobile={isMobile}
+                            showMasterPanel={showMasterPanel}
+                            onBackToMaster={handleBackToMaster}
+                        />
+                    )}
+                </div>
+            } />
+        </Routes>
     );
 }
 

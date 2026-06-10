@@ -11,6 +11,25 @@ import {
 import {createLogger} from '../logger.js';
 import {Op, QueryTypes, Transaction} from "sequelize";
 
+export interface NetworkDetails {
+    id: number;
+    name: string;
+    playerPeaks: {
+        allTime: number;
+        daily: number;
+        weekly: number;
+    };
+    topServer: {
+        id: number;
+        host: string;
+        port: number;
+        players: number;
+        name: string;
+    } | null;
+    activeServers: number;
+    totalServers: number;
+}
+
 const logger = createLogger("Repository");
 
 // todo WHY is this here, WHY is it not in models/index.ts ???
@@ -73,7 +92,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
                    AND players >= 0 AND players < 100
                  ORDER BY server_id, timestamp DESC
              )
-        SELECT s.id, sg.name, s.host, s.port, s.country_code, s.updated_at as "lastUpdated", s.last_seen,
+        SELECT s.id, sg.name, s.server_group_id as "groupId", s.host, s.port, s.country_code, s.updated_at as "lastUpdated", s.last_seen,
                stats.online, stats.timestamp, stats.players, stats.max_players as "playerLimit",
                stats.wave, stats.version, stats.version_type as "versionType", stats.ping,
                motds."serverName", motds.description, maps."modeName", maps."mapName", maps.mode
@@ -92,6 +111,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
         const serverWithHistory: ServerElement = {
             id: row.id,
             name: row.name,
+            groupId: row.groupId,
             host: row.host,
             port: row.port,
             online: row.online || false,
@@ -616,4 +636,166 @@ export async function bulkSaveMaps(newMaps: any[]): Promise<void> {
 
         await ServerMapHistory.bulkCreate(historyToInsert, { transaction: t });
     });
+}
+
+/**
+ * Get aggregated player history for a network (server group)
+ * Sums player counts per time bucket across all servers in the group
+ */
+export async function getNetworkPlayerHistory(
+    groupId: number,
+    hoursBack: number = 24,
+    bucketMinutes: number = 0
+): Promise<Array<ServerHistory>> {
+    let query: string;
+    let replacements: Record<string, unknown>;
+
+    if (bucketMinutes === 0) {
+        query = `
+            WITH server_players AS (
+                SELECT timestamp, server_id, MAX(players) as max_players
+                FROM server_stats
+                WHERE server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId)
+                    AND timestamp > NOW() - interval '1 hour' * :hoursBack
+                    AND players >= 0 AND players < 100
+                GROUP BY timestamp, server_id
+            )
+            SELECT extract(epoch from timestamp) * 1000 as timestamp, SUM(max_players) as players
+            FROM server_players
+            GROUP BY timestamp
+            ORDER BY timestamp
+        `;
+        replacements = { groupId, hoursBack };
+    } else {
+        const bucketSeconds = bucketMinutes * 60;
+        query = `
+            WITH time_range AS (
+                SELECT to_timestamp(floor(extract(epoch from NOW() - interval '1 hour' * :hoursBack) / :bucketSeconds) * :bucketSeconds) as range_start,
+                       to_timestamp(floor(extract(epoch from NOW()) / :bucketSeconds) * :bucketSeconds) as range_end
+            ),
+                 all_buckets AS (
+                     SELECT generate_series((SELECT range_start FROM time_range), (SELECT range_end FROM time_range), (:bucketSeconds || ' seconds')::interval) as bucket
+                 ),
+                 bucketed AS (
+                     SELECT server_id, to_timestamp(floor(extract(epoch from timestamp) / :bucketSeconds) * :bucketSeconds) as bucket, players
+                     FROM server_stats
+                     WHERE server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId)
+                         AND timestamp > NOW() - interval '1 hour' * :hoursBack
+                         AND players >= 0 AND players < 100
+                 ),
+                 server_max AS (
+                     SELECT bucket, server_id, MAX(players) as max_players
+                     FROM bucketed
+                     GROUP BY bucket, server_id
+                 ),
+                 aggregated AS (
+                     SELECT bucket, SUM(max_players) as players
+                     FROM server_max
+                     GROUP BY bucket
+                 )
+            SELECT extract(epoch from all_buckets.bucket) * 1000 as timestamp, aggregated.players
+            FROM all_buckets
+            LEFT JOIN aggregated ON all_buckets.bucket = aggregated.bucket
+            ORDER BY all_buckets.bucket
+        `;
+        replacements = { groupId, bucketSeconds, hoursBack };
+    }
+
+    const result = await sequelize.query(query, { replacements, type: QueryTypes.SELECT }) as Array<{ timestamp: number; players: number | null }>;
+    return result.map((row) => ({ timestamp: Number(row.timestamp), players: Number(row.players) }));
+}
+
+/**
+ * Get network-level details for a server group
+ */
+export async function getNetworkDetails(groupId: number): Promise<NetworkDetails | undefined> {
+    const [groupResult]: any = await sequelize.query(
+        `SELECT id, name FROM server_groups WHERE id = :groupId`,
+        { replacements: { groupId }, type: QueryTypes.SELECT }
+    );
+
+    if (!groupResult) return undefined;
+
+    const [serversResult]: any = await sequelize.query(
+        `SELECT id, host, port FROM servers WHERE server_group_id = :groupId`,
+        { replacements: { groupId }, type: QueryTypes.SELECT }
+    );
+
+    const totalServers = serversResult.length;
+    const activeServers = serversResult.length;
+
+    // Get player peaks for the network
+    const [peaksResult]: any = await sequelize.query(
+        `
+        SELECT
+            COALESCE(MAX(daily_peak.daily_peak), 0) as daily_peak,
+            COALESCE(MAX(weekly_peak.weekly_peak), 0) as weekly_peak,
+            COALESCE(MAX(all_time_peak.all_time_peak), 0) as all_time_peak
+        FROM server_groups sg
+        LEFT JOIN (
+            SELECT server_id, MAX(players) as daily_peak
+            FROM server_stats
+            WHERE server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId)
+                AND timestamp > NOW() - interval '1 day'
+            GROUP BY server_id
+        ) daily_peak ON true
+        LEFT JOIN (
+            SELECT server_id, MAX(players) as weekly_peak
+            FROM server_stats
+            WHERE server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId)
+                AND timestamp > NOW() - interval '7 days'
+            GROUP BY server_id
+        ) weekly_peak ON true
+        LEFT JOIN (
+            SELECT server_id, MAX(players) as all_time_peak
+            FROM server_stats
+            WHERE server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId)
+            GROUP BY server_id
+        ) all_time_peak ON true
+        WHERE sg.id = :groupId
+        `,
+        { replacements: { groupId }, type: QueryTypes.SELECT }
+    );
+
+    // Get top server by current players
+    const [topServerResult]: any = await sequelize.query(
+        `
+        SELECT s.id, s.host, s.port, stats.players, sg.name as server_name
+        FROM servers s
+        JOIN server_groups sg ON s.server_group_id = sg.id
+        LEFT JOIN (
+            SELECT DISTINCT ON (server_id) server_id, players
+            FROM server_stats
+            WHERE server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId)
+            ORDER BY server_id, timestamp DESC
+        ) stats ON s.id = stats.server_id
+        WHERE s.server_group_id = :groupId
+        ORDER BY stats.players DESC NULLS LAST
+        LIMIT 1
+        `,
+        { replacements: { groupId }, type: QueryTypes.SELECT }
+    );
+
+    const topServer = topServerResult
+        ? {
+              id: topServerResult.id,
+              host: topServerResult.host,
+              port: topServerResult.port,
+              players: topServerResult.players || 0,
+              name: topServerResult.server_name
+          }
+        : null;
+
+    return {
+        id: groupResult.id,
+        name: groupResult.name,
+        playerPeaks: {
+            allTime: peaksResult.all_time_peak || 0,
+            daily: peaksResult.daily_peak || 0,
+            weekly: peaksResult.weekly_peak || 0
+        },
+        topServer,
+        activeServers,
+        totalServers
+    };
 }

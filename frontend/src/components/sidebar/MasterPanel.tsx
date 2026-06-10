@@ -23,7 +23,9 @@ interface MasterPanelProps {
     expandedGroups: Set<string>;
     onToggleGroup: (groupName: string) => void;
     onServerSelect: (server: ServerElement) => void;
+    onNetworkSelect: (groupId: number, groupName: string) => void;
     selectedServer: ServerElement | null;
+    selectedNetworkId: number | null;
     loading: boolean;
     error: boolean;
     lastUpdated: string;
@@ -41,7 +43,9 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                                      expandedGroups,
                                                      onToggleGroup,
                                                      onServerSelect,
+                                                     onNetworkSelect,
                                                      selectedServer,
+                                                     selectedNetworkId,
                                                      loading,
                                                      error,
                                                      lastUpdated,
@@ -222,17 +226,24 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                             <div className="space-y-4">
                                 {isGrouped ? (
                                     // Grouped view
-                                    Object.entries(processedServerGroups).map(([groupName, servers]) => (
-                                        <ServerGroup
-                                            key={groupName}
-                                            name={groupName}
-                                            servers={servers}
-                                            expanded={expandedGroups.has(groupName)}
-                                            onToggleExpand={() => onToggleGroup(groupName)}
-                                            onServerSelect={onServerSelect}
-                                            selectedServer={selectedServer}
-                                        />
-                                    ))
+                                    Object.entries(processedServerGroups).map(([groupName, servers]) => {
+                                        const groupId = servers.length > 0 ? servers[0].groupId : 0;
+                                        const isNetworkSelected = selectedNetworkId === groupId;
+                                        return (
+                                            <ServerGroup
+                                                key={groupName}
+                                                name={groupName}
+                                                servers={servers}
+                                                expanded={expandedGroups.has(groupName)}
+                                                onToggleExpand={() => onToggleGroup(groupName)}
+                                                onServerSelect={onServerSelect}
+                                                onNetworkSelect={onNetworkSelect}
+                                                selectedServer={selectedServer}
+                                                selectedNetworkId={selectedNetworkId}
+                                                isNetworkSelected={isNetworkSelected}
+                                            />
+                                        );
+                                    })
                                 ) : (
                                     // Flat view
                                     <FlatServerList

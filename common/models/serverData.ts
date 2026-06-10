@@ -32,6 +32,7 @@ export interface ServerHistory {
 const SERVER_ELEMENT_KEYS: (keyof ServerElement)[] = [
   'id',
   'name',
+  'groupId',
   'host',
   'port',
   'currentData',
@@ -45,6 +46,7 @@ const SERVER_ELEMENT_KEYS: (keyof ServerElement)[] = [
 export interface ServerElement {
   id: number;
   name: string;
+  groupId: number;
   host: string;
   port: number;
   currentData?: ServerData;
@@ -139,4 +141,23 @@ export interface ServerDetails {
   // Keep single current records for convenience
   currentMotd: ServerMotdData | null;
   currentMap: ServerMapData | null;
+}
+
+export interface NetworkDetails {
+  id: number;
+  name: string;
+  playerPeaks: {
+    allTime: number;
+    daily: number;
+    weekly: number;
+  };
+  topServer: {
+    id: number;
+    host: string;
+    port: number;
+    players: number;
+    name: string;
+  } | null;
+  activeServers: number;
+  totalServers: number;
 }
