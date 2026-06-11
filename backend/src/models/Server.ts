@@ -11,6 +11,8 @@ class Server extends Model {
   declare updated_at: Date;
   declare last_seen: Date | null;
   declare country_code: string | null;
+  declare inactivity_excluded: boolean;
+  declare active: boolean;
 }
 
 Server.init({
@@ -50,6 +52,11 @@ Server.init({
   country_code: {
     type: DataTypes.STRING(2),
     allowNull: true
+  },
+  inactivity_excluded: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 }, {
   sequelize,

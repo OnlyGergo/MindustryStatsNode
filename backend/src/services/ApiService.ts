@@ -10,6 +10,7 @@ import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version.js";
 import apicache from 'apicache';
 import {encodeServerElements, ServerElement} from "../../../common/models/serverData";
 import {mindustryApp} from "../index";
+import {Server} from '../models/index.js';
 
 const logger = createLogger('ApiService');
 const cache = apicache.middleware;
@@ -307,6 +308,61 @@ export class ApiService {
       } catch (error) {
         logger.error('Failed to fetch global history:', error);
         res.status(500).json({ error: 'Failed to fetch global history' });
+      }
+    });
+
+    // Get inactive servers with their source list info
+    this.app.get('/api/inactive-servers', cache("5 minutes"), async (req, res) => {
+      try {
+        const inactiveServers = await serverRepository.getInactiveServers();
+        res.json(inactiveServers);
+      } catch (error) {
+        logger.error('Error fetching inactive servers:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Get server list statistics
+    this.app.get('/api/serverlist-stats', cache("5 minutes"), async (req, res) => {
+      try {
+        const stats = await serverRepository.getServerListStats();
+        res.json(stats);
+      } catch (error) {
+        logger.error('Error fetching server list stats:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    // Toggle server inactivity exclusion
+    this.app.patch('/api/servers/:id/inactivity-excluded', async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { inactivity_excluded } = req.body;
+        const idNumber = parseInt(id, 10);
+
+        if (isNaN(idNumber)) {
+          res.status(400).json({ error: 'Invalid ID number' });
+          return;
+        }
+
+        if (typeof inactivity_excluded !== 'boolean') {
+          res.status(400).json({ error: 'inactivity_excluded must be a boolean' });
+          return;
+        }
+
+        const server = await Server.findByPk(idNumber);
+        if (!server) {
+          res.status(404).json({ error: 'Server not found' });
+          return;
+        }
+
+        await server.update({ inactivity_excluded });
+
+        logger.debug(`Updated inactivity_excluded for server ID ${idNumber} to ${inactivity_excluded}`);
+        res.json({ success: true, inactivity_excluded });
+      } catch (error) {
+        logger.error('Error updating inactivity exclusion:', error);
+        res.status(500).json({ error: 'Internal server error' });
       }
     });
   }

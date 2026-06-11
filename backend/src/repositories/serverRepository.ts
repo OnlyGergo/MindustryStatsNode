@@ -1,5 +1,5 @@
 import sequelize from '../config/database.js';
-import {Server, ServerGroup, ServerMapHistory, ServerMotdHistory, ServerStats} from '../models/index.js';
+import {Server, ServerGroup, ServerList, ServerMapHistory, ServerMotdHistory, ServerSourceList, ServerStats} from '../models/index.js';
 import {
     GameMode,
     ServerDetails,
@@ -368,7 +368,8 @@ export async function getServer(serverId: number): Promise<ServerElement & Serve
         allMaps: allMapsData,
         allMotds: allMotdsData,
         currentMotd: allMotdsData.find(motd => motd.validTo === null) || allMotdsData[0] || null,
-        currentMap: allMapsData.find(map => map.validTo === null) || allMapsData[0] || null
+        currentMap: allMapsData.find(map => map.validTo === null) || allMapsData[0] || null,
+        groupId: result.server_group_id
     };
 
     if (result.detail_timestamp) {
@@ -798,4 +799,168 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
         activeServers,
         totalServers
     };
+}
+
+// Server List Repository Functions
+
+export interface ServerListInfo {
+    id: number;
+    name: string;
+    url: string;
+    display_name: string;
+}
+
+export interface InactiveServerInfo {
+    id: number;
+    host: string;
+    port: number;
+    lastSeen: number | null;
+    serverLists: ServerListInfo[];
+    inactivity_excluded: boolean;
+}
+
+export interface ServerListStats {
+    id: number;
+    display_name: string;
+    url: string;
+    total_servers: number;
+    active_servers: number;
+    active_percentage: number;
+}
+
+export async function getOrCreateServerList(url: string, name: string, display_name: string): Promise<ServerList> {
+    const [serverList] = await ServerList.findOrCreate({
+        where: { url },
+        defaults: { name, display_name }
+    });
+    return serverList;
+}
+
+export async function getAllServerLists(): Promise<ServerList[]> {
+    return await ServerList.findAll();
+}
+
+export async function refreshServerSourceList(servers: Array<{host: string, port: number, serverlist_id: number, display_name: string}>): Promise<void> {
+    await sequelize.transaction(async (t) => {
+        if (servers.length === 0) return;
+
+        const serverMap = new Map<string, number>();
+        const serverRows = await Server.findAll({
+            attributes: ['id', 'host', 'port'],
+            transaction: t
+        });
+        serverRows.forEach((s: any) => {
+            serverMap.set(`${s.host}|${s.port}`, s.id);
+        });
+
+        const records = servers
+            .map(s => {
+                const serverId = serverMap.get(`${s.host}|${s.port}`);
+                if (!serverId) return null;
+                return {
+                    server_id: serverId,
+                    serverlist_id: s.serverlist_id,
+                    display_name: s.display_name,
+                    last_seen: new Date()
+                };
+            })
+            .filter((r): r is NonNullable<typeof r> => r !== null);
+
+        if (records.length > 0) {
+            // Upsert all records
+            for (const record of records) {
+                await ServerSourceList.upsert({
+                    server_id: record.server_id,
+                    serverlist_id: record.serverlist_id,
+                    display_name: record.display_name,
+                    last_seen: record.last_seen
+                }, { transaction: t });
+            }
+
+            // Delete records that are no longer in the incoming data
+            const affectedServerlistIds = [...new Set(records.map(r => r.serverlist_id))];
+            const existingRecords = await ServerSourceList.findAll({
+                where: { serverlist_id: affectedServerlistIds },
+                transaction: t
+            });
+
+            const expectedPairs = new Set(records.map(r => `${r.server_id}|${r.serverlist_id}`));
+            const toDelete = existingRecords.filter(r => !expectedPairs.has(`${r.server_id}|${r.serverlist_id}`));
+
+            if (toDelete.length > 0) {
+                const deleteIds = toDelete.map(r => r.id);
+                await ServerSourceList.destroy({
+                    where: { id: deleteIds },
+                    transaction: t
+                });
+            }
+        }
+    });
+}
+
+export async function getInactiveServers(): Promise<InactiveServerInfo[]> {
+    const result = await sequelize.query(`
+        SELECT
+            s.id,
+            s.host,
+            s.port,
+            s.last_seen,
+            s.inactivity_excluded,
+            COALESCE(
+                json_agg(
+                    json_build_object(
+                        'id', sl.id,
+                        'display_name', sl.display_name,
+                        'url', sl.url
+                    )
+                ) FILTER (WHERE sl.id IS NOT NULL),
+                '[]'::json
+            ) as server_lists
+        FROM servers s
+        LEFT JOIN server_source_list ssl ON s.id = ssl.server_id
+        LEFT JOIN serverlists sl ON ssl.serverlist_id = sl.id
+        WHERE s.active = false
+        GROUP BY s.id, s.host, s.port, s.last_seen, s.inactivity_excluded
+        ORDER BY s.last_seen DESC NULLS LAST
+    `, {
+        type: QueryTypes.SELECT
+    });
+
+    return result.map((row: any) => ({
+        id: row.id,
+        host: row.host,
+        port: row.port,
+        lastSeen: row.last_seen ? new Date(row.last_seen).getTime() : null,
+        serverLists: row.server_lists || [],
+        inactivity_excluded: row.inactivity_excluded
+    }));
+}
+
+export async function getServerListStats(): Promise<ServerListStats[]> {
+    const result = await sequelize.query(`
+        SELECT
+            sl.id,
+            sl.display_name,
+            sl.url,
+            COUNT(DISTINCT ssl.server_id) as total_servers,
+            COUNT(DISTINCT ssl.server_id) FILTER (WHERE s.active = true) as active_servers
+        FROM serverlists sl
+        LEFT JOIN server_source_list ssl ON sl.id = ssl.serverlist_id
+        LEFT JOIN servers s ON ssl.server_id = s.id
+        GROUP BY sl.id, sl.display_name, sl.url
+        ORDER BY sl.display_name
+    `, {
+        type: QueryTypes.SELECT
+    });
+
+    return result.map((row: any) => ({
+        id: row.id,
+        display_name: row.display_name,
+        url: row.url,
+        total_servers: parseInt(row.total_servers, 10) || 0,
+        active_servers: parseInt(row.active_servers, 10) || 0,
+        active_percentage: row.total_servers > 0
+            ? Math.round((parseInt(row.active_servers, 10) / parseInt(row.total_servers, 10)) * 100)
+            : 0
+    }));
 }

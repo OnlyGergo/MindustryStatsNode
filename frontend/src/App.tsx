@@ -326,6 +326,46 @@ const App: React.FC = () => {
                     )}
                 </div>
             } />
+            <Route path="/inactive" element={
+                <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-900 to-stone-950 text-white flex overflow-hidden">
+                    <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
+                        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-orange-600/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+                    </div>
+                    {(!isMobile || showMasterPanel) && (
+                        <MasterPanel
+                            isCollapsed={isMobile ? false : isMasterPanelCollapsed}
+                            onToggleCollapse={handleToggleCollapse}
+                            connectionStatus={connectionStatus}
+                            totalServers={totalServers}
+                            onlineServers={onlineServers}
+                            totalPlayers={totalPlayers}
+                            serverGroups={serverGroups}
+                            expandedGroups={expandedGroups}
+                            onToggleGroup={toggleGroupExpanded}
+                            onServerSelect={handleServerSelect}
+                            onNetworkSelect={handleNetworkSelect}
+                            selectedServer={selectedServer}
+                            selectedNetworkId={selectedNetwork?.id || null}
+                            loading={loading}
+                            error={error}
+                            lastUpdated={lastUpdated}
+                            isMobile={isMobile}
+                        />
+                    )}
+                    {(!isMobile || !showMasterPanel) && (
+                        <DetailPanel
+                            selectedServer={selectedServer}
+                            selectedNetwork={selectedNetwork}
+                            isMobile={isMobile}
+                            showMasterPanel={showMasterPanel}
+                            onBackToMaster={handleBackToMaster}
+                            showInactiveServers={true}
+                        />
+                    )}
+                </div>
+            } />
         </Routes>
     );
 }

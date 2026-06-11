@@ -2,6 +2,7 @@ import React from 'react';
 import {ServerElement, NetworkDetails} from '../../../../common/models/serverData';
 import ServerDetail from './ServerDetail';
 import NetworkDetail from './NetworkDetail';
+import InactiveServersDetail from './InactiveServersDetail';
 
 interface DetailPanelProps {
     selectedServer: ServerElement | null;
@@ -9,6 +10,7 @@ interface DetailPanelProps {
     isMobile: boolean;
     showMasterPanel: boolean;
     onBackToMaster?: () => void;
+    showInactiveServers?: boolean;
 }
 
 const DetailPanel: React.FC<DetailPanelProps> = ({
@@ -16,10 +18,32 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
     selectedNetwork,
     isMobile,
     showMasterPanel,
-    onBackToMaster
+    onBackToMaster,
+    showInactiveServers
 }) => {
     if (isMobile && showMasterPanel) {
         return null;
+    }
+
+    if (showInactiveServers) {
+        return (
+            <div className="flex-1 relative h-screen overflow-hidden">
+                {isMobile && onBackToMaster && (
+                    <div className="bg-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center">
+                        <button
+                            onClick={onBackToMaster}
+                            className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50 mr-4"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </button>
+                        <h2 className="text-lg font-semibold text-white">Inactive Servers</h2>
+                    </div>
+                )}
+                <InactiveServersDetail />
+            </div>
+        );
     }
 
     return (

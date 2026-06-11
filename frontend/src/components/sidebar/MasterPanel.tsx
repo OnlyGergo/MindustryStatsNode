@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import {useNavigate} from 'react-router-dom';
 import ServerGroup from './ServerGroup';
 import FlatServerList from './FlatServerList';
 import {ServerElement} from "../../../../common/models/serverData.ts";
@@ -33,24 +34,25 @@ interface MasterPanelProps {
 }
 
 const MasterPanel: React.FC<MasterPanelProps> = ({
-                                                     isCollapsed,
-                                                     onToggleCollapse,
-                                                     connectionStatus,
-                                                     totalServers,
-                                                     onlineServers,
-                                                     totalPlayers,
-                                                     serverGroups: rawServerGroups,
-                                                     expandedGroups,
-                                                     onToggleGroup,
-                                                     onServerSelect,
-                                                     onNetworkSelect,
-                                                     selectedServer,
-                                                     selectedNetworkId,
-                                                     loading,
-                                                     error,
-                                                     lastUpdated,
-                                                     isMobile
-                                                 }) => {
+                                                      isCollapsed,
+                                                      onToggleCollapse,
+                                                      connectionStatus,
+                                                      totalServers,
+                                                      onlineServers,
+                                                      totalPlayers,
+                                                      serverGroups: rawServerGroups,
+                                                      expandedGroups,
+                                                      onToggleGroup,
+                                                      onServerSelect,
+                                                      onNetworkSelect,
+                                                      selectedServer,
+                                                      selectedNetworkId,
+                                                      loading,
+                                                      error,
+                                                      lastUpdated,
+                                                      isMobile
+                                                  }) => {
+    const navigate = useNavigate();
     // Convert grouped data to flat array for the hook
     const rawServers = React.useMemo(() => {
         return Object.values(rawServerGroups).flat();
@@ -149,6 +151,16 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                 <div className="text-lg font-bold text-orange-400 drop-shadow-[0_0_10px_rgba(249,115,22,0.3)]">{totalPlayers}</div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Inactive Servers Button */}
+                    <div className="px-4 pb-3 border-b border-neutral-700/50 flex-shrink-0">
+                        <button
+                            onClick={() => navigate('/inactive')}
+                            className="w-full bg-neutral-800/30 hover:bg-neutral-700/30 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition-colors border border-neutral-700/50 text-sm font-medium"
+                        >
+                            Server List Statistics
+                        </button>
                     </div>
 
                     {/* Controls */}

@@ -1,7 +1,9 @@
 import Server from './Server.js';
 import ServerGroup from './ServerGroup.js';
+import ServerList from './ServerList.js';
 import ServerMapHistory from './ServerMapHistory.js';
 import ServerMotdHistory from './ServerMotdHistory.js';
+import ServerSourceList from './ServerSourceList.js';
 import ServerStats from './ServerStats.js';
 
 // Define associations
@@ -11,11 +13,16 @@ Server.belongsTo(ServerGroup, { foreignKey: 'server_group_id' });
 Server.hasMany(ServerMapHistory, { foreignKey: 'server_id' });
 Server.hasMany(ServerMotdHistory, { foreignKey: 'server_id' });
 Server.hasMany(ServerStats, { foreignKey: 'server_id' });
+Server.hasMany(ServerSourceList, { foreignKey: 'server_id' });
+
+ServerList.hasMany(ServerSourceList, { foreignKey: 'serverlist_id' });
 
 export {
     Server,
     ServerGroup,
+    ServerList,
     ServerMapHistory,
     ServerMotdHistory,
+    ServerSourceList,
     ServerStats
 };

@@ -1,5 +1,4 @@
 import {createLogger} from '../logger.js';
-import {SERVERS_SOURCE} from '../const.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import {ServerListElement} from '../models/ServerListElement.js';
 import {ServerDiscoveryConfig} from '../shared/config.js';
@@ -56,14 +55,16 @@ export class ServerDiscoveryService {
     logger.info('Refreshing servers...');
 
     try {
+      const serverlists = await serverRepository.getAllServerLists();
       const allDiscoveredServers: Array<{name: string, host: string, port: number}> = [];
+      const serverSourceListData: Array<{host: string, port: number, serverlist_id: number, display_name: string}> = [];
 
-      for (const url of SERVERS_SOURCE) {
-        logger.info(`Fetching servers from: ${url}`);
+      for (const serverlist of serverlists) {
+        logger.info(`Fetching servers from: ${serverlist.url}`);
 
-        const response = await fetch(url);
+        const response = await fetch(serverlist.url);
         if (!response.ok) {
-          logger.warn(`Failed to fetch from ${url}: ${response.statusText}`);
+          logger.warn(`Failed to fetch from ${serverlist.url}: ${response.statusText}`);
           continue;
         }
 
@@ -89,12 +90,22 @@ export class ServerDiscoveryService {
               host,
               port
             });
+
+            serverSourceListData.push({
+              host,
+              port,
+              serverlist_id: serverlist.id,
+              display_name: serverGroup.name
+            });
           }
         }
       }
 
       // Batch upsert all discovered servers to database
       await serverRepository.batchUpsertServers(allDiscoveredServers);
+
+      // Refresh server source list tracking
+      await serverRepository.refreshServerSourceList(serverSourceListData);
 
       const timeTaken = (Date.now() - startTime) / 1000;
       logger.info(`Found ${groupsCount} total server groups in ${timeTaken.toFixed(2)} seconds.`);
