@@ -12,7 +12,6 @@ class Server extends Model {
   declare last_seen: Date | null;
   declare country_code: string | null;
   declare inactivity_excluded: boolean;
-  declare active: boolean;
 }
 
 Server.init({

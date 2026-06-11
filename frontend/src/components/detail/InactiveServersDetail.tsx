@@ -40,32 +40,6 @@ const InactiveServersDetail: React.FC = () => {
         fetchData();
     }, []);
 
-    const toggleExclusion = async (serverId: number, currentStatus: boolean) => {
-        try {
-            const response = await fetch(`${API_BASE}/api/servers/${serverId}/inactivity-excluded`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ inactivity_excluded: !currentStatus })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update exclusion status');
-            }
-
-            setInactiveServers(prev =>
-                prev.map(server =>
-                    server.id === serverId
-                        ? { ...server, inactivity_excluded: !currentStatus }
-                        : server
-                )
-            );
-        } catch (err) {
-            console.error('Error toggling exclusion:', err);
-        }
-    };
-
     const formatDate = (timestamp: number | null) => {
         if (!timestamp) return 'Never';
         return new Date(timestamp).toLocaleDateString();
@@ -140,9 +114,6 @@ const InactiveServersDetail: React.FC = () => {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                                             Server Lists
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                            Inactivity Excluded
-                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-700/50">
@@ -173,24 +144,6 @@ const InactiveServersDetail: React.FC = () => {
                                                         <span className="text-sm text-gray-500">Unknown</span>
                                                     )}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <button
-                                                    onClick={() => toggleExclusion(server.id, server.inactivity_excluded)}
-                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                                        server.inactivity_excluded
-                                                            ? 'bg-orange-500'
-                                                            : 'bg-neutral-600'
-                                                    }`}
-                                                >
-                                                    <span
-                                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                                            server.inactivity_excluded
-                                                                ? 'translate-x-6'
-                                                                : 'translate-x-1'
-                                                        }`}
-                                                    />
-                                                </button>
                                             </td>
                                         </tr>
                                     ))}

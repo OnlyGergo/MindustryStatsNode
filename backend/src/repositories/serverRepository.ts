@@ -919,7 +919,7 @@ export async function getInactiveServers(): Promise<InactiveServerInfo[]> {
         FROM servers s
         LEFT JOIN server_source_list ssl ON s.id = ssl.server_id
         LEFT JOIN serverlists sl ON ssl.serverlist_id = sl.id
-        WHERE s.active = false
+        WHERE s.last_seen IS NOT NULL AND s.last_seen >= NOW() - INTERVAL '14 days'
         GROUP BY s.id, s.host, s.port, s.last_seen, s.inactivity_excluded
         ORDER BY s.last_seen DESC NULLS LAST
     `, {
@@ -943,7 +943,7 @@ export async function getServerListStats(): Promise<ServerListStats[]> {
             sl.display_name,
             sl.url,
             COUNT(DISTINCT ssl.server_id) as total_servers,
-            COUNT(DISTINCT ssl.server_id) FILTER (WHERE s.active = true) as active_servers
+            COUNT(DISTINCT ssl.server_id) FILTER (WHERE s.last_seen IS NOT NULL AND s.last_seen >= NOW() - INTERVAL '14 days') as active_servers
         FROM serverlists sl
         LEFT JOIN server_source_list ssl ON sl.id = ssl.serverlist_id
         LEFT JOIN servers s ON ssl.server_id = s.id

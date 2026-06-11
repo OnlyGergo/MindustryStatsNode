@@ -332,39 +332,6 @@ export class ApiService {
         res.status(500).json({ error: 'Internal server error' });
       }
     });
-
-    // Toggle server inactivity exclusion
-    this.app.patch('/api/servers/:id/inactivity-excluded', async (req, res) => {
-      try {
-        const { id } = req.params;
-        const { inactivity_excluded } = req.body;
-        const idNumber = parseInt(id, 10);
-
-        if (isNaN(idNumber)) {
-          res.status(400).json({ error: 'Invalid ID number' });
-          return;
-        }
-
-        if (typeof inactivity_excluded !== 'boolean') {
-          res.status(400).json({ error: 'inactivity_excluded must be a boolean' });
-          return;
-        }
-
-        const server = await Server.findByPk(idNumber);
-        if (!server) {
-          res.status(404).json({ error: 'Server not found' });
-          return;
-        }
-
-        await server.update({ inactivity_excluded });
-
-        logger.debug(`Updated inactivity_excluded for server ID ${idNumber} to ${inactivity_excluded}`);
-        res.json({ success: true, inactivity_excluded });
-      } catch (error) {
-        logger.error('Error updating inactivity exclusion:', error);
-        res.status(500).json({ error: 'Internal server error' });
-      }
-    });
   }
 
   /**

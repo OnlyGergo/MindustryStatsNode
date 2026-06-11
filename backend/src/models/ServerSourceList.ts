@@ -61,7 +61,13 @@ ServerSourceList.init({
   tableName: 'server_source_list',
   timestamps: true,
   createdAt: 'created_at',
-  updatedAt: 'updated_at'
+  updatedAt: 'updated_at',
+  indexes: [
+    {
+      unique: true,
+      fields: ['server_id', 'serverlist_id']
+    }
+  ]
 });
 
 // Define associations
