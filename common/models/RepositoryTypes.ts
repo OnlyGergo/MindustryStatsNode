@@ -43,6 +43,7 @@ export interface InactiveServerInfo {
     id: number;
     host: string;
     port: number;
+    group_name: string;
     lastSeen: number | null;
     serverLists: ServerListInfo[];
     inactivity_excluded: boolean;

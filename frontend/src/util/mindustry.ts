@@ -1,9 +1,14 @@
 import {ServerElement} from "../../../common/models/serverData.ts";
 
 export function removeColors(text: string | null) {
+    return formatUnsafeText(text ?? ''); // Since AI decided to use removeColors more than format text ...
+}
+
+export function removeColours(text: string | null) {
     if (text === null) return null;
     return text.replace(/\[([a-zA-Z0-9#]*?)]/g, '');
 }
+
 
 /**
  * Formats text for unsafe HTML display by removing color codes and replacing newlines with <br/>.
@@ -13,7 +18,7 @@ export function removeColors(text: string | null) {
  */
 export function formatUnsafeText(text: string): string {
     if (text === null) return "";
-    const cleanedText = removeColors(text);
+    const cleanedText = removeColours(text);
     if (cleanedText === null) return "";
     return String(cleanedText.replace(/\n/g, '<br/>').trim().substring(0, 500));
 }

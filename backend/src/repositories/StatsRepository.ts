@@ -120,7 +120,7 @@ function buildHistoryQuery(
         ),
         bucketed AS (
             SELECT ${multiServer ? 'server_id, ' : ''}
-                       time_bucket(:bucketSeconds * INTERVAL '1 second', timestamp) AS bucket,,
+                       time_bucket(:bucketSeconds * INTERVAL '1 second', timestamp) AS bucket,
                    players
             FROM server_stats
             WHERE ${scopeSql} AND ${timeFilter}
@@ -161,7 +161,7 @@ export async function getAggregatedHistory(
         startDate,
         endDate
     );
-    const rows = await sequelize.query(query, { replacements, type: QueryTypes.SELECT }) as RawHistoryRow[];
+    const rows = await sequelize.query(query, {replacements, type: QueryTypes.SELECT}) as RawHistoryRow[];
     return rows.map(r => ({ timestamp: Number(r.timestamp), players: r.players }));
 }
 

@@ -235,18 +235,20 @@ export async function batchUpsertServers(servers: ServerInput[]): Promise<void> 
     );
 
     // 2. Extract strictly unique group names
-    const uniqueGroupNames = Array.from(new Set(deduplicated.map(s => s.name)));
+    const groupObjects = Array.from(new Set(deduplicated.map(s => s.name)))
+        .map(name => ({ name }));
 
     try {
         await sequelize.transaction(async (t) => {
             // Step 1: Ensure all server groups exist
-            if (uniqueGroupNames.length > 0) {
+            if (groupObjects.length > 0) {
                 await sequelize.query(`
                     INSERT INTO server_groups (name)
-                    SELECT unnest(:groupNames::text[])
+                    SELECT name
+                    FROM jsonb_to_recordset(:groupsJson::jsonb) AS x(name text)
                     ON CONFLICT (name) DO NOTHING
                 `, {
-                    replacements: { groupNames: uniqueGroupNames },
+                    replacements: { groupsJson: JSON.stringify(groupObjects) },
                     type: QueryTypes.INSERT,
                     transaction: t
                 });

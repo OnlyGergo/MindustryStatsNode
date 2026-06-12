@@ -1,10 +1,12 @@
 import React, {useEffect, useState} from 'react';
-import {InactiveServer, ServerListStats} from '../../../../common/models/serverData';
+import {ServerListStats} from '../../../../common/models/serverData';
+import {InactiveServerInfo} from "../../../../common/models/RepositoryTypes.ts";
+import CopyButton from "../CopyButton.tsx";
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const InactiveServersDetail: React.FC = () => {
-    const [inactiveServers, setInactiveServers] = useState<InactiveServer[]>([]);
+    const [inactiveServers, setInactiveServers] = useState<InactiveServerInfo[]>([]);
     const [stats, setStats] = useState<ServerListStats[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -24,7 +26,7 @@ const InactiveServersDetail: React.FC = () => {
                     throw new Error('Failed to fetch server list stats');
                 }
 
-                const serversData: InactiveServer[] = await serversRes.json();
+                const serversData: InactiveServerInfo[] = await serversRes.json();
                 const statsData: ServerListStats[] = await statsRes.json();
 
                 setInactiveServers(serversData);
@@ -106,7 +108,7 @@ const InactiveServersDetail: React.FC = () => {
                                 <thead>
                                     <tr className="border-b border-neutral-700/50">
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                            Server
+                                            Group
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                                             Last Seen
@@ -114,14 +116,17 @@ const InactiveServersDetail: React.FC = () => {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                                             Server Lists
                                         </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            Copy IP
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-700/50">
                                     {inactiveServers.map(server => (
                                         <tr key={server.id} className="hover:bg-neutral-700/30">
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-white">
-                                                    {server.host}:{server.port}
+                                                <div className="text-sm text-gray-300">
+                                                    {server.group_name}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -143,6 +148,11 @@ const InactiveServersDetail: React.FC = () => {
                                                     ) : (
                                                         <span className="text-sm text-gray-500">Unknown</span>
                                                     )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-white">
+                                                    <CopyButton text={`${server.host}:${server.port}`} />
                                                 </div>
                                             </td>
                                         </tr>

@@ -10,7 +10,6 @@ import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version.js";
 import apicache from 'apicache';
 import {encodeServerElements, ServerElement} from "../../../common/models/serverData";
 import {mindustryApp} from "../index";
-import {Server} from '../models/index.js';
 import {getAggregatedHistory, getGlobalPlayerHistory, getNetworkPlayerHistory} from "../repositories/StatsRepository";
 import {getInactiveServers, getServerListStats} from "../repositories/ServerListRepository";
 import {getMapHistory, getMotdHistory} from "../repositories/serverRepository.js";
@@ -318,7 +317,11 @@ export class ApiService {
     this.app.get('/api/inactive-servers', cache("5 minutes"), async (req, res) => {
       try {
         const inactiveServers = await getInactiveServers();
-        res.json(inactiveServers);
+
+        // Remove "old" servers which aren't in any list, just also arent pruned from database
+        res.json(inactiveServers.filter(server => {
+          return server.serverLists.length >= 1
+        }));
       } catch (error) {
         logger.error('Error fetching inactive servers:', error);
         res.status(500).json({ error: 'Internal server error' });

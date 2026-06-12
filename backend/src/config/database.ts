@@ -1,8 +1,6 @@
 import {Sequelize} from 'sequelize';
 import {env} from './env.js';
 import {createLogger} from '../logger.js';
-import fs from 'fs';
-import path from 'path';
 
 const logger = createLogger("Database");
 
@@ -17,9 +15,9 @@ const dbConfig = {
   logging: logger.debug.bind(logger),
   pool: {
     max: 20,
-    min: 0,
-    idle: 30000,
-    acquire: 2000,
+    min: 5,
+    idle: 10000,
+    acquire: 30000,
   },
 };
 
@@ -62,34 +60,5 @@ export async function initDatabase(): Promise<void> {
 }
 
 async function runMigrations(): Promise<void> {
-  const migrationsDir = path.join(process.cwd(), 'backend', 'migrations');
-  
-  if (!fs.existsSync(migrationsDir)) {
-    logger.warn('Migrations directory not found, skipping migrations');
-    return;
-  }
-
-  const files = fs.readdirSync(migrationsDir)
-    .filter((file: string) => file.endsWith('.sql'))
-    .sort((a: string, b: string) => {
-      const numA = parseInt(a.split('_')[0], 10);
-      const numB = parseInt(b.split('_')[0], 10);
-      return numA - numB;
-    });
-
-  for (const file of files) {
-    const filePath = path.join(migrationsDir, file);
-    logger.info(`Running migration: ${file}`);
-    
-    try {
-      const sql = fs.readFileSync(filePath, 'utf-8');
-      await sequelize.query(sql);
-      logger.info(`Migration completed: ${file}`);
-    } catch (error) {
-      logger.error(`Migration failed: ${file}`, error);
-      throw error;
-    }
-  }
-  
-  logger.info(`All migrations completed (${files.length} files)`);
+  return; // For now these happen manually
 }

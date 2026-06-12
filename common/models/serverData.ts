@@ -162,21 +162,6 @@ export interface NetworkDetails {
   totalServers: number;
 }
 
-export interface ServerListInfo {
-  id: number;
-  display_name: string;
-  url: string;
-}
-
-export interface InactiveServer {
-  id: number;
-  host: string;
-  port: number;
-  lastSeen: number | null;
-  serverLists: ServerListInfo[];
-  inactivity_excluded: boolean;
-}
-
 export interface ServerListStats {
   id: number;
   display_name: string;

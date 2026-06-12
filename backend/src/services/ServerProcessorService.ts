@@ -172,7 +172,7 @@ export class ServerProcessorService {
 
       logger.debug(`Processed batch of ${batch.length} servers (Stats: ${statsToInsert.length}, MOTDs: ${motdsToUpdate.length}, Maps: ${mapsToUpdate.length})`);
     } catch (error) {
-      logger.error('Database batch write failed:', error);
+      logger.error('Database batch write failed:', (error as Error).message);
     }
   }
 

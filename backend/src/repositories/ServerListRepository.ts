@@ -121,6 +121,7 @@ export async function getInactiveServers(): Promise<InactiveServerInfo[]> {
             s.port,
             s.last_seen,
             s.inactivity_excluded,
+            sg.name as group_name,
             COALESCE(
                 json_agg(
                     json_build_object(
@@ -134,15 +135,17 @@ export async function getInactiveServers(): Promise<InactiveServerInfo[]> {
         FROM servers s
         LEFT JOIN server_source_list ssl ON s.id = ssl.server_id
         LEFT JOIN serverlists sl         ON ssl.serverlist_id = sl.id
+        LEFT JOIN server_groups sg       ON sg.id = s.server_group_id
         WHERE s.last_seen IS NOT NULL
           AND s.last_seen < NOW() - INTERVAL '14 days'
-        GROUP BY s.id, s.host, s.port, s.last_seen, s.inactivity_excluded
+        GROUP BY s.id, s.host, s.port, s.last_seen, s.inactivity_excluded, sg.name
         ORDER BY s.last_seen DESC NULLS LAST
     `, { type: QueryTypes.SELECT });
 
     return rows.map(row => ({
         id:                   row.id,
         host:                 row.host,
+        group_name:           row.group_name,
         port:                 row.port,
         lastSeen:             row.last_seen ? new Date(row.last_seen).getTime() : null,
         serverLists:          row.server_lists ?? [],

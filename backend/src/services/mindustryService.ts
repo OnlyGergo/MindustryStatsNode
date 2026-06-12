@@ -21,7 +21,7 @@ if (customResolver) {
  * Resolves a hostname to an IPv4 address sequentially.
  * Supports custom DNS name servers if configured.
  */
-async function resolveHost(host: string): Promise<string> {
+async function resolveHost(host: string): Promise<string | null> {
   // Direct return if the host is already a valid IPv4 address
   if (/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(host)) {
     return host;
@@ -37,6 +37,12 @@ async function resolveHost(host: string): Promise<string> {
     const lookupResult = await dns.lookup(host, { family: 4 });
     return lookupResult.address;
   } catch (err) {
+    // Annoying but exists. This needs to be here.
+    if((err as Error).message.includes('ENOTFOUND')) {
+      logger.debug((err as Error).message);
+      return null;
+    }
+
     throw new Error(`DNS lookup failed for ${host}: ${(err as Error).message}`);
   }
 }
@@ -53,11 +59,14 @@ export async function getServerData(host: string, port: number | string, serverK
   }
 
   // 1. Core DNS Resolution Step
-  let ipAddress: string;
+  let ipAddress: string | null = null;
   try {
     ipAddress = await resolveHost(host);
+    if (!ipAddress) {
+      return null;
+    }
   } catch (err) {
-    logger.warn((err as Error).message);
+    logger.error((err as Error).message);
     return null;
   }
 
