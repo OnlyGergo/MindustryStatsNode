@@ -3,7 +3,7 @@ import {InMemoryCache, InMemoryQueue} from '../utils/in-memory-queue.js';
 import {CACHE_KEYS, CACHE_TTL} from '../shared/constants.js';
 import {getServerData} from './mindustryService.js';
 import * as serverRepository from '../repositories/serverRepository.js';
-import {ServerRecord} from '../repositories/serverRepository.js';
+import {ServerRecord} from '../../../common/models/RepositoryTypes.js';
 import {ServerData} from '../../../common/models/serverData.js';
 import {ServerCollectorConfig} from '../shared/config.js';
 

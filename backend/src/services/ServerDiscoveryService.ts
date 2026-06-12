@@ -2,6 +2,7 @@ import {createLogger} from '../logger.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import {ServerListElement} from '../models/ServerListElement.js';
 import {ServerDiscoveryConfig} from '../shared/config.js';
+import {getAllServerLists, refreshServerSourceList} from "../repositories/ServerListRepository";
 
 const logger = createLogger('ServerDiscovery');
 
@@ -55,7 +56,7 @@ export class ServerDiscoveryService {
     logger.info('Refreshing servers...');
 
     try {
-      const serverlists = await serverRepository.getAllServerLists();
+      const serverlists = await getAllServerLists();
       const allDiscoveredServers: Array<{name: string, host: string, port: number}> = [];
       const serverSourceListData: Array<{host: string, port: number, serverlist_id: number, display_name: string}> = [];
 
@@ -105,7 +106,7 @@ export class ServerDiscoveryService {
       await serverRepository.batchUpsertServers(allDiscoveredServers);
 
       // Refresh server source list tracking
-      await serverRepository.refreshServerSourceList(serverSourceListData);
+      await refreshServerSourceList(serverSourceListData);
 
       const timeTaken = (Date.now() - startTime) / 1000;
       logger.info(`Found ${groupsCount} total server groups in ${timeTaken.toFixed(2)} seconds.`);

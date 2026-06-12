@@ -11,6 +11,9 @@ import apicache from 'apicache';
 import {encodeServerElements, ServerElement} from "../../../common/models/serverData";
 import {mindustryApp} from "../index";
 import {Server} from '../models/index.js';
+import {getAggregatedHistory, getGlobalPlayerHistory, getNetworkPlayerHistory} from "../repositories/StatsRepository";
+import {getInactiveServers, getServerListStats} from "../repositories/ServerListRepository";
+import {getMapHistory, getMotdHistory} from "../repositories/serverRepository.js";
 
 const logger = createLogger('ApiService');
 const cache = apicache.middleware;
@@ -258,7 +261,7 @@ export class ApiService {
         }
 
         const bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
-        const history = await serverRepository.getNetworkPlayerHistory(idNumber, hoursBack, bucketMinutes);
+        const history = await getNetworkPlayerHistory(idNumber, hoursBack, bucketMinutes);
 
         logger.debug(`Served network history for network ID ${idNumber} with range ${range || '1d'}`);
         res.json(history);
@@ -314,7 +317,7 @@ export class ApiService {
     // Get inactive servers with their source list info
     this.app.get('/api/inactive-servers', cache("5 minutes"), async (req, res) => {
       try {
-        const inactiveServers = await serverRepository.getInactiveServers();
+        const inactiveServers = await getInactiveServers();
         res.json(inactiveServers);
       } catch (error) {
         logger.error('Error fetching inactive servers:', error);
@@ -325,7 +328,7 @@ export class ApiService {
     // Get server list statistics
     this.app.get('/api/serverlist-stats', cache("5 minutes"), async (req, res) => {
       try {
-        const stats = await serverRepository.getServerListStats();
+        const stats = await getServerListStats();
         res.json(stats);
       } catch (error) {
         logger.error('Error fetching server list stats:', error);
@@ -338,7 +341,7 @@ export class ApiService {
    * Get MOTD history with pagination (no caching for paginated requests)
    */
   private async getServerMotdHistory(id: number, page: number = 1, perPage: number = 20) {
-    const result = await serverRepository.getMotdHistory(id, page, perPage);
+    const result = await getMotdHistory(id, page, perPage);
     return result.data;
   }
 
@@ -346,7 +349,7 @@ export class ApiService {
    * Get map history with pagination (no caching for paginated requests)
    */
   private async getServerMapHistory(id: number, page: number = 1, perPage: number = 20) {
-    const result = await serverRepository.getMapHistory(id, page, perPage);
+    const result = await getMapHistory(id, page, perPage);
     return result.data;
   }
 
@@ -400,7 +403,7 @@ export class ApiService {
       bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
     }
 
-    return await serverRepository.getAggregatedHistory(
+    return await getAggregatedHistory(
         id,
         hoursBack,
         bucketMinutes,
@@ -439,6 +442,6 @@ export class ApiService {
 
     let bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
 
-    return await serverRepository.getGlobalPlayerHistory(hoursBack, bucketMinutes);
+    return await getGlobalPlayerHistory(hoursBack, bucketMinutes);
   }
 }
