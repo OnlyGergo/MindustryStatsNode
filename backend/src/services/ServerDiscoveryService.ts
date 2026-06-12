@@ -2,7 +2,7 @@ import {createLogger} from '../logger.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import {ServerListElement} from '../models/ServerListElement.js';
 import {ServerDiscoveryConfig} from '../shared/config.js';
-import {getAllServerLists, refreshServerSourceList} from "../repositories/ServerListRepository";
+import {getAllServerLists, refreshServerSourceList} from "../repositories/ServerListRepository.js";
 
 const logger = createLogger('ServerDiscovery');
 

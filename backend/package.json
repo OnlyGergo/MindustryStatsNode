@@ -2,7 +2,7 @@
   "name": "mindustry-stats",
   "version": "1.0.0",
   "description": "",
-  "type": "commonjs",
+  "type": "module",
   "author": "GergoEB",
   "main": "src/main.ts",
   "scripts": {
