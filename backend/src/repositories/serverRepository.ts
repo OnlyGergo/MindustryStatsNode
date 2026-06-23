@@ -27,6 +27,7 @@ import {
     ServerInput,
     ServerRecord,
 } from '../../../common/models/RepositoryTypes.js';
+import {CURRENT_DATA_FRESH_THRESHOLD} from "../const";
 
 const logger = createLogger('ServerRepository');
 
@@ -119,7 +120,8 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             countryCode: row.country_code ?? null,
         };
 
-        if (row.timestamp) {
+        // currentData is current - only populate if "fresh" aka 5 minutes
+        if (row.timestamp && row.timestamp > new Date(Date.now() - CURRENT_DATA_FRESH_THRESHOLD).getTime()) {
             element.currentData = {
                 ping:        row.ping        ?? 0,
                 host:        row.host,
@@ -197,7 +199,8 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
         currentMap,
     };
 
-    if (result.detail_timestamp) {
+    if (result.detail_timestamp != null &&
+        result.detail_timestamp > new Date(Date.now() - CURRENT_DATA_FRESH_THRESHOLD).getTime()) {
         detail.currentData = {
             ping:        result.detail_ping         ?? 0,
             host:        result.detail_host,
@@ -322,8 +325,8 @@ async function bulkSaveHistoryEntries<T extends Record<string, unknown>>(opts: {
     registryTypeDef:  string;
     /** Build the history insert row (without server_id / fk / valid_from). */
     logTag:           string;
-}): Promise<void> {
-    if (!opts.entries.length) return;
+}): Promise<Map<number, number>> {
+    if (!opts.entries.length) return new Map();
 
     // 1. Deduplicate
     const unique = new Map<string, T>();
@@ -392,7 +395,7 @@ async function bulkSaveHistoryEntries<T extends Record<string, unknown>>(opts: {
     });
 
     if (changedEntries.length === 0) {
-        return;
+        return new Map();
     }
 
     const changedServerIds = changedEntries.map(
@@ -422,10 +425,18 @@ async function bulkSaveHistoryEntries<T extends Record<string, unknown>>(opts: {
 
         await (opts.historyModel as any).bulkCreate(toInsert, { transaction: t });
     });
+
+    return new Map<number, number>(
+        opts.entries.flatMap((e: any) => {
+            const key = opts.keyOf(e);
+            const registryId = registryMap.get(key);
+            return registryId !== undefined ? [[e.server_id, registryId]] : [];
+        })
+    );
 }
 
-export async function bulkSaveMotds(newMotds: any[]): Promise<void> {
-    await bulkSaveHistoryEntries({
+export async function bulkSaveMotds(newMotds: any[]): Promise<Map<number, number>> {
+    return await bulkSaveHistoryEntries({
         entries:         newMotds,
         keyOf:           e => `${normalize((e as any).server_name)}|${normalize((e as any).description)}`,
         registryColumns: ['server_name', 'description'],
@@ -442,8 +453,8 @@ export async function bulkSaveMotds(newMotds: any[]): Promise<void> {
     });
 }
 
-export async function bulkSaveMaps(newMaps: any[]): Promise<void> {
-    await bulkSaveHistoryEntries({
+export async function bulkSaveMaps(newMaps: any[]): Promise<Map<number, number>> {
+    return await bulkSaveHistoryEntries({
         entries:         newMaps,
         keyOf:           e => `${normalize((e as any).map_name)}|${normalize((e as any).game_mode)}|${normalize((e as any).mode_name)}`,
         registryColumns: ['map_name', 'game_mode', 'mode_name'],

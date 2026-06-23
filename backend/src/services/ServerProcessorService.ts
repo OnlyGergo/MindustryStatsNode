@@ -5,6 +5,7 @@ import * as serverRepository from '../repositories/serverRepository.js';
 import {ServerElement} from '../../../common/models/serverData.js';
 import {ServerProcessorConfig} from '../shared/config.js';
 import {RawServerData} from './ServerCollectorService.js';
+import {CURRENT_DATA_FRESH_THRESHOLD} from "../const";
 
 const logger = createLogger('ServerProcessor');
 
@@ -78,8 +79,7 @@ export class ServerProcessorService {
       const { host, port, data, timestamp, online, cacheKey } = rawData;
       let serverEntry = this.serverDataCache.get(cacheKey);
 
-      // Skip unknown servers (or fetch them like your original code, omitted here for brevity)
-      if (!serverEntry) {
+      if (serverEntry == null) {
         serverEntry = await serverRepository.getServer(rawData.serverId)
 
         // This should never happen, can only really be caused by a bug or memory corruption
@@ -89,7 +89,7 @@ export class ServerProcessorService {
         }
       }
 
-      if (data && online) {
+      if (data != null && online) {
         // Compare new data against our memory cache to see if MOTD/Map ACTUALLY changed
         const currentData = serverEntry.currentData;
 
@@ -146,6 +146,12 @@ export class ServerProcessorService {
         serverEntry.lastUpdated = timestamp;
         serverEntry.consecutiveFailures = (serverEntry.consecutiveFailures || 0) + 1;
 
+        // Invalidate current data if not seen for a while
+        if (serverEntry.lastSeen != null &&
+            serverEntry.lastSeen > new Date(Date.now() - CURRENT_DATA_FRESH_THRESHOLD).getTime()) {
+          serverEntry.currentData = undefined;
+        }
+
         statsToInsert.push({
           server_id: serverEntry.id,
           timestamp: timestamp,
@@ -163,12 +169,19 @@ export class ServerProcessorService {
       logger.debug(`Saving batch of ${batch.length} servers (Stats: ${statsToInsert.length}, MOTDs: ${motdsToUpdate.length}, Maps: ${mapsToUpdate.length})`);
 
       // Run all independent queries in parallel using Promise.all
-      await Promise.all([
-        serverRepository.bulkSaveServerStats(statsToInsert),
+      const [, motdRegistryByServer, mapRegistryByServer] = await Promise.all([
         serverRepository.bulkUpdateLastSeen(onlineServerIds),
         serverRepository.bulkSaveMotds(motdsToUpdate),
         serverRepository.bulkSaveMaps(mapsToUpdate)
       ]);
+
+      const statsWithRegistryIds = statsToInsert.map(stat => ({
+        ...stat,
+        motd_registry_id: motdRegistryByServer.get(stat.server_id) ?? null,
+        map_registry_id:  mapRegistryByServer.get(stat.server_id)  ?? null,
+      }));
+
+      await serverRepository.bulkSaveServerStats(statsWithRegistryIds);
 
       logger.debug(`Processed batch of ${batch.length} servers (Stats: ${statsToInsert.length}, MOTDs: ${motdsToUpdate.length}, Maps: ${mapsToUpdate.length})`);
     } catch (error) {

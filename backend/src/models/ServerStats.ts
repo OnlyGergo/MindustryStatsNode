@@ -6,7 +6,7 @@ class ServerStats extends Model {
   declare id: number;
   declare server_id: number;
   declare timestamp: Date;
-  declare players: number;
+  declare players: number | null;
   declare max_players: number | null;
   declare wave: number | null;
   declare version: number | null;
@@ -62,7 +62,17 @@ ServerStats.init({
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
-  }
+  },
+  motd_registry_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    //references: { model: 'server_motds_registry', key: 'id' },
+  },
+  map_registry_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    //references: { model: 'server_maps_registry', key: 'id' },
+  },
 }, {
   sequelize,
   tableName: 'server_stats',

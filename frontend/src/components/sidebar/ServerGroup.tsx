@@ -1,18 +1,18 @@
 import React from 'react';
 import ServerItem from './ServerItem';
 import {isHub} from "../../util/mindustry.ts";
+import {ServerElement} from "../../../../common/models/serverData.ts";
 
 const ServerGroup: React.FC<{
     name: string;
-    servers: any[];
+    servers: ServerElement[];
     expanded: boolean;
     onToggleExpand: () => void;
-    onServerSelect: (server: any) => void;
+    onServerSelect: (server: ServerElement) => void;
     onNetworkSelect?: (groupId: number, groupName: string) => void;
-    selectedServer: any;
-    selectedNetworkId?: number | null;
+    selectedServer: ServerElement | null;
     isNetworkSelected?: boolean;
-}> = ({ name, servers, expanded, onToggleExpand, onServerSelect, onNetworkSelect, selectedServer, selectedNetworkId: _selectedNetworkId, isNetworkSelected }) => {
+}> = ({ name, servers, expanded, onToggleExpand, onServerSelect, onNetworkSelect, selectedServer, isNetworkSelected }) => {
     const onlineServersCount = servers.filter(s => s.online).length;
     const totalPlayers = servers.reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
     const groupId = servers.length > 0 ? servers[0].groupId : 0;
@@ -79,7 +79,7 @@ const ServerGroup: React.FC<{
                             key={`${server.host}-${server.port}`}
                             server={server}
                             onSelect={onServerSelect}
-                            isSelected={selectedServer && selectedServer.host === server.host && selectedServer.port === server.port}
+                            isSelected={selectedServer != null && selectedServer.host === server.host && selectedServer.port === server.port}
                         />
                     ))}
                 </div>

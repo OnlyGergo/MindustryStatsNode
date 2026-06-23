@@ -251,7 +251,6 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                                 onServerSelect={onServerSelect}
                                                 onNetworkSelect={onNetworkSelect}
                                                 selectedServer={selectedServer}
-                                                selectedNetworkId={selectedNetworkId}
                                                 isNetworkSelected={isNetworkSelected}
                                             />
                                         );
