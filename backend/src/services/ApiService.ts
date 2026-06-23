@@ -9,7 +9,7 @@ import path from "path";
 import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version.js";
 import apicache from 'apicache';
 import {encodeServerElements, ServerElement} from "../../../common/models/serverData.js";
-import {mindustryApp} from "../index";
+import {mindustryApp} from "../index.js";
 import {getAggregatedHistory, getGlobalPlayerHistory, getNetworkPlayerHistory} from "../repositories/StatsRepository.js";
 import {getInactiveServers, getServerListStats} from "../repositories/ServerListRepository.js";
 import {getMapHistory, getMotdHistory} from "../repositories/serverRepository.js";

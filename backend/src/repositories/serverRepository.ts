@@ -27,7 +27,7 @@ import {
     ServerInput,
     ServerRecord,
 } from '../../../common/models/RepositoryTypes.js';
-import {CURRENT_DATA_FRESH_THRESHOLD} from "../const";
+import {CURRENT_DATA_FRESH_THRESHOLD} from "../const.js";
 
 const logger = createLogger('ServerRepository');
 

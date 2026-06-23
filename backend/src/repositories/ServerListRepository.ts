@@ -4,10 +4,10 @@
 // (inactive servers, per-list stats).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import sequelize from '../config/database';
-import { Server, ServerList, ServerSourceList } from '../models/index';
+import sequelize from '../config/database.js';
+import { Server, ServerList, ServerSourceList } from '../models/index.js';
 import { QueryTypes } from 'sequelize';
-import {InactiveServerInfo, ServerListStats} from "../../../common/models/RepositoryTypes"
+import {InactiveServerInfo, ServerListStats} from "../../../common/models/RepositoryTypes.js"
 
 // ─── Serverlist CRUD ──────────────────────────────────────────────────────────
 

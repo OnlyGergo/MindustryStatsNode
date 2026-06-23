@@ -5,7 +5,7 @@ import * as serverRepository from '../repositories/serverRepository.js';
 import {ServerElement} from '../../../common/models/serverData.js';
 import {ServerProcessorConfig} from '../shared/config.js';
 import {RawServerData} from './ServerCollectorService.js';
-import {CURRENT_DATA_FRESH_THRESHOLD} from "../const";
+import {CURRENT_DATA_FRESH_THRESHOLD} from "../const.js";
 
 const logger = createLogger('ServerProcessor');
 
