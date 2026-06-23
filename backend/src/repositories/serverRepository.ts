@@ -335,6 +335,13 @@ async function bulkSaveHistoryEntries<T extends Record<string, unknown>>(opts: {
         if (!unique.has(k)) unique.set(k, e);
     }
 
+    const registryRowToKey = new Map<string, string>();
+    for (const [key, entry] of unique.entries()) {
+        const row = opts.toRegistryRow(entry);
+        const rowKey = opts.registryColumns.map(col => row[col]).join('\x00');
+        registryRowToKey.set(rowKey, key);
+    }
+
     const registryData = Array.from(unique.values()).map(opts.toRegistryRow);
 
     // 2. Upsert registry
@@ -361,9 +368,14 @@ async function bulkSaveHistoryEntries<T extends Record<string, unknown>>(opts: {
         type: QueryTypes.SELECT,
     });
 
-    const registryMap = new Map<string, number>(
-        fetched.map(r => [opts.keyOf(r as T), r.id])
-    );
+    const registryMap = new Map<string, number>();
+    for (const row of fetched) {
+        const rowKey = opts.registryColumns.map(col => row[col]).join('\x00');
+        const naturalKey = registryRowToKey.get(rowKey);
+        if (naturalKey !== undefined) {
+            registryMap.set(naturalKey, row.id);
+        }
+    }
 
     const serverIds = opts.entries.map((e: any) => e.server_id);
     const now       = new Date();

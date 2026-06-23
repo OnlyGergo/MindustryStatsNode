@@ -93,32 +93,20 @@ export class ServerProcessorService {
         // Compare new data against our memory cache to see if MOTD/Map ACTUALLY changed
         const currentData = serverEntry.currentData;
 
-        const motdChanged = !currentData ||
-            currentData.serverName !== data.serverName ||
-            currentData.description !== data.description ||
-            currentData.modeName !== data.modeName;
-
-        const mapChanged = !currentData ||
-            currentData.mapName !== data.mapName;
-
         // Queue up MOTD update only if changed
-        if (motdChanged) {
-          motdsToUpdate.push({
-            server_id: serverEntry.id,
-            server_name: data.serverName,
-            description: data.description,
-            mode_name: data.modeName
-          });
-        }
+        motdsToUpdate.push({
+          server_id: serverEntry.id,
+          server_name: data.serverName,
+          description: data.description,
+          mode_name: data.modeName
+        });
 
         // Queue up Map update only if changed
-        if (mapChanged) {
-          mapsToUpdate.push({
-            server_id: serverEntry.id,
-            map_name: data.mapName,
-            game_mode: data.mode
-          });
-        }
+        mapsToUpdate.push({
+          server_id: serverEntry.id,
+          map_name: data.mapName,
+          game_mode: data.mode
+        });
 
         // Always queue stats and last seen
         statsToInsert.push({
