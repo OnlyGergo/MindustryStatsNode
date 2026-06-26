@@ -57,6 +57,9 @@ export const theme = {
             dot: 'bg-red-400',
         },
     },
+
+    // Gamemode color mapping for charts
+    modeColors: {} as Record<string, string>,
 } as const;
 
 // Tailwind class presets for common components

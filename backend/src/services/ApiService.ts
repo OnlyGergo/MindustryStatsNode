@@ -13,6 +13,7 @@ import {mindustryApp} from "../index.js";
 import {getAggregatedHistory, getGlobalPlayerHistory, getNetworkPlayerHistory} from "../repositories/StatsRepository.js";
 import {getInactiveServers, getServerListStats} from "../repositories/ServerListRepository.js";
 import {getMapHistory, getMotdHistory} from "../repositories/serverRepository.js";
+import {getGlobalGamemodeHistory, getGamemodeList, getServerShareByGamemode} from "../repositories/GlobalStatsRepository.js";
 
 const logger = createLogger('ApiService');
 const cache = apicache.middleware;
@@ -310,6 +311,102 @@ export class ApiService {
       } catch (error) {
         logger.error('Failed to fetch global history:', error);
         res.status(500).json({ error: 'Failed to fetch global history' });
+      }
+    });
+
+    // Global gamemode history endpoint
+    this.app.get('/api/global/gamemode-history', cache("15 minutes"), async (req, res) => {
+      try {
+        const { range, startDate, endDate } = req.query;
+
+        let hoursBack: number;
+        switch (range as string | undefined) {
+          case '7d':
+            hoursBack = 168;
+            break;
+          case '14d':
+            hoursBack = 336;
+            break;
+          case '3m':
+            hoursBack = 2190;
+            break;
+          case '12m':
+            hoursBack = 8760;
+            break;
+          default:
+            hoursBack = 24;
+        }
+
+        const bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
+        const history = await getGlobalGamemodeHistory(
+          hoursBack,
+          bucketMinutes,
+          startDate ? parseInt(startDate as string, 10) : undefined,
+          endDate ? parseInt(endDate as string, 10) : undefined
+        );
+
+        logger.debug(`Served global gamemode history with range ${range || '1d'}`);
+        res.json(history);
+
+      } catch (error) {
+        logger.error('Failed to fetch global gamemode history:', error);
+        res.status(500).json({ error: 'Failed to fetch global gamemode history' });
+      }
+    });
+
+    // Gamemode list endpoint
+    this.app.get('/api/gamemodes', cache("1 hour"), async (req, res) => {
+      try {
+        const gamemodes = await getGamemodeList();
+
+        logger.debug(`Served ${gamemodes.length} gamemodes`);
+        res.json(gamemodes);
+
+      } catch (error) {
+        logger.error('Failed to fetch gamemode list:', error);
+        res.status(500).json({ error: 'Failed to fetch gamemode list' });
+      }
+    });
+
+    // Server share by gamemode endpoint
+    this.app.get('/api/gamemodes/:modeName/servers', cache("15 minutes"), async (req, res) => {
+      try {
+        const { modeName } = req.params;
+        const { range, startDate, endDate } = req.query;
+
+        let hoursBack: number;
+        switch (range as string | undefined) {
+          case '7d':
+            hoursBack = 168;
+            break;
+          case '14d':
+            hoursBack = 336;
+            break;
+          case '3m':
+            hoursBack = 2190;
+            break;
+          case '12m':
+            hoursBack = 8760;
+            break;
+          default:
+            hoursBack = 24;
+        }
+
+        const bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
+        const serverShare = await getServerShareByGamemode(
+          modeName,
+          hoursBack,
+          bucketMinutes,
+          startDate ? parseInt(startDate as string, 10) : undefined,
+          endDate ? parseInt(endDate as string, 10) : undefined
+        );
+
+        logger.debug(`Served server share for gamemode ${modeName} with range ${range || '1d'}`);
+        res.json(serverShare);
+
+      } catch (error) {
+        logger.error('Failed to fetch server share by gamemode:', error);
+        res.status(500).json({ error: 'Failed to fetch server share by gamemode' });
       }
     });
 
