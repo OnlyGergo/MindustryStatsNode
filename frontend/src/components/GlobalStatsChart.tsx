@@ -48,7 +48,8 @@ function stringToColor(str: string): string {
 }
 
 // Get color for a gamemode, using theme.modeColors if available
-function getModeColor(modeName: string): string {
+function getModeColor(modeName: string | null): string {
+    if (!modeName) return "#ffffff";
     const lowerName = modeName.toLowerCase();
     if (theme.modeColors && theme.modeColors[lowerName]) {
         return theme.modeColors[lowerName];
