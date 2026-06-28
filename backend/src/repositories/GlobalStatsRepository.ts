@@ -6,6 +6,7 @@
 import sequelize from '../config/database.js';
 import { QueryTypes } from 'sequelize';
 import { GamemodeHistoryEntry, GamemodeInfo, ServerShareEntry } from '../../../common/models/GlobalStatsTypes.js';
+import {removeColors} from "../utils/Mindustry";
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -247,6 +248,7 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
 
     return rows.map(r => ({
         modeName: r.mode_name,
+        cleanName: removeColors(r.mode_name),
         serverCount: Number(r.server_count)
     }));
 }

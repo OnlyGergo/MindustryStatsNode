@@ -14,6 +14,8 @@ import {getAggregatedHistory, getGlobalPlayerHistory, getNetworkPlayerHistory} f
 import {getInactiveServers, getServerListStats} from "../repositories/ServerListRepository.js";
 import {getMapHistory, getMotdHistory} from "../repositories/serverRepository.js";
 import {getGlobalGamemodeHistory, getGamemodeList, getServerShareByGamemode} from "../repositories/GlobalStatsRepository.js";
+import {removeColors} from "../utils/Mindustry";
+import {GamemodeHistoryEntry, ServerShareEntry} from "../../../common/models/GlobalStatsTypes.js";
 
 const logger = createLogger('ApiService');
 const cache = apicache.middleware;
@@ -338,12 +340,19 @@ export class ApiService {
         }
 
         const bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
-        const history = await getGlobalGamemodeHistory(
+        let history = await getGlobalGamemodeHistory(
           hoursBack,
           bucketMinutes,
           startDate ? parseInt(startDate as string, 10) : undefined,
           endDate ? parseInt(endDate as string, 10) : undefined
         );
+
+        history = history.map((item): GamemodeHistoryEntry => {
+          return {
+            ...item,
+            modeName: removeColors(item.modeName)
+          }
+        })
 
         logger.debug(`Served global gamemode history with range ${range || '1d'}`);
         res.json(history);
@@ -393,13 +402,21 @@ export class ApiService {
         }
 
         const bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
-        const serverShare = await getServerShareByGamemode(
+        let serverShare = await getServerShareByGamemode(
           modeName,
           hoursBack,
           bucketMinutes,
           startDate ? parseInt(startDate as string, 10) : undefined,
           endDate ? parseInt(endDate as string, 10) : undefined
         );
+
+        serverShare = serverShare.map((item): ServerShareEntry => {
+          return {
+            ...item,
+            groupName: removeColors(item.groupName),
+            serverName: removeColors(item.serverName)
+          }
+        })
 
         logger.debug(`Served server share for gamemode ${modeName} with range ${range || '1d'}`);
         res.json(serverShare);
