@@ -32,6 +32,8 @@ interface RawServerShareRow {
 /**
  * Builds the SQL for bucketed gamemode history query.
  * Returns player counts grouped by mode_name per time bucket.
+ * Uses a cross-join of all_buckets × all_modes so empty buckets
+ * retain their mode_name instead of coming back as null rows.
  */
 function buildGamemodeHistoryQuery(
     hoursBack: number,
@@ -64,33 +66,37 @@ function buildGamemodeHistoryQuery(
             SELECT ${rangeStart} AS range_start,
                    ${rangeEnd}   AS range_end
         ),
-        all_buckets AS (
-            SELECT generate_series(
-                (SELECT range_start FROM time_range),
-                (SELECT range_end   FROM time_range),
-                :bucketSeconds * INTERVAL '1 second'
-            ) AS bucket
-        ),
-        bucketed AS (
-            SELECT
-                time_bucket(:bucketSeconds * INTERVAL '1 second', ss.timestamp) AS bucket,
-                smr.mode_name,
-                ss.players
-            FROM server_stats ss
-            JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
-            WHERE ${timeFilter}
-        ),
-        aggregated AS (
-            SELECT bucket, mode_name, SUM(players) AS players
-            FROM bucketed
-            GROUP BY bucket, mode_name
-        )
-        SELECT extract(epoch FROM all_buckets.bucket) * 1000 AS timestamp,
-               aggregated.mode_name,
-               aggregated.players
-        FROM all_buckets
-        LEFT JOIN aggregated ON all_buckets.bucket = aggregated.bucket
-        ORDER BY all_buckets.bucket, aggregated.mode_name
+             all_buckets AS (
+                 SELECT generate_series(
+                                (SELECT range_start FROM time_range),
+                                (SELECT range_end   FROM time_range),
+                                :bucketSeconds * INTERVAL '1 second'
+                        ) AS bucket
+             ),
+             bucketed AS (
+                 SELECT
+                     time_bucket(:bucketSeconds * INTERVAL '1 second', ss.timestamp) AS bucket,
+                     smr.mode_name,
+                     ss.players
+                 FROM server_stats ss
+                          JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
+                 WHERE ${timeFilter}
+             ),
+             aggregated AS (
+                 SELECT bucket, mode_name, MAX(players) AS players
+                 FROM bucketed
+                 GROUP BY bucket, mode_name
+             ),
+             all_modes AS (
+                 SELECT DISTINCT mode_name FROM aggregated
+             )
+        SELECT extract(epoch FROM b.bucket) * 1000 AS timestamp,
+               m.mode_name,
+               a.players
+        FROM all_buckets b
+                 CROSS JOIN all_modes m
+                 LEFT JOIN aggregated a ON a.bucket = b.bucket AND a.mode_name = m.mode_name
+        ORDER BY b.bucket, m.mode_name
     `;
 
     const replacements = { ...timeParams, bucketSeconds };
@@ -100,6 +106,8 @@ function buildGamemodeHistoryQuery(
 /**
  * Builds the SQL for bucketed server share query for a specific gamemode.
  * Returns player counts per server with group info.
+ * Uses a cross-join of all_buckets × all_servers so empty buckets
+ * retain server identity instead of coming back as null rows.
  */
 function buildServerShareQuery(
     modeName: string,
@@ -133,42 +141,47 @@ function buildServerShareQuery(
             SELECT ${rangeStart} AS range_start,
                    ${rangeEnd}   AS range_end
         ),
-        all_buckets AS (
-            SELECT generate_series(
-                (SELECT range_start FROM time_range),
-                (SELECT range_end   FROM time_range),
-                :bucketSeconds * INTERVAL '1 second'
-            ) AS bucket
-        ),
-        bucketed AS (
-            SELECT
-                time_bucket(:bucketSeconds * INTERVAL '1 second', ss.timestamp) AS bucket,
-                ss.server_id,
-                s.server_group_id,
-                s.name AS server_name,
-                sg.name AS group_name,
-                MAX(ss.players) AS players
-            FROM server_stats ss
-            JOIN servers s ON ss.server_id = s.id
-            JOIN server_groups sg ON s.server_group_id = sg.id
-            JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
-            WHERE smr.mode_name = :modeName AND ${timeFilter}
-            GROUP BY bucket, ss.server_id, s.server_group_id, s.name, sg.name
-        ),
-        aggregated AS (
-            SELECT bucket, server_id, server_group_id, server_name, group_name, SUM(players) AS players
-            FROM bucketed
-            GROUP BY bucket, server_id, server_group_id, server_name, group_name
-        )
-        SELECT extract(epoch FROM all_buckets.bucket) * 1000 AS timestamp,
-               aggregated.server_id,
-               aggregated.server_group_id,
-               aggregated.server_name,
-               aggregated.group_name,
-               aggregated.players
-        FROM all_buckets
-        LEFT JOIN aggregated ON all_buckets.bucket = aggregated.bucket
-        ORDER BY all_buckets.bucket, aggregated.server_id
+             all_buckets AS (
+                 SELECT generate_series(
+                                (SELECT range_start FROM time_range),
+                                (SELECT range_end   FROM time_range),
+                                :bucketSeconds * INTERVAL '1 second'
+                        ) AS bucket
+             ),
+             bucketed AS (
+                 SELECT
+                     time_bucket(:bucketSeconds * INTERVAL '1 second', ss.timestamp) AS bucket,
+                     ss.server_id,
+                     s.server_group_id,
+                     '' AS server_name,
+                     sg.name AS group_name,
+                     MAX(ss.players) AS players
+                 FROM server_stats ss
+                          JOIN servers s ON ss.server_id = s.id
+                          JOIN server_groups sg ON s.server_group_id = sg.id
+                          JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
+                 WHERE smr.mode_name = :modeName AND ${timeFilter}
+                 GROUP BY bucket, ss.server_id, s.server_group_id, sg.name
+             ),
+             aggregated AS (
+                 SELECT bucket, server_id, server_group_id, server_name, group_name, MAX(players) AS players
+                 FROM bucketed
+                 GROUP BY bucket, server_id, server_group_id, server_name, group_name
+             ),
+             all_servers AS (
+                 SELECT DISTINCT server_id, server_group_id, server_name, group_name
+                 FROM aggregated
+             )
+        SELECT extract(epoch FROM b.bucket) * 1000 AS timestamp,
+               s.server_id,
+               s.server_group_id,
+               s.server_name,
+               s.group_name,
+               a.players
+        FROM all_buckets b
+                 CROSS JOIN all_servers s
+                 LEFT JOIN aggregated a ON a.bucket = b.bucket AND a.server_id = s.server_id
+        ORDER BY b.bucket, s.server_id
     `;
 
     const replacements = {
@@ -221,7 +234,7 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
         SELECT smr.mode_name,
                COUNT(DISTINCT smh.server_id) AS server_count
         FROM server_maps_registry smr
-        JOIN server_maps_history smh ON smr.id = smh.map_id
+                 JOIN server_maps_history smh ON smr.id = smh.map_id
         WHERE smr.mode_name IS NOT NULL
           AND smr.mode_name != ''
         GROUP BY smr.mode_name

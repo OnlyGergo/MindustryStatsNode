@@ -95,7 +95,7 @@ function buildHistoryQuery(
                 GROUP BY bucket, server_id
             ),
             aggregated AS (
-                SELECT bucket, SUM(max_players) AS players
+                SELECT bucket, MAX(max_players) AS players
                 FROM server_max
                 GROUP BY bucket
             )`
