@@ -27,7 +27,7 @@ import {
     ServerInput,
     ServerRecord,
 } from '../../../common/models/RepositoryTypes.js';
-import {CURRENT_DATA_FRESH_THRESHOLD} from "../const.js";
+import {CURRENT_DATA_FRESH_THRESHOLD, MAX_REALISTIC_PLAYERCOUNT} from "../const.js";
 
 const logger = createLogger('ServerRepository');
 
@@ -87,7 +87,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
                 version, version_type, ping, online
             FROM server_stats
             WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
-              AND players >= 0 AND players < 100
+              AND players >= 0 AND players < :maxRealisticPlayerCount
             ORDER BY server_id, timestamp DESC
         )
         SELECT
@@ -105,7 +105,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
         LEFT JOIN latest_maps  maps  ON s.id = maps.server_id
         LEFT JOIN server_groups sg   ON s.server_group_id = sg.id
         ORDER BY sg.name, s.host, s.port
-    `, { replacements: { hoursBack }, type: QueryTypes.SELECT });
+    `, { replacements: { hoursBack, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT }, type: QueryTypes.SELECT });
 
     return rows.map((row): ServerElement => {
         const element: ServerElement = {

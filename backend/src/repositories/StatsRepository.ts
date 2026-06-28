@@ -7,6 +7,7 @@
 import sequelize from '../config/database.js';
 import { ServerHistory } from '../../../common/models/serverData.js';
 import { QueryTypes } from 'sequelize';
+import { MAX_REALISTIC_PLAYERCOUNT } from '../const.js';
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -30,16 +31,16 @@ interface RawHistoryRow {
 function scopeFilter(scope: Scope): { sql: string; params: Record<string, unknown> } {
     switch (scope.kind) {
         case 'global':
-            return { sql: 'players >= 0 AND players < 100', params: {} };
+            return { sql: 'players >= 0 AND players < :maxRealisticPlayerCount', params: {maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT} };
         case 'server':
             return {
-                sql: 'server_id = :serverId AND players >= 0 AND players < 100',
-                params: { serverId: scope.serverId }
+                sql: 'server_id = :serverId AND players >= 0 AND players < maxRealisticPlayerCount',
+                params: { serverId: scope.serverId, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT }
             };
         case 'network':
             return {
-                sql: 'server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId) AND players >= 0 AND players < 100',
-                params: { groupId: scope.groupId }
+                sql: 'server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId) AND players >= 0 AND players < maxRealisticPlayerCount',
+                params: { groupId: scope.groupId, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT }
             };
     }
 }

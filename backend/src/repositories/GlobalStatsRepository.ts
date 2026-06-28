@@ -7,6 +7,7 @@ import sequelize from '../config/database.js';
 import { QueryTypes } from 'sequelize';
 import { GamemodeHistoryEntry, GamemodeInfo, ServerShareEntry } from '../../../common/models/GlobalStatsTypes.js';
 import {removeColors} from "../utils/Mindustry";
+import { MAX_REALISTIC_PLAYERCOUNT } from '../const.js';
 
 // ─── Internal helpers ────────────────────────────────────────────────────────
 
@@ -81,7 +82,7 @@ function buildGamemodeHistoryQuery(
                      ss.players
                  FROM server_stats ss
                           JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
-                 WHERE ${timeFilter}
+                 WHERE ${timeFilter} AND ss.players >= 0 AND ss.players < :maxRealisticPlayerCount
              ),
              aggregated AS (
                  SELECT bucket, mode_name, MAX(players) AS players
@@ -100,7 +101,7 @@ function buildGamemodeHistoryQuery(
         ORDER BY b.bucket, m.mode_name
     `;
 
-    const replacements = { ...timeParams, bucketSeconds };
+    const replacements = { ...timeParams, bucketSeconds, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT };
     return { query, replacements };
 }
 
@@ -161,7 +162,7 @@ function buildServerShareQuery(
                           JOIN servers s ON ss.server_id = s.id
                           JOIN server_groups sg ON s.server_group_id = sg.id
                           JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
-                 WHERE smr.mode_name = :modeName AND ${timeFilter}
+                 WHERE smr.mode_name = :modeName AND ${timeFilter} AND ss.players >= 0 AND ss.players < :maxRealisticPlayerCount
                  GROUP BY bucket, ss.server_id, s.server_group_id, sg.name
              ),
              aggregated AS (
@@ -189,6 +190,7 @@ function buildServerShareQuery(
         ...timeParams,
         bucketSeconds,
         modeName,
+        maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT,
     };
     return { query, replacements };
 }

@@ -246,11 +246,12 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({ onClose }) => {
           borderColor: color,
           backgroundColor: color + "15",
           fill: true,
-          tension: 0.35,
+          tension: 0.5,
           pointRadius: data.length > 80 ? 0 : 2.5,
           pointHoverRadius: 5,
           borderWidth: 2,
-          spanGaps: true,
+          spanGaps: false,
+          cubicInterpolationMode: "monotone",
         };
       });
     } else {
