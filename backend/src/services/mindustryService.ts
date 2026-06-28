@@ -5,6 +5,7 @@ import {readString} from '../utils/buffer.js';
 import {MINDUSTRY_TIMEOUT_MILLISECONDS} from '../const.js';
 import {createLogger} from '../logger.js';
 import {lookupCountryFromIPSync} from "../utils/countryLookup.js";
+import {decodeGamemode} from "../utils/GamemodeDecoder";
 
 const failedServersCache = new Set<string>();
 const logger = createLogger('Mindustry Service');
@@ -115,7 +116,7 @@ export async function getServerData(host: string, port: number | string, serverK
 
         const playerLimit = buffer.readInt32BE(offset.value); offset.value += 4;
         const description = readString(buffer, offset);
-        const modeName = readString(buffer, offset);
+        const modeName = decodeGamemode(readString(buffer, offset), mode);
 
         failedServersCache.delete(serverKey);
 
