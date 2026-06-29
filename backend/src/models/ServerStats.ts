@@ -67,12 +67,12 @@ ServerStats.init({
   },
   motd_registry_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     //references: { model: 'server_motds_registry', key: 'id' },
   },
   map_registry_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     //references: { model: 'server_maps_registry', key: 'id' },
   },
 }, {
