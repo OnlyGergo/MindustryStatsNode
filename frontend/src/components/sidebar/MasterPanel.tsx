@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {useNavigate} from 'react-router-dom';
 import ServerGroup from './ServerGroup';
 import FlatServerList from './FlatServerList';
@@ -10,7 +10,6 @@ import Tooltip from "../Tooltip.tsx";
 import {useServerList} from "../../hooks/useServerList.ts";
 import {COMMIT, VERSION} from "../../../../common/version.ts";
 import {getConnectionStatusClasses} from "../../theme.ts";
-import GlobalStatsChart from "../GlobalStatsChart.tsx";
 import {FetchStatus} from "../../hooks/useApi.ts";
 
 interface MasterPanelProps {
@@ -74,15 +73,8 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
     } = useServerList(rawServers);
 
     const connectionStatusInfo = getConnectionStatusClasses(connectionStatus);
-    const [showGlobalStats, setShowGlobalStats] = useState(false);
 
     return (
-        <>
-        {/* Global Stats Modal */}
-        {showGlobalStats && (
-            <GlobalStatsChart onClose={() => setShowGlobalStats(false)} />
-        )}
-        
         <div className={`relative transition-all duration-300 ${
             isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-1/3'
         } min-w-0 bg-neutral-900/20 backdrop-blur-md border-r border-neutral-700/50 flex flex-col h-screen`}>
@@ -138,7 +130,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                             </div>
                             <div 
                                 className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 p-2 rounded-lg cursor-pointer hover:bg-neutral-700/30 hover:border-orange-500/30 transition-all group"
-                                onClick={() => setShowGlobalStats(true)}
+                                onClick={() => navigate('/global')}
                             >
                                 <div className="text-gray-400 text-xs flex items-center justify-center gap-1">
                                     Total Players
@@ -274,7 +266,6 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                 </>
             )}
         </div>
-        </>
     );
 };
 

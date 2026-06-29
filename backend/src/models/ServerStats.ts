@@ -13,6 +13,8 @@ class ServerStats extends Model {
   declare version_type: string | null;
   declare ping: number | null;
   declare online: boolean;
+  declare motd_registry_id: number | null;
+  declare map_registry_id: number | null;
 }
 
 ServerStats.init({
