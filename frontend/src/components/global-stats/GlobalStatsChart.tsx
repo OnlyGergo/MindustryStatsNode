@@ -4,8 +4,8 @@ import { useGamemodeList } from "../../hooks/api/useGamemodeList.ts";
 import { useGamemodeHistory } from "../../hooks/api/useGamemodeHistory.ts";
 import { useServerShare } from "../../hooks/api/useServerShare.ts";
 import { ChartControls } from "../ChartControls.tsx";
-import { GamemodeChart } from "../GamemodeChart.tsx";
-import { ServerShareChart } from "../ServerShareChart.tsx";
+import { GamemodeChart } from "./GamemodeChart.tsx";
+import { ServerShareChart } from "./ServerShareChart.tsx";
 
 const GlobalStatsChart: React.FC = () => {
   const [selectedRange, setSelectedRange] = useState<DateRangeOption>("1d");
@@ -72,13 +72,13 @@ const GlobalStatsChart: React.FC = () => {
 
         <div className="flex-1 p-6 overflow-y-auto space-y-6 custom-scrollbar">
           {/* Main Timeline */}
-          <div className="border border-neutral-800/80 rounded-2xl p-4">
+          <div className="border border-neutral-800/80 rounded-2xl p-4 h-[40vh]">
             <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4">
               {viewMode === "lines"
                   ? "Concurrent Players by Game Mode"
                   : "Aggregated Network Players"}
             </h4>
-            <div className="relative h-[480px] w-full">
+            <div className="relative w-full h-[calc(100%-2rem)]">
               <GamemodeChart
                   data={gamemodeData}
                   loading={loading}
@@ -91,13 +91,13 @@ const GlobalStatsChart: React.FC = () => {
 
           {/* Server Load Distribution (only when a gamemode is selected) */}
           {selectedGamemode && (
-              <div className="border border-neutral-800/80 rounded-2xl p-4">
+              <div className="border border-neutral-800/80 rounded-2xl p-4 h-[40vh]">
                 <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
                   Load Distribution for:{" "}
                   <span className="text-orange-400 font-extrabold">{selectedGamemode}</span>
                 </h4>
-                <div className="relative h-[220px] w-full">
+                <div className="relative w-full h-[calc(100%-2rem)]">
                   <ServerShareChart
                       data={serverShareData}
                       loading={serverShareLoading}

@@ -55,7 +55,7 @@ const App: React.FC = () => {
         // Handle serverId from URL
         if (serverId) {
             const parsedServerId = parseInt(serverId, 10);
-            if (!isNaN(parsedServerId) && parsedServerId > 0 && parsedServerId < 1000000) {
+            if (!isNaN(parsedServerId) && parsedServerId > 0) {
                 const targetServer = data.find(s => s.id === parsedServerId);
                 if (targetServer) {
                     setSelectedServer(targetServer);

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
-import { GamemodeHistoryEntry } from "../../../common/models/GlobalStatsTypes.js";
+import { GamemodeHistoryEntry } from "../../../../common/models/GlobalStatsTypes.js";
 import {
     buildGamemodeIndex,
     buildUPlotData,
@@ -9,7 +9,7 @@ import {
     getModeColor,
     DateRangeOption,
     ViewMode,
-} from "../util/chartHelpers.ts";
+} from "../../util/chartHelpers.ts";
 
 interface GamemodeChartProps {
     data: GamemodeHistoryEntry[];
@@ -26,11 +26,13 @@ export const GamemodeChart: React.FC<GamemodeChartProps> = ({
                                                                 selectedRange,
                                                                 viewMode,
                                                             }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
+    const outerRef = useRef<HTMLDivElement>(null);
+    const mountRef = useRef<HTMLDivElement>(null);
     const uplotRef = useRef<uPlot | null>(null);
+    const lastSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
 
     useEffect(() => {
-        if (!containerRef.current || data.length === 0) return;
+        if (!outerRef.current || !mountRef.current || data.length === 0) return;
 
         uplotRef.current?.destroy();
         uplotRef.current = null;
@@ -70,8 +72,8 @@ export const GamemodeChart: React.FC<GamemodeChartProps> = ({
             padding:10px 12px; font-size:11px; color:#fff; white-space:nowrap;
             box-shadow:0 4px 16px rgba(0,0,0,0.5);
         `;
-        containerRef.current.style.position = "relative";
-        containerRef.current.appendChild(tooltipEl);
+        mountRef.current.style.position = "relative";
+        mountRef.current.appendChild(tooltipEl);
 
         function renderTooltip(u: uPlot, idx: number | null) {
             if (idx == null) { tooltipEl.style.display = "none"; return; }
@@ -129,7 +131,7 @@ export const GamemodeChart: React.FC<GamemodeChartProps> = ({
             // Position tooltip near cursor, keep inside bounds
             const cursorLeft = u.cursor.left ?? 0;
             const cursorTop = u.cursor.top ?? 0;
-            const containerW = containerRef.current?.offsetWidth ?? 600;
+            const containerW = mountRef.current?.offsetWidth ?? 600;
             const tipW = 220;
             const left = cursorLeft + 16 + tipW > containerW ? cursorLeft - tipW - 8 : cursorLeft + 16;
 
@@ -161,9 +163,12 @@ export const GamemodeChart: React.FC<GamemodeChartProps> = ({
         ];
 
         // ── uPlot init ───────────────────────────────────────────────────────
+        // Use the OUTER box's dimensions, not the mount element's — the mount
+        // element's own size can change once the legend renders into it
+        // (e.g. wrapping to 2 lines), and we never want that fed back in.
         const opts: uPlot.Options = {
-            width: containerRef.current.offsetWidth,
-            height: containerRef.current.offsetHeight,
+            width: outerRef.current.offsetWidth,
+            height: outerRef.current.offsetHeight,
             series,
             axes,
             scales: {
@@ -181,19 +186,38 @@ export const GamemodeChart: React.FC<GamemodeChartProps> = ({
             plugins: [],
         };
 
-        uplotRef.current = new uPlot(opts, chartData as uPlot.AlignedData, containerRef.current);
+        uplotRef.current = new uPlot(opts, chartData as uPlot.AlignedData, mountRef.current);
+        lastSizeRef.current = { width: opts.width, height: opts.height };
 
-        // Handle resize carefully to avoid infinite expansion loops
+        // Handle resize carefully to avoid infinite expansion loops.
+        // CRITICAL: we observe outerRef, NOT mountRef. outerRef's size is
+        // determined purely by CSS (absolute inset-0 against its parent) and
+        // is completely independent of uPlot's own rendered content (canvas,
+        // legend, axis labels). mountRef — where uPlot actually renders —
+        // can change size as a side effect of redrawing (e.g. the legend
+        // wrapping differently at a new width), and observing that element
+        // is what creates the feedback loop in the first place.
         const ro = new ResizeObserver((entries) => {
             if (!uplotRef.current) return;
             const entry = entries[0];
-            // Destructure contentRect, not the raw container properties, to prevent loops
             const { width, height } = entry.contentRect;
-            if (width > 0 && height > 0) {
-                uplotRef.current.setSize({ width, height });
+
+            if (width <= 0 || height <= 0) return;
+
+            // Only act on a genuine size change. This is still useful even
+            // though we're observing a stable element, since it avoids
+            // redundant setSize calls during e.g. drag-resize streams.
+            const last = lastSizeRef.current;
+            if (Math.abs(width - last.width) < 1 && Math.abs(height - last.height) < 1) {
+                return;
             }
+            lastSizeRef.current = { width, height };
+
+            requestAnimationFrame(() => {
+                uplotRef.current?.setSize({ width, height });
+            });
         });
-        ro.observe(containerRef.current);
+        ro.observe(outerRef.current);
 
         return () => {
             ro.disconnect();
@@ -228,6 +252,15 @@ export const GamemodeChart: React.FC<GamemodeChartProps> = ({
         );
     }
 
-    // `overflow-hidden` is crucial here to stop the uPlot canvas from infinitely stretching the parent
-    return <div ref={containerRef} className="absolute inset-0 overflow-hidden" />;
+    // outerRef is the element we observe; its size is fixed purely by CSS
+    // (absolute inset-0 against the actual layout parent) and is never
+    // affected by what uPlot renders inside mountRef.
+    // mountRef fills the outer box and is what uPlot draws into — if its
+    // legend wraps and overflows slightly, `overflow-hidden` clips it rather
+    // than growing the box, so there's nothing for the observer to react to.
+    return (
+        <div ref={outerRef} className="absolute inset-0 block">
+            <div ref={mountRef} className="absolute inset-0 block overflow-hidden" />
+        </div>
+    );
 };
