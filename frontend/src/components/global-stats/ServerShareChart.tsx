@@ -149,7 +149,7 @@ export const ServerShareChart: React.FC<ServerShareChartProps> = ({
             </div>
 
             {loading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-neutral-950/10 z-20">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-neutral-900/10 z-20">
                     <div className="animate-spin rounded-full h-6 w-6 border-2 border-orange-500 border-t-transparent" />
                     <span className="text-xs text-neutral-400 font-medium tracking-wide animate-pulse">
             Analyzing operational instances...

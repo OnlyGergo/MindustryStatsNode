@@ -34,7 +34,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="hover:bg-orange-700/10 hover:border-orange-500/30 text-gray-300 border border-neutral-800/50 px-3 py-1 rounded-lg text-xs transition-colors flex items-center space-x-2 min-w-0"
+        className="hover:bg-orange-700/10 hover:border-orange-500/30 text-gray-300 border border-neutral-600/30 bg-neutral-800/50 px-3 py-1 rounded-lg text-xs transition-colors flex items-center space-x-2 min-w-0"
       >
         <span className="truncate">
           Sort: {currentOption?.label}
@@ -64,7 +64,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-48 bg-neutral-850 border-neutral-800/50 backdrop-blur-md border rounded-lg shadow-xl z-50">
+        <div className="absolute top-full left-0 mt-1 w-48 bg-neutral-800 border-neutral-800/40 backdrop-blur-md border rounded-lg shadow-xl z-50">
           {sortOptions.map((option) => (
             <div key={option.key} className="border-b border-neutral-800/50 last:border-b-0">
               <div

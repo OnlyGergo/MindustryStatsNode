@@ -92,7 +92,7 @@ export const ChartSidebarLegend: React.FC<ChartSidebarLegendProps> = ({
                                     />
                                     <span className="truncate text-xs font-semibold">{mode}</span>
                                 </div>
-                                <span className="text-[10px] font-mono text-neutral-400 shrink-0 bg-neutral-950/60 px-1.5 py-0.5 rounded border border-neutral-800/40">
+                                <span className="text-[10px] font-mono text-neutral-400 shrink-0 bg-neutral-900/60 px-1.5 py-0.5 rounded border border-neutral-800/40">
                                   {peak.toLocaleString()}
                                 </span>
                             </label>

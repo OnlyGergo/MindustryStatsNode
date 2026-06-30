@@ -205,7 +205,7 @@ const App: React.FC = () => {
     return (
         <Routes>
             <Route path="/" element={
-                <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-950 to-stone-950 text-white flex overflow-hidden">
+                <div className="h-screen bg-gradient-to-br from-stone-900 via-neutral-900 to-stone-900 text-white flex overflow-hidden">
                     {/* Animated background elements */}
                     <div className="fixed inset-0 overflow-hidden pointer-events-none">
                         <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
@@ -250,7 +250,7 @@ const App: React.FC = () => {
                 </div>
             } />
             <Route path="/server/:serverId" element={
-                <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-950 to-stone-950 text-white flex overflow-hidden">
+                <div className="h-screen bg-gradient-to-br from-stone-900 via-neutral-900 to-stone-900 text-white flex overflow-hidden">
                     <div className="fixed inset-0 overflow-hidden pointer-events-none">
                         <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
                         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
@@ -290,7 +290,7 @@ const App: React.FC = () => {
                 </div>
             } />
             <Route path="/network/:networkId" element={
-                <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-950 to-stone-950 text-white flex overflow-hidden">
+                <div className="h-screen bg-gradient-to-br from-stone-900 via-neutral-900 to-stone-900 text-white flex overflow-hidden">
                     <div className="fixed inset-0 overflow-hidden pointer-events-none">
                         <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
                         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
@@ -330,7 +330,7 @@ const App: React.FC = () => {
                 </div>
             } />
             <Route path="/inactive" element={
-                <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-950 to-stone-950 text-white flex overflow-hidden">
+                <div className="h-screen bg-gradient-to-br from-stone-900 via-neutral-900 to-stone-900 text-white flex overflow-hidden">
                     <div className="fixed inset-0 overflow-hidden pointer-events-none">
                         <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
                         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
@@ -370,7 +370,7 @@ const App: React.FC = () => {
                 </div>
             } />
             <Route path="/global" element={
-                <div className="h-screen bg-gradient-to-br from-stone-950 via-neutral-950 to-stone-950 text-white flex overflow-hidden">
+                <div className="h-screen bg-gradient-to-br from-stone-900 via-neutral-900 to-stone-900 text-white flex overflow-hidden">
                     <div className="fixed inset-0 overflow-hidden pointer-events-none">
                         <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl animate-pulse"></div>
                         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>

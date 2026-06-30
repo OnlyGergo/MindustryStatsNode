@@ -79,7 +79,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
             isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-3/12'
         } min-w-0 bg-neutral-900/20 backdrop-blur-md border-r border-neutral-800/50 flex flex-col h-screen`}>
             {/* Header - Improved design with connection status */}
-            <div className="bg-gradient-to-r from-neutral-900/60 to-neutral-950/40 backdrop-blur-md border-b border-neutral-950/50 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
+            <div className="bg-gradient-to-r from-neutral-900/60 to-neutral-900/40 backdrop-blur-md border-b border-neutral-900/50 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
                 {!isCollapsed && (
                     <div className="flex items-center gap-3">
                         {/* Logo/Icon */}
@@ -106,7 +106,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                 {!isMobile && (
                     <button
                         onClick={onToggleCollapse}
-                        className="bg-neutral-810/50 border-orange-500/30 hover:bg-orange-700/10 hover:border-orange-500/30 text-orange-500 p-2 rounded-lg transition-colors border border-neutral-600/50"
+                        className="bg-neutral-810/50 border-orange-500/40 hover:bg-orange-700/10 hover:border-orange-500/40 text-orange-500 p-2 rounded-lg transition-colors border border-neutral-600/50"
                     >
                         <svg className={`w-4 h-4 transform transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -120,7 +120,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     {/* Stats */}
                     <div className="p-4 border-neutral-800/50 flex-shrink-0">
                         <div className="grid grid-cols-2 gap-2 text-center">
-                            <div className="bg-neutral-850/30 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg">
+                            <div className="bg-neutral-800/40 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg">
                                 <div className="text-gray-300 text-xs">Online / Total Servers</div>
                                 <div className="flex items-center justify-center space-x-2">
                                     <span className="text-lg font-bold text-green-400">{onlineServers}</span>
@@ -129,7 +129,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                 </div>
                             </div>
                             <div
-                                className="bg-neutral-850/30 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg cursor-pointer hover:bg-orange-700/10 hover:border-orange-500/30 transition-all group"
+                                className="bg-neutral-800/40 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg cursor-pointer hover:bg-orange-700/10 hover:border-orange-500/40 transition-all group"
                                 onClick={() => navigate('/global')}
                             >
                                 <div className="text-gray-300 text-xs flex group-hover:text-orange-400 items-center justify-center gap-1">
@@ -149,7 +149,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     <div className="px-4 pb-3 border-b border-neutral-800/50 flex-shrink-0">
                         <button
                             onClick={() => navigate('/inactive')}
-                            className="w-full bg-neutral-850/30 hover:bg-orange-700/10 hover:border-orange-500/30 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition-colors border border-neutral-800/50 text-sm font-medium"
+                            className="w-full bg-neutral-800/40 hover:bg-orange-700/10 hover:border-orange-500/40 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition-colors border border-neutral-800/50 text-sm font-medium"
                         >
                             Server List Statistics
                         </button>
@@ -193,8 +193,8 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                     onClick={toggleHideInactive}
                                     activeText="Show All"
                                     inactiveText="Hide Inactive"
-                                    activeColor="bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border-orange-500/30"
-                                    inactiveColor="bg-neutral-600/20 hover:bg-neutral-600/30 text-neutral-400 border-neutral-600/30"
+                                    activeColor="bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 border-orange-500/40"
+                                    inactiveColor="bg-neutral-600/20 hover:bg-neutral-600/40 text-neutral-400 border-neutral-600/40"
                                     className="w-full"
                                 />
                             </Tooltip>
@@ -214,14 +214,14 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     {/* Server List */}
                     <div className="flex-1 overflow-y-auto p-4 min-h-0">
                         {loading && (
-                            <div className="text-center p-8 bg-neutral-850/30 backdrop-blur-md border border-neutral-800/50 rounded-xl mb-6">
+                            <div className="text-center p-8 bg-neutral-800/40 backdrop-blur-md border border-neutral-800/50 rounded-xl mb-6">
                                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-400 border-t-transparent"></div>
                                 <p className="mt-4 text-gray-300">Loading server data...</p>
                             </div>
                         )}
 
                         {error && (
-                            <div className="bg-red-500/20 border border-red-500/30 text-red-400 px-6 py-4 rounded-xl backdrop-blur-sm mb-6">
+                            <div className="bg-red-500/20 border border-red-500/40 text-red-400 px-6 py-4 rounded-xl backdrop-blur-sm mb-6">
                                 <span className="block sm:inline">Failed to load server data. Please try again later.</span>
                             </div>
                         )}

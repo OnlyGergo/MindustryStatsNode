@@ -25,7 +25,7 @@ const ServerGroup: React.FC<{
     };
 
     return (
-        <div className={`bg-neutral-850/30 backdrop-blur-md border rounded-xl overflow-hidden ${
+        <div className={`bg-neutral-800/50 backdrop-blur-md border rounded-xl overflow-hidden ${
             isNetworkSelected ? 'border-orange-500/50' : 'border-neutral-700/50'
         } ${expanded ? 'border-orange-400/20 border-2' : 'hover:border-orange-500/30'}`}>
             <div
