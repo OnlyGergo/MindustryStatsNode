@@ -37,7 +37,7 @@ export const ChartSidebarLegend: React.FC<ChartSidebarLegendProps> = ({
             <div className="mb-2.5">
                 <input
                     type="text"
-                    placeholder="Fuzzy search profiles..."
+                    placeholder="Search gamemodes..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs text-neutral-200 placeholder-neutral-500 focus:outline-none focus:border-orange-500/40 transition-colors"
@@ -75,7 +75,7 @@ export const ChartSidebarLegend: React.FC<ChartSidebarLegendProps> = ({
                                 key={mode}
                                 className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border cursor-pointer select-none transition-all ${
                                     isChecked
-                                        ? "bg-neutral-800/30 border-neutral-700/40 text-neutral-100"
+                                        ? "bg-neutral-800/10 border-neutral-700/40 text-neutral-100"
                                         : "bg-transparent border-transparent text-neutral-500 hover:bg-neutral-900/50 hover:text-neutral-300"
                                 }`}
                             >
@@ -93,8 +93,8 @@ export const ChartSidebarLegend: React.FC<ChartSidebarLegendProps> = ({
                                     <span className="truncate text-xs font-semibold">{mode}</span>
                                 </div>
                                 <span className="text-[10px] font-mono text-neutral-400 shrink-0 bg-neutral-950/60 px-1.5 py-0.5 rounded border border-neutral-800/40">
-                  {peak.toLocaleString()}
-                </span>
+                                  {peak.toLocaleString()}
+                                </span>
                             </label>
                         );
                     })

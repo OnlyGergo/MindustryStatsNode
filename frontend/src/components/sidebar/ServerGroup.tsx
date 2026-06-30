@@ -25,11 +25,11 @@ const ServerGroup: React.FC<{
     };
 
     return (
-        <div className={`bg-neutral-800/30 backdrop-blur-md border rounded-xl overflow-hidden ${
+        <div className={`bg-neutral-850/30 backdrop-blur-md border rounded-xl overflow-hidden ${
             isNetworkSelected ? 'border-orange-500/50' : 'border-neutral-700/50'
-        }`}>
+        } ${expanded ? 'border-orange-400/20 border-2' : 'hover:border-orange-500/30'}`}>
             <div
-                className="bg-neutral-900/50 backdrop-blur-sm border-b border-neutral-700/50 px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-neutral-800/50 transition-colors"
+                className="bg-neutral-900/50 backdrop-blur-sm border-neutral-700/50 px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-neutral-800/50 transition-colors ${(expanded ? 'border-b' : '')}"
                 onClick={onToggleExpand}
             >
                 <div>
@@ -44,8 +44,8 @@ const ServerGroup: React.FC<{
                             onClick={handleNetworkClick}
                             className={`p-1.5 rounded-lg transition-colors ${
                                 isNetworkSelected
-                                    ? 'bg-orange-500/30 text-orange-400'
-                                    : 'bg-neutral-700/30 text-gray-400 hover:bg-neutral-600/30 hover:text-gray-300'
+                                    ? 'bg-orange-500/30 text-orange-400/50'
+                                    : 'bg-neutral-700/30 text-gray-400 hover:text-orange-400 hover:bg-orange-700/10 hover:border-orange-500/30 hover:text-gray-300'
                             }`}
                             title="View network graph"
                         >

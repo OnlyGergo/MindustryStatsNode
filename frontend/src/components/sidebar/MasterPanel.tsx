@@ -76,10 +76,10 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
 
     return (
         <div className={`relative transition-all duration-300 ${
-            isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-1/3'
-        } min-w-0 bg-neutral-900/20 backdrop-blur-md border-r border-neutral-700/50 flex flex-col h-screen`}>
+            isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-3/12'
+        } min-w-0 bg-neutral-900/20 backdrop-blur-md border-r border-neutral-800/50 flex flex-col h-screen`}>
             {/* Header - Improved design with connection status */}
-            <div className="bg-gradient-to-r from-neutral-800/60 to-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
+            <div className="bg-gradient-to-r from-neutral-900/60 to-neutral-950/40 backdrop-blur-md border-b border-neutral-950/50 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
                 {!isCollapsed && (
                     <div className="flex items-center gap-3">
                         {/* Logo/Icon */}
@@ -97,7 +97,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                 <Tooltip content={connectionStatusInfo.tooltip} position="bottom" delay={100}>
                                     <span className={`inline-block w-2 h-2 rounded-full ${connectionStatusInfo.dotColor}`}></span>
                                 </Tooltip>
-                                <span className="text-xs text-gray-500">{VERSION}</span>
+                                <span className="text-xs text-gray-400">{VERSION}</span>
                             </div>
                         </div>
                     </div>
@@ -106,7 +106,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                 {!isMobile && (
                     <button
                         onClick={onToggleCollapse}
-                        className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50"
+                        className="bg-neutral-810/50 border-orange-500/30 hover:bg-orange-700/10 hover:border-orange-500/30 text-orange-500 p-2 rounded-lg transition-colors border border-neutral-600/50"
                     >
                         <svg className={`w-4 h-4 transform transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -118,24 +118,24 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
             {!isCollapsed && (
                 <>
                     {/* Stats */}
-                    <div className="p-4 border-b border-neutral-700/50 flex-shrink-0">
+                    <div className="p-4 border-neutral-800/50 flex-shrink-0">
                         <div className="grid grid-cols-2 gap-2 text-center">
-                            <div className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 p-2 rounded-lg">
-                                <div className="text-gray-400 text-xs">Online / Total Servers</div>
+                            <div className="bg-neutral-850/30 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg">
+                                <div className="text-gray-300 text-xs">Online / Total Servers</div>
                                 <div className="flex items-center justify-center space-x-2">
                                     <span className="text-lg font-bold text-green-400">{onlineServers}</span>
-                                    <span className="text-lg font-bold text-gray-400"> / </span>
+                                    <span className="text-lg font-bold text-gray-300"> / </span>
                                     <span className="text-lg font-bold text-white">{totalServers}</span>
                                 </div>
                             </div>
-                            <div 
-                                className="bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 p-2 rounded-lg cursor-pointer hover:bg-neutral-700/30 hover:border-orange-500/30 transition-all group"
+                            <div
+                                className="bg-neutral-850/30 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg cursor-pointer hover:bg-orange-700/10 hover:border-orange-500/30 transition-all group"
                                 onClick={() => navigate('/global')}
                             >
-                                <div className="text-gray-400 text-xs flex items-center justify-center gap-1">
+                                <div className="text-gray-300 text-xs flex group-hover:text-orange-400 items-center justify-center gap-1">
                                     Total Players
                                     <Tooltip content="View global player history" position="top" delay={200}>
-                                        <svg className="w-3.5 h-3.5 text-gray-500 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-3.5 h-3.5 text-gray-300 group-hover:text-orange-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                                         </svg>
                                     </Tooltip>
@@ -146,17 +146,17 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     </div>
 
                     {/* Inactive Servers Button */}
-                    <div className="px-4 pb-3 border-b border-neutral-700/50 flex-shrink-0">
+                    <div className="px-4 pb-3 border-b border-neutral-800/50 flex-shrink-0">
                         <button
                             onClick={() => navigate('/inactive')}
-                            className="w-full bg-neutral-800/30 hover:bg-neutral-700/30 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition-colors border border-neutral-700/50 text-sm font-medium"
+                            className="w-full bg-neutral-850/30 hover:bg-orange-700/10 hover:border-orange-500/30 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition-colors border border-neutral-800/50 text-sm font-medium"
                         >
                             Server List Statistics
                         </button>
                     </div>
 
                     {/* Controls */}
-                    <div className="p-4 border-b border-neutral-700/50 flex-shrink-0">
+                    <div className="p-4 border-b border-neutral-900/50 flex-shrink-0">
                         {/* Search Bar */}
                         <div className="mb-3">
                             <SearchBar
@@ -214,7 +214,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     {/* Server List */}
                     <div className="flex-1 overflow-y-auto p-4 min-h-0">
                         {loading && (
-                            <div className="text-center p-8 bg-neutral-800/30 backdrop-blur-md border border-neutral-700/50 rounded-xl mb-6">
+                            <div className="text-center p-8 bg-neutral-850/30 backdrop-blur-md border border-neutral-800/50 rounded-xl mb-6">
                                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-400 border-t-transparent"></div>
                                 <p className="mt-4 text-gray-300">Loading server data...</p>
                             </div>
@@ -260,7 +260,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     </div>
 
                     {/* Footer */}
-                    <div className="p-4 border-t border-neutral-700/50 flex-shrink-0">
+                    <div className="p-4 border-t border-neutral-800/50 flex-shrink-0">
                         <p className="text-xs text-gray-500">Last updated: {lastUpdated} | Commit: {COMMIT}</p>
                     </div>
                 </>
