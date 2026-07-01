@@ -77,7 +77,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
     return (
         <div className={`relative transition-all duration-300 ${
             isCollapsed ? 'w-16' : isMobile ? 'w-full' : 'w-3/12'
-        } min-w-0 bg-neutral-900/20 backdrop-blur-md border-r border-neutral-800/50 flex flex-col h-screen`}>
+        } min-w-0 bg-neutral-900 backdrop-blur-md border-r border-neutral-800/50 flex flex-col h-screen`}>
             {/* Header - Improved design with connection status */}
             <div className="bg-gradient-to-r from-neutral-900/60 to-neutral-900/40 backdrop-blur-md border-b border-neutral-900/50 p-3 sm:p-4 flex items-center justify-between flex-shrink-0">
                 {!isCollapsed && (

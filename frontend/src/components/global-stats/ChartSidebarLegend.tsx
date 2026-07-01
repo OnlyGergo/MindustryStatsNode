@@ -47,13 +47,13 @@ export const ChartSidebarLegend: React.FC<ChartSidebarLegendProps> = ({
             <div className="flex gap-2 mb-3 text-[11px]">
                 <button
                     onClick={() => onChange(new Set(gamemodes))}
-                    className="flex-1 bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 rounded py-1 text-neutral-400 hover:text-neutral-200 font-medium transition-colors"
+                    className="flex-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded py-1 text-neutral-400 hover:text-neutral-200 font-medium transition-colors"
                 >
                     Select All
                 </button>
                 <button
                     onClick={() => onChange(new Set())}
-                    className="flex-1 bg-neutral-900/60 hover:bg-neutral-800 border border-neutral-800 rounded py-1 text-neutral-400 hover:text-neutral-200 font-medium transition-colors"
+                    className="flex-1 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded py-1 text-neutral-400 hover:text-neutral-200 font-medium transition-colors"
                 >
                     Clear All
                 </button>

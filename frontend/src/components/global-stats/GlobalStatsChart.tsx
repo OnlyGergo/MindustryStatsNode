@@ -73,7 +73,7 @@ const GlobalStatsChart: React.FC = () => {
 
         {/* Stats Cards Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="bg-neutral-800/40 border-neutral-800/50 border rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-neutral-800 border-neutral-800 border rounded-xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
                 Period Peak High
@@ -89,7 +89,7 @@ const GlobalStatsChart: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-neutral-800/40 border-neutral-800/50 border rounded-xl p-4 flex items-center justify-between shadow-sm">
+          <div className="bg-neutral-800 border-neutral-800/50 border rounded-xl p-4 flex items-center justify-between shadow-sm">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
                 Tracked Gamemodes
@@ -110,10 +110,10 @@ const GlobalStatsChart: React.FC = () => {
         {/* Main Responsive Grid Panel */}
         <div className="flex flex-col lg:flex-row gap-5 items-stretch w-full min-h-[460px] h-[60vh]">
           {/* Core Timeline View */}
-          <div className="flex-1 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900/10 flex flex-col min-h-[340px] lg:min-h-0">
+          <div className="flex-1 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900 flex flex-col min-h-[340px] lg:min-h-0">
             <div className="mb-3">
-              <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">
-                {viewMode === "lines" ? "Concurrent Active Telemetry Streams" : "Aggregated Cluster Execution"}
+              <h4 className="text-neutral-400">
+                {viewMode === "lines" ? "Playercounts by Gamemode" : "Aggregated Global Playercounts"}
               </h4>
             </div>
             <div className="relative flex-1 w-full min-h-0">
@@ -130,7 +130,7 @@ const GlobalStatsChart: React.FC = () => {
 
           {/* Dynamic Sidebar Legend - Flows underneath on mobile layouts natively */}
           {viewMode === "lines" && (
-              <div className="w-full lg:w-76 shrink-0 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900/10 flex flex-col overflow-hidden">
+              <div className="w-full lg:w-76 shrink-0 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900 flex flex-col overflow-hidden">
                 <div className="mb-3">
                   <h4 className="font-bold text-orange-400/80">
                     Gamemodes
@@ -148,68 +148,43 @@ const GlobalStatsChart: React.FC = () => {
           )}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-5 items-stretch w-full min-h-[460px] h-[60vh]">
-          {/* Core Timeline View */}
-          <div className="flex-1 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900/10 flex flex-col min-h-[340px] lg:min-h-0">
-            <div className="mb-3">
-              <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
-                Group Share for {" "}
-                <span className="text-orange-400 font-black px-1.5 py-0.5 rounded bg-orange-500/5 border border-orange-500/10 text-xs">
-                    {selectedGamemode}
-                  </span>
-              </h4>
-            </div>
-            <div className="relative flex-1 w-full min-h-0">
-              <ServerShareChart
-                  data={serverShareData}
-                  loading={serverShareLoading}
-                  error={serverShareError}
-                  selectedRange={selectedRange}
-                  gamemode={selectedGamemode}
-              />
-            </div>
-          </div>
-
-          {/* Dynamic Sidebar Legend - Flows underneath on mobile layouts natively */}
-          {viewMode === "lines" && (
-              <div className="w-full lg:w-76 shrink-0 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900/10 flex flex-col overflow-hidden">
-                <div className="mb-3">
-                  <h4 className="font-bold text-orange-400/80">
-                    Gamemodes
-                  </h4>
-                </div>
-                <div className="flex-1 min-h-0">
-                  <ChartSidebarLegend
-                      gamemodes={sortedGamemodes}
-                      peaks={computedPeaks}
-                      visibleModes={visibleModes}
-                      onChange={setVisibleModes}
-                  />
-                </div>
-              </div>
-          )}
-        </div>
-
-        {/* Secondary Node Breakdown Map */}
         {selectedGamemode && (
-            <div className="border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900/10 h-[380px] flex flex-col">
-              <div className="mb-3">
-                <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-sm shadow-blue-400" />
-                  Instance Core Matrix:{" "}
-                  <span className="text-orange-400 font-black px-1.5 py-0.5 rounded bg-orange-500/5 border border-orange-500/10 text-xs">
+            <div className="flex flex-col lg:flex-row gap-5 items-stretch w-full min-h-[460px] h-[60vh]">
+              {/* Core Timeline View */}
+              <div className="flex-1 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900 flex flex-col min-h-[340px] lg:min-h-0">
+                <div className="mb-3">
+                  <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                    Group Share for {" "}
+                    <span className="text-orange-400 font-black px-1.5 py-0.5 rounded bg-orange-500/5 border border-orange-500/10 text-xs">
                     {selectedGamemode}
                   </span>
-                </h4>
+                  </h4>
+                </div>
+                <div className="relative flex-1 w-full min-h-0">
+                  <ServerShareChart
+                      data={serverShareData}
+                      loading={serverShareLoading}
+                      error={serverShareError}
+                      selectedRange={selectedRange}
+                      gamemode={selectedGamemode}
+                  />
+                </div>
               </div>
-              <div className="relative flex-1 w-full min-h-0">
-                <ServerShareChart
-                    data={serverShareData}
-                    loading={serverShareLoading}
-                    error={serverShareError}
-                    selectedRange={selectedRange}
-                    gamemode={selectedGamemode}
-                />
+
+              <div className="w-full lg:w-76 shrink-0 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900 flex flex-col overflow-hidden">
+                <div className="mb-3">
+                  <h4 className="font-bold text-orange-400/80">
+                    Gamemodes
+                  </h4>
+                </div>
+                <div className="flex-1 min-h-0">
+                  <ChartSidebarLegend
+                      gamemodes={sortedGamemodes}
+                      peaks={computedPeaks}
+                      visibleModes={visibleModes}
+                      onChange={setVisibleModes}
+                  />
+                </div>
               </div>
             </div>
         )}

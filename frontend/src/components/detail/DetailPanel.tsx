@@ -68,7 +68,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
                     {selectedServer ? (
                         <div className="h-full">
                             {isMobile && onBackToMaster && (
-                                <div className="bg-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center">
+                                <div className="bg-neutral-800 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center">
                                     <button
                                         onClick={onBackToMaster}
                                         className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50 mr-4"
@@ -102,7 +102,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
             return (
                 <div className="flex-1 relative h-screen overflow-hidden">
                     {isMobile && onBackToMaster && (
-                        <div className="bg-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center">
+                        <div className="bg-neutral-800 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center">
                             <button
                                 onClick={onBackToMaster}
                                 className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50 mr-4"
@@ -120,7 +120,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({
         case 'global-stats':
             return <div className="flex-1 relative h-screen overflow-hidden">
                 {isMobile && onBackToMaster && (
-                    <div className="bg-neutral-800/40 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center">
+                    <div className="bg-neutral-800 backdrop-blur-md border-b border-neutral-700/50 p-4 flex items-center">
                         <button
                             onClick={onBackToMaster}
                             className="bg-neutral-700/50 hover:bg-neutral-600/50 text-gray-300 p-2 rounded-lg transition-colors border border-neutral-600/50 mr-4"
