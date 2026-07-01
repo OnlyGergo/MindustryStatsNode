@@ -29,20 +29,6 @@ export interface ServerHistory {
   players: number | null;
 }
 
-const SERVER_ELEMENT_KEYS: (keyof ServerElement)[] = [
-  'id',
-  'name',
-  'groupId',
-  'host',
-  'port',
-  'currentData',
-  'lastSeen',
-  'lastUpdated',
-  'online',
-  'consecutiveFailures',
-  'countryCode'
-];
-
 export interface ServerElement {
   id: number;
   name: string;
@@ -55,54 +41,6 @@ export interface ServerElement {
   online: boolean;
   consecutiveFailures?: number;
   countryCode?: string | null;
-}
-export function encodeServerElements(data: ServerElement[]): any[][] {
-  const header = [...SERVER_ELEMENT_KEYS];
-
-  const rows = data.map(item =>
-      SERVER_ELEMENT_KEYS.map(key => {
-        const value = item[key];
-
-        // Handle optional or nested objects safely (like currentData)
-        if (value && typeof value === 'object') {
-          return JSON.stringify(value);
-        }
-
-        return value ?? null; // Normalize undefined to null for clean grid/CSV data
-      })
-  );
-
-  return [header, ...rows];
-}
-
-export function decodeServerElements(matrix: any[][]): ServerElement[] {
-  if (matrix.length <= 1) return [];
-
-  const [header, ...rows] = matrix;
-
-  return rows.map(row => {
-    const obj = {} as any;
-
-    header.forEach((key, index) => {
-      let value = row[index];
-
-      // Parse back nested JSON strings (like currentData)
-      if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
-        try {
-          value = JSON.parse(value);
-        } catch {
-          // Fallback to original string if JSON parsing fails
-        }
-      }
-
-      // Only assign if it's not null/undefined to keep optional fields clean
-      if (value !== null && value !== undefined) {
-        obj[key] = value;
-      }
-    });
-
-    return obj as ServerElement;
-  });
 }
 
 export interface ServerMotdData {

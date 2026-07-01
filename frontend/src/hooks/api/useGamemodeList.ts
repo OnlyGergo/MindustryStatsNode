@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { GamemodeInfo } from "../../../../common/models/GlobalStatsTypes.js";
+import {GamemodeInfo} from "../../../../common/models/GlobalStatsTypes.js";
+import {ApiPacker} from "../../../../common/Packer.ts";
 
 export function useGamemodeList() {
     const [gamemodeList, setGamemodeList] = useState<GamemodeInfo[]>([]);
@@ -8,6 +9,7 @@ export function useGamemodeList() {
         let cancelled = false;
         fetch("/api/gamemodes")
             .then((r) => r.ok ? r.json() : Promise.reject())
+            .then((r) => ApiPacker.unpack<GamemodeInfo>(r))
             .then((data: GamemodeInfo[]) => {
                 if (!cancelled) setGamemodeList(data);
             })

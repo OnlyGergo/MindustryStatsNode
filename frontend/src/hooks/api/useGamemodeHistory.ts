@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { GamemodeHistoryEntry } from "../../../../common/models/GlobalStatsTypes.js";
 import { DateRangeOption } from "../../util/chartHelpers.ts";
+import {ApiPacker} from "../../../../common/Packer.ts";
 
 interface GamemodeHistoryState {
     data: GamemodeHistoryEntry[];
@@ -23,6 +24,7 @@ export function useGamemodeHistory(range: DateRangeOption): GamemodeHistoryState
 
         fetch(`/api/global/gamemode-history?range=${range}`)
             .then((r) => r.ok ? r.json() : Promise.reject("Unable to load gamemode history data."))
+            .then((r) => ApiPacker.unpack<GamemodeHistoryEntry>(r))
             .then((data: GamemodeHistoryEntry[]) => {
                 if (cancelled) return;
 

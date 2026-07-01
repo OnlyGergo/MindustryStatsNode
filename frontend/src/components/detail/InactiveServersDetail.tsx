@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {ServerListStats} from '../../../../common/models/serverData';
 import {InactiveServerInfo} from "../../../../common/models/RepositoryTypes.ts";
 import CopyButton from "../CopyButton.tsx";
+import {ApiPacker} from "../../../../common/Packer.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -26,8 +27,8 @@ const InactiveServersDetail: React.FC = () => {
                     throw new Error('Failed to fetch server list stats');
                 }
 
-                const serversData: InactiveServerInfo[] = await serversRes.json();
-                const statsData: ServerListStats[] = await statsRes.json();
+                const serversData: InactiveServerInfo[] = ApiPacker.unpack(await serversRes.json());
+                const statsData: ServerListStats[] = ApiPacker.unpack(await statsRes.json());
 
                 setInactiveServers(serversData);
                 setStats(statsData);

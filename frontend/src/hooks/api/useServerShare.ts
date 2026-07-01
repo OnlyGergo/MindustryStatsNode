@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ServerShareEntry } from "../../../../common/models/GlobalStatsTypes.js";
 import { DateRangeOption } from "../../util/chartHelpers.ts";
+import {ApiPacker} from "../../../../common/Packer.ts";
 
 interface ServerShareState {
     data: ServerShareEntry[];
@@ -29,6 +30,7 @@ export function useServerShare(
 
         fetch(`/api/gamemodes/${encodeURIComponent(gamemode)}/servers?range=${range}`)
             .then((r) => r.ok ? r.json() : Promise.reject("Unable to load server share data."))
+            .then((r) => ApiPacker.unpack<ServerShareEntry>(r))
             .then((data: ServerShareEntry[]) => {
                 if (!cancelled) setState({ data, loading: false, error: null });
             })

@@ -11,6 +11,7 @@ import {
     Tooltip
 } from 'chart.js';
 import {NetworkDetails, ServerHistory} from "../../../../common/models/serverData.ts";
+import {ApiPacker} from "../../../../common/Packer.ts";
 
 // Register Chart.js components
 Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler);
@@ -77,7 +78,7 @@ const NetworkHistoryChart = ({network}: { network: NetworkDetails }) => {
 
                 const response = await fetch(url);
                 if (response.ok) {
-                    const data = await response.json();
+                    const data = ApiPacker.unpack<ServerHistory>(await response.json());
                     setChartData(data);
                 } else {
                     console.error('Failed to fetch network history data. Status:', response.status, response.statusText);

@@ -8,7 +8,7 @@ import http from 'http';
 import path from "path";
 import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version.js";
 import apicache from 'apicache';
-import {encodeServerElements, ServerElement} from "../../../common/models/serverData.js";
+import {ServerElement} from "../../../common/models/serverData.js";
 import {mindustryApp} from "../index.js";
 import {getAggregatedHistory, getGlobalPlayerHistory, getNetworkPlayerHistory} from "../repositories/StatsRepository.js";
 import {getInactiveServers, getServerListStats} from "../repositories/ServerListRepository.js";
@@ -16,6 +16,7 @@ import {getMapHistory, getMotdHistory} from "../repositories/serverRepository.js
 import {getGlobalGamemodeHistory, getGamemodeList, getServerShareByGamemode} from "../repositories/GlobalStatsRepository.js";
 import {removeColors} from "../utils/Mindustry";
 import {GamemodeHistoryEntry, ServerShareEntry} from "../../../common/models/GlobalStatsTypes.js";
+import {ApiPacker} from "../../../common/Packer.js";
 
 const logger = createLogger('ApiService');
 const cache = apicache.middleware;
@@ -224,7 +225,7 @@ export class ApiService {
         }
 
         logger.debug(`Served ${servers.length} servers from cache`);
-        res.json(encodeServerElements(servers));
+        res.json(ApiPacker.pack(servers));
 
       } catch (error) {
         logger.error('Error fetching servers:', error);
@@ -266,7 +267,7 @@ export class ApiService {
         const history = await getNetworkPlayerHistory(idNumber, hoursBack, bucketMinutes);
 
         logger.debug(`Served network history for network ID ${idNumber} with range ${range || '1d'}`);
-        res.json(history);
+        res.json(ApiPacker.pack(history));
 
       } catch (error) {
         logger.error('Failed to fetch network history:', error);
@@ -301,7 +302,7 @@ export class ApiService {
       }
     });
 
-    // Global player history endpoint
+    // Global player history endpoint //todo is this unused? Client aggregates this data now...
     this.app.get('/api/global/history', cache("3 minutes"), async (req, res) => {
       try {
         const { range } = req.query;
@@ -355,7 +356,7 @@ export class ApiService {
         })
 
         logger.debug(`Served global gamemode history with range ${range || '1d'}`);
-        res.json(history);
+        res.json(ApiPacker.pack(history));
 
       } catch (error) {
         logger.error('Failed to fetch global gamemode history:', error);
@@ -419,7 +420,7 @@ export class ApiService {
         })
 
         logger.debug(`Served server share for gamemode ${modeName} with range ${range || '1d'}`);
-        res.json(serverShare);
+        res.json(ApiPacker.pack(serverShare));
 
       } catch (error) {
         logger.error('Failed to fetch server share by gamemode:', error);
@@ -446,7 +447,7 @@ export class ApiService {
     this.app.get('/api/serverlist-stats', cache("5 minutes"), async (req, res) => {
       try {
         const stats = await getServerListStats();
-        res.json(stats);
+        res.json(ApiPacker.pack(stats));
       } catch (error) {
         logger.error('Error fetching server list stats:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -520,13 +521,13 @@ export class ApiService {
       bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
     }
 
-    return await getAggregatedHistory(
+    return ApiPacker.pack(await getAggregatedHistory(
         id,
         hoursBack,
         bucketMinutes,
         startDate,
         endDate
-    );
+    ));
   }
 
   /**
@@ -559,6 +560,6 @@ export class ApiService {
 
     let bucketMinutes = Math.round((hoursBack * 60) / this.config.GRAPH_MAX_POINTS);
 
-    return await getGlobalPlayerHistory(hoursBack, bucketMinutes);
+    return ApiPacker.pack(await getGlobalPlayerHistory(hoursBack, bucketMinutes));
   }
 }

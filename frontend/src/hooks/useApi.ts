@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
-import {decodeServerElements, ServerElement} from "../../../common/models/serverData.ts";
+import {ServerElement} from "../../../common/models/serverData.ts";
+import {ApiPacker} from "../../../common/Packer.ts";
 
 // We adapted the status to fit HTTP requests instead of persistent sockets
 export type FetchStatus = 'loading' | 'success' | 'error';
@@ -23,7 +24,7 @@ const useApi = () => {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const jsonData = decodeServerElements(await response.json());
+                const jsonData = ApiPacker.unpack<ServerElement>(await response.json());
 
                 if (isMounted) {
                     setData(jsonData);
