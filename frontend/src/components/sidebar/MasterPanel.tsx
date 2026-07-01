@@ -120,7 +120,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     {/* Stats */}
                     <div className="p-4 border-neutral-800/50 flex-shrink-0">
                         <div className="grid grid-cols-2 gap-2 text-center">
-                            <div className="bg-neutral-800/40 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg">
+                            <div className="bg-neutral-800 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg">
                                 <div className="text-gray-300 text-xs">Online / Total Servers</div>
                                 <div className="flex items-center justify-center space-x-2">
                                     <span className="text-lg font-bold text-green-400">{onlineServers}</span>
@@ -129,7 +129,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                                 </div>
                             </div>
                             <div
-                                className="bg-neutral-800/40 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg cursor-pointer hover:bg-orange-700/10 hover:border-orange-500/40 transition-all group"
+                                className="bg-neutral-800 backdrop-blur-md border border-neutral-800/50 p-2 rounded-lg cursor-pointer hover:bg-orange-700/10 hover:border-orange-500/40 transition-all group"
                                 onClick={() => navigate('/global')}
                             >
                                 <div className="text-gray-300 text-xs flex group-hover:text-orange-400 items-center justify-center gap-1">
@@ -149,7 +149,7 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     <div className="px-4 pb-3 border-b border-neutral-800/50 flex-shrink-0">
                         <button
                             onClick={() => navigate('/inactive')}
-                            className="w-full bg-neutral-800/40 hover:bg-orange-700/10 hover:border-orange-500/40 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition-colors border border-neutral-800/50 text-sm font-medium"
+                            className="w-full bg-neutral-800 hover:bg-orange-700/10 hover:border-orange-500/40 text-gray-300 hover:text-white px-4 py-2 rounded-lg transition-colors border border-neutral-800/50 text-sm font-medium"
                         >
                             Server List Statistics
                         </button>
@@ -214,14 +214,14 @@ const MasterPanel: React.FC<MasterPanelProps> = ({
                     {/* Server List */}
                     <div className="flex-1 overflow-y-auto p-4 min-h-0">
                         {loading && (
-                            <div className="text-center p-8 bg-neutral-800/40 backdrop-blur-md border border-neutral-800/50 rounded-xl mb-6">
+                            <div className="text-center p-8 bg-neutral-800 backdrop-blur-md border border-neutral-800/50 rounded-xl mb-6">
                                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-400 border-t-transparent"></div>
                                 <p className="mt-4 text-gray-300">Loading server data...</p>
                             </div>
                         )}
 
                         {error && (
-                            <div className="bg-red-500/20 border border-red-500/40 text-red-400 px-6 py-4 rounded-xl backdrop-blur-sm mb-6">
+                            <div className="bg-red-500/20 border border-red-500 text-red-400 px-6 py-4 rounded-xl backdrop-blur-sm mb-6">
                                 <span className="block sm:inline">Failed to load server data. Please try again later.</span>
                             </div>
                         )}
