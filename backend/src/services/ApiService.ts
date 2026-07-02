@@ -14,7 +14,7 @@ import {getAggregatedHistory, getGlobalPlayerHistory, getNetworkPlayerHistory} f
 import {getInactiveServers, getServerListStats} from "../repositories/ServerListRepository.js";
 import {getMapHistory, getMotdHistory} from "../repositories/serverRepository.js";
 import {getGlobalGamemodeHistory, getGamemodeList, getServerShareByGamemode} from "../repositories/GlobalStatsRepository.js";
-import {removeColors} from "../utils/Mindustry";
+import {removeColorsFromMindustry} from "../../../common/Mindustry";
 import {GamemodeHistoryEntry, ServerShareEntry} from "../../../common/models/GlobalStatsTypes.js";
 import {ApiPacker} from "../../../common/Packer.js";
 
@@ -348,13 +348,6 @@ export class ApiService {
           endDate ? parseInt(endDate as string, 10) : undefined
         );
 
-        history = history.map((item): GamemodeHistoryEntry => {
-          return {
-            ...item,
-            cleanName: removeColors(item.modeName)
-          }
-        })
-
         logger.debug(`Served global gamemode history with range ${range || '1d'}`);
         res.json(ApiPacker.pack(history));
 
@@ -414,8 +407,8 @@ export class ApiService {
         serverShare = serverShare.map((item): ServerShareEntry => {
           return {
             ...item,
-            groupName: removeColors(item.groupName),
-            serverName: removeColors(item.serverName)
+            groupName: removeColorsFromMindustry(item.groupName) ?? "Null",
+            serverName: removeColorsFromMindustry(item.serverName) ?? "Null",
           }
         })
 

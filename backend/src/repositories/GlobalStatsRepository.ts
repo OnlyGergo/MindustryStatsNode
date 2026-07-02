@@ -1,13 +1,15 @@
 import sequelize from '../config/database.js';
 import { QueryTypes } from 'sequelize';
 import { GamemodeHistoryEntry, GamemodeInfo, ServerShareEntry } from '../../../common/models/GlobalStatsTypes.js';
-import {removeColors} from "../utils/Mindustry";
+import {removeColorsFromMindustry} from "../../../common/Mindustry.js";
 import { MAX_REALISTIC_PLAYERCOUNT } from '../const.js';
+import {getModeName} from "../../../common/Gamemode";
 
 interface RawGamemodeHistoryRow {
     timestamp: number;
     mode_name: string;
     players: number | null;
+    game_mode: number;
 }
 
 interface RawGamemodeListRow {
@@ -68,25 +70,33 @@ function buildGamemodeHistoryQuery(
                                 :bucketSeconds * INTERVAL '1 second'
                         ) AS bucket
              ),
-             bucketed AS (
+             per_server AS (
+                 -- Collapse multiple raw stat rows for the SAME server within a
+                 -- bucket down to that server's peak count for the bucket. This
+                 -- is a dedup step, not a cross-server aggregation.
                  SELECT
                      time_bucket(:bucketSeconds * INTERVAL '1 second', ss.timestamp) AS bucket,
+                     ss.server_id,
                      smr.mode_name,
-                     ss.players
+                     smr.game_mode,
+                     MAX(ss.players) AS players
                  FROM server_stats ss
                           JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
-                 WHERE ${timeFilter} AND ss.players >= 0 AND ss.players < :maxRealisticPlayerCount
+                 WHERE ${timeFilter}
+                   AND ss.players >= 0 AND ss.players < :maxRealisticPlayerCount
+                 GROUP BY bucket, ss.server_id, smr.mode_name
              ),
              aggregated AS (
-                 SELECT bucket, mode_name, MAX(players) AS players
-                 FROM bucketed
-                 GROUP BY bucket, mode_name
+                 SELECT bucket, mode_name, game_mode, SUM(players) AS players
+                 FROM per_server
+                 GROUP BY bucket, mode_name, game_mode
              ),
              all_modes AS (
-                 SELECT DISTINCT mode_name FROM aggregated
+                 SELECT DISTINCT mode_name, game_mode FROM aggregated
              )
         SELECT extract(epoch FROM b.bucket) * 1000 AS timestamp,
                m.mode_name,
+               m.game_mode,
                a.players
         FROM all_buckets b
                  CROSS JOIN all_modes m
@@ -215,11 +225,15 @@ export async function getGlobalGamemodeHistory(
         type: QueryTypes.SELECT
     }) as RawGamemodeHistoryRow[];
 
-    return rows.map(r => ({
-        timestamp: Number(r.timestamp),
-        modeName: r.mode_name,
-        players: r.players == null ? null : Number(r.players)
-    }));
+    return rows.map(r => {
+        const modeName = getModeName(r.mode_name, r.game_mode);
+        return {
+            timestamp: Number(r.timestamp),
+            modeName: r.mode_name ?? 'Unknown',
+            cleanName: r.mode_name ? removeColorsFromMindustry(r.mode_name) ?? 'Unknown' : 'Unknown',
+            players: r.players == null ? null : Number(r.players)
+        }
+    });
 }
 
 /**
@@ -243,8 +257,8 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
 
     return rows.map(r => ({
         modeName: r.mode_name,
-        cleanName: removeColors(r.mode_name),
-        serverCount: Number(r.server_count)
+        serverCount: Number(r.server_count),
+        cleanName: removeColorsFromMindustry(r.mode_name) ?? "Null",
     }));
 }
 
