@@ -1,7 +1,8 @@
 import React, {useMemo, useState} from 'react';
-import {getGameModeName, removeColors} from "../../../util/mindustry.ts";
+import {removeColors} from "../../../util/mindustry.ts";
 import {ServerMapData} from "../../../../../common/models/serverData.ts";
 import {formatDateTimeHuman} from "../../../util/general.ts";
+import {getModeName} from "../../../../../common/Gamemode.ts"
 
 const ITEMS_PER_PAGE = 10;
 
@@ -22,7 +23,7 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({mapHistory}
         const lowerCaseSearchTerm = searchTerm.toLowerCase();
         return sortedHistory.filter(item =>
             removeColors(item.mapName)?.toLowerCase().includes(lowerCaseSearchTerm) ||
-            getGameModeName(item.gameMode).toLowerCase().includes(lowerCaseSearchTerm)
+            getModeName(item.modeName, item.gameMode).toLowerCase().includes(lowerCaseSearchTerm)
         );
     }, [sortedHistory, searchTerm]);
 
@@ -104,7 +105,7 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({mapHistory}
                                     <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm ${
                                         hasModeChanged(item, index) ? 'text-orange-400 bg-orange-500/10' : 'text-gray-300'
                                     }`}>
-                                        {getGameModeName(item.gameMode)}
+                                        {getModeName(item.modeName, item.gameMode)}
                                         {hasModeChanged(item, index) && (
                                             <span className="ml-1 text-xs text-orange-400">●</span>
                                         )}

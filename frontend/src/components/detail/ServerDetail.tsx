@@ -2,11 +2,12 @@ import React, {useEffect, useState} from 'react';
 import ServerHistoryChart from './ServerHistoryChart.tsx';
 import MapHistoryTable from './table/MapHistoryTable.tsx';
 import MotdHistoryTable from './table/MotdHistoryTable.tsx';
-import {getGameModeName, removeColors} from "../../util/mindustry.ts";
+import {removeColors} from "../../util/mindustry.ts";
 import {formatDate} from "../../util/general.ts";
 import CopyButton from "../CopyButton.tsx";
 import ShareButton from "../ShareButton.tsx";
 import {ServerDetails, ServerElement} from "../../../../common/models/serverData.ts";
+import {getModeName} from "../../../../common/Gamemode.ts";
 
 const ServerDetail: React.FC<{ server: ServerElement }> = ({ server }) => {
     const [details, setDetails] = useState<ServerDetails | null>(null);
@@ -124,7 +125,7 @@ const ServerDetail: React.FC<{ server: ServerElement }> = ({ server }) => {
                             <div className="bg-neutral-700/30 backdrop-blur-sm border border-neutral-600/30 p-2 sm:p-3 rounded-lg">
                                 <span className="text-gray-400">Mode: </span>
                                 <span className="font-medium text-white break-words">
-                                    {String(removeColors(serverData.modeName)) || getGameModeName(serverData.mode)}
+                                    {String(removeColors(serverData.modeName)) || getModeName(serverData.modeName, serverData.mode)}
                                 </span>
                             </div>
                             <div className="bg-neutral-700/30 backdrop-blur-sm border border-neutral-600/30 p-2 sm:p-3 rounded-lg">

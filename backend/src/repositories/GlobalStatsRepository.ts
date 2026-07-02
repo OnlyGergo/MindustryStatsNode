@@ -71,9 +71,6 @@ function buildGamemodeHistoryQuery(
                         ) AS bucket
              ),
              per_server AS (
-                 -- Collapse multiple raw stat rows for the SAME server within a
-                 -- bucket down to that server's peak count for the bucket. This
-                 -- is a dedup step, not a cross-server aggregation.
                  SELECT
                      time_bucket(:bucketSeconds * INTERVAL '1 second', ss.timestamp) AS bucket,
                      ss.server_id,
@@ -84,7 +81,7 @@ function buildGamemodeHistoryQuery(
                           JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
                  WHERE ${timeFilter}
                    AND ss.players >= 0 AND ss.players < :maxRealisticPlayerCount
-                 GROUP BY bucket, ss.server_id, smr.mode_name
+                 GROUP BY bucket, ss.server_id, smr.mode_name, smr.game_mode
              ),
              aggregated AS (
                  SELECT bucket, mode_name, game_mode, SUM(players) AS players
@@ -100,7 +97,9 @@ function buildGamemodeHistoryQuery(
                a.players
         FROM all_buckets b
                  CROSS JOIN all_modes m
-                 LEFT JOIN aggregated a ON a.bucket = b.bucket AND a.mode_name = m.mode_name
+                 LEFT JOIN aggregated a ON a.bucket = b.bucket
+            AND a.mode_name = m.mode_name
+            AND a.game_mode = m.game_mode
         ORDER BY b.bucket, m.mode_name
     `;
 

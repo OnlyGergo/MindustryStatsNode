@@ -16,7 +16,7 @@ export interface ServerData {
   wave: number | null;
   version: number | null;
   versionType: string | null;
-  mode: GameMode | null;
+  mode: GameMode;
   playerLimit: number | null;
   description: string | null;
   modeName: string | null;
@@ -59,7 +59,8 @@ export interface ServerMapData {
   validFrom: Date;
   validTo: Date | null;
   mapName: string;
-  gameMode: GameMode | null;
+  gameMode: GameMode;
+  modeName: string | null;
 }
 
 export interface ServerDetails {

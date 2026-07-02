@@ -160,6 +160,7 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
         validTo:   m.validTo ? new Date(m.validTo) : null,
         mapName:   m.mapName,
         gameMode:  m.gameMode as GameMode,
+        modeName:  m.modeName,
     }));
 
     const allMotds: ServerMotdData[] = (result.detail_all_motds ?? []).map((m: any) => ({

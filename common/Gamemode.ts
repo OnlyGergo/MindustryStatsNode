@@ -1,9 +1,11 @@
 import {removeColorsFromMindustry} from "./Mindustry.js";
 
-export function getModeName(mode_name: string, mode_int: number): string {
-    const colorlesss = removeColorsFromMindustry(mode_name);
-    if (colorlesss) {
-        return colorlesss;
+export function getModeName(mode_name: string | null, mode_int: number): string {
+    if (mode_name !== null) {
+        const colorlesss = removeColorsFromMindustry(mode_name);
+        if (colorlesss) {
+            return colorlesss;
+        }
     }
 
     if (mode_int === null) return "Unknown";
