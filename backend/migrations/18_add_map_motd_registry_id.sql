@@ -39,7 +39,9 @@ CREATE INDEX CONCURRENTLY tmp_idx_map_history_windows
 UPDATE server_stats ss
 SET motd_registry_id = mh.motd_id
 FROM server_motds_history mh
-WHERE ss.server_id = mh.server_id
+WHERE
+    ss.timestamp > '2026-07-22 00:00:00+00'  -- Only update records after this timestamp
+  AND ss.server_id = mh.server_id
   AND ss.timestamp >= mh.valid_from
   AND ss.timestamp < COALESCE(mh.valid_to, '3000-01-01 00:00:00+00');
 
@@ -47,6 +49,8 @@ WHERE ss.server_id = mh.server_id
 UPDATE server_stats ss
 SET map_registry_id = mah.map_id
 FROM server_maps_history mah
-WHERE ss.server_id = mah.server_id
+WHERE
+    ss.timestamp > '2026-07-22 00:00:00+00'  -- Only update records after this timestamp
+    AND ss.server_id = mah.server_id
   AND ss.timestamp >= mah.valid_from
   AND ss.timestamp < COALESCE(mah.valid_to, '3000-01-01 00:00:00+00');

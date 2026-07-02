@@ -292,9 +292,9 @@ export async function bulkUpdateLastSeen(serverIds: number[]): Promise<void> {
 
 // ─── Stats writes ─────────────────────────────────────────────────────────────
 
-export async function bulkSaveServerStats(statsBatch: any[]): Promise<void> {
+export async function bulkSaveServerStats(statsBatch: ServerStats[]): Promise<void> {
     if (!statsBatch.length) return;
-    await ServerStats.bulkCreate(statsBatch);
+    await ServerStats.bulkCreate(<any>statsBatch);
 }
 
 // ─── Map / MOTD history writes ────────────────────────────────────────────────

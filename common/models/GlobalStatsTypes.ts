@@ -3,6 +3,7 @@ export interface GamemodeHistoryEntry {
     timestamp: number;
     modeName: string;
     players: number | null;
+    cleanName: string;
 }
 
 // Server share entry - player count per server with group info

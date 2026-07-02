@@ -111,7 +111,7 @@ export class ServerProcessorService {
         // Always queue stats and last seen
         statsToInsert.push({
           server_id: serverEntry.id,
-          timestamp: timestamp,
+          timestamp: new Date(timestamp),
           players: data.players,
           max_players: data.playerLimit,
           wave: data.wave,
@@ -142,10 +142,8 @@ export class ServerProcessorService {
 
         statsToInsert.push({
           server_id: serverEntry.id,
-          timestamp: timestamp,
-          online: false,
-          host: host,
-          port: port
+          timestamp: new Date(timestamp),
+          online: false
         });
       }
 

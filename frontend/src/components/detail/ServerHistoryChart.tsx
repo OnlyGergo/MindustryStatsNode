@@ -11,6 +11,7 @@ import {
     Tooltip
 } from 'chart.js';
 import {ServerElement, ServerHistory} from "../../../../common/models/serverData.ts";
+import {ApiPacker} from "../../../../common/Packer.ts";
 
 // Register Chart.js components
 Chart.register(LineElement, PointElement, LineController, CategoryScale, LinearScale, Tooltip, Legend, Filler);
@@ -77,7 +78,7 @@ const ServerHistoryChart = ({id}: ServerElement) => {
 
                 const response = await fetch(url);
                 if (response.ok) {
-                    const data = await response.json();
+                    const data: ServerHistory[] = ApiPacker.unpack(await response.json());
                     setChartData(data);
                 } else {
                     console.error('Failed to fetch history data. Status:', response.status, response.statusText);

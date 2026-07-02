@@ -59,7 +59,8 @@ export function buildGamemodeIndex(
             tsMap = new Map();
             index.set(entry.timestamp, tsMap);
         }
-        tsMap.set(entry.modeName, entry.players ?? 0);
+        const existing = tsMap.get(entry.modeName) ?? 0;
+        tsMap.set(entry.modeName, existing + (entry.players ?? 0));
     }
     return index;
 }

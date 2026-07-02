@@ -351,7 +351,7 @@ export class ApiService {
         history = history.map((item): GamemodeHistoryEntry => {
           return {
             ...item,
-            modeName: removeColors(item.modeName)
+            cleanName: removeColors(item.modeName)
           }
         })
 
@@ -370,7 +370,7 @@ export class ApiService {
         const gamemodes = await getGamemodeList();
 
         logger.debug(`Served ${gamemodes.length} gamemodes`);
-        res.json(gamemodes);
+        res.json(ApiPacker.pack(gamemodes));
 
       } catch (error) {
         logger.error('Failed to fetch gamemode list:', error);
