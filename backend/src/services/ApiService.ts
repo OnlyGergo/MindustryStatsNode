@@ -14,9 +14,10 @@ import {getAggregatedHistory, getGlobalPlayerHistory, getNetworkPlayerHistory} f
 import {getInactiveServers, getServerListStats} from "../repositories/ServerListRepository.js";
 import {getMapHistory, getMotdHistory} from "../repositories/serverRepository.js";
 import {getGlobalGamemodeHistory, getGamemodeList, getServerShareByGamemode} from "../repositories/GlobalStatsRepository.js";
-import {removeColorsFromMindustry} from "../../../common/Mindustry";
-import {GamemodeHistoryEntry, ServerShareEntry} from "../../../common/models/GlobalStatsTypes.js";
+import {removeColorsFromMindustry} from "../../../common/Mindustry.js";
+import {ServerShareEntry} from "../../../common/models/GlobalStatsTypes.js";
 import {ApiPacker} from "../../../common/Packer.js";
+import {modeNameToIntOrNull} from "../../../common/Gamemode";
 
 const logger = createLogger('ApiService');
 const cache = apicache.middleware;
@@ -376,6 +377,8 @@ export class ApiService {
       try {
         const { modeName } = req.params;
         const { range, startDate, endDate } = req.query;
+
+        if (modeNameToIntOrNull(modeName) === null) return res.status(400).json({ error: 'GO away bot!' });
 
         let hoursBack: number;
         switch (range as string | undefined) {

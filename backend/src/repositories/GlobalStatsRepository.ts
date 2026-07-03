@@ -3,7 +3,7 @@ import { QueryTypes } from 'sequelize';
 import { GamemodeHistoryEntry, GamemodeInfo, ServerShareEntry } from '../../../common/models/GlobalStatsTypes.js';
 import {removeColorsFromMindustry} from "../../../common/Mindustry.js";
 import { MAX_REALISTIC_PLAYERCOUNT } from '../const.js';
-import {getModeName, modeNameToIntOrNull} from "../../../common/Gamemode";
+import {getModeName, getVanillaModeName, modeNameToIntOrNull} from "../../../common/Gamemode.js";
 
 interface RawGamemodeHistoryRow {
     timestamp: number;
@@ -14,6 +14,7 @@ interface RawGamemodeHistoryRow {
 
 interface RawGamemodeListRow {
     mode_name: string;
+    game_mode: number;
     server_count: number;
 }
 
@@ -120,10 +121,11 @@ function buildServerShareQuery(
     startDate?: number,
     endDate?: number
 ): { query: string; replacements: Record<string, unknown> } {
+    // FIX: Redefined timeFilter to align exactly with the dynamic range boundaries
     const timeFilter =
         startDate != null && endDate != null
             ? 'ss.timestamp >= to_timestamp(:startDate / 1000.0) AND ss.timestamp <= to_timestamp(:endDate / 1000.0)'
-            : "ss.timestamp > NOW() - interval '1 hour' * :hoursBack";
+            : "ss.timestamp >= NOW() - interval '1 hour' * :hoursBack AND ss.timestamp <= NOW()";
 
     const timeParams =
         startDate != null && endDate != null
@@ -154,7 +156,8 @@ function buildServerShareQuery(
                 MAX(ss.players) AS players -- Leaves gaps as NULL automatically
             FROM server_stats ss
                      JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
-            WHERE smr.mode_name = :modeName OR smr.game_mode = :modeInt
+            WHERE smr.game_mode = :modeInt
+              --WHERE smr.mode_name = colon modeName OR smr.game_mode = colon modeInt
               AND ${timeFilter}
               AND ss.players >= 0
               AND ss.players < :maxRealisticPlayerCount
@@ -177,7 +180,7 @@ function buildServerShareQuery(
     const replacements = {
         ...timeParams,
         bucketSeconds,
-        modeName,
+        //modeName,
         maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT,
         modeInt: modeNameToIntOrNull(modeName),
     };
@@ -226,15 +229,17 @@ export async function getGlobalGamemodeHistory(
  * Get list of all gamemodes with server counts
  */
 export async function getGamemodeList(): Promise<GamemodeInfo[]> {
+    //todo gamemode registry, that will unlock this feature fully
     const query = `
-        SELECT smr.mode_name,
-               COUNT(DISTINCT smh.server_id) AS server_count
+        SELECT --smr.mode_name,
+               COUNT(DISTINCT smh.server_id) AS server_count,
+               smr.game_mode
         FROM server_maps_registry smr
                  JOIN server_maps_history smh ON smr.id = smh.map_id
         WHERE smr.mode_name IS NOT NULL
           AND smr.mode_name != ''
-        GROUP BY smr.mode_name
-        ORDER BY smr.mode_name
+        GROUP BY smr.game_mode--, smr.mode_name
+        --ORDER BY smr.mode_name
     `;
 
     const rows = await sequelize.query(query, {
@@ -242,9 +247,9 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
     }) as RawGamemodeListRow[];
 
     return rows.map(r => ({
-        modeName: r.mode_name,
+        modeName: getVanillaModeName(r.game_mode),
         serverCount: Number(r.server_count),
-        cleanName: removeColorsFromMindustry(r.mode_name) ?? "Null",
+        cleanName: getVanillaModeName(r.game_mode)//removeColorsFromMindustry(r.mode_name) ?? "Null",
     }));
 }
 
