@@ -13,13 +13,13 @@ const GlobalStatsChart: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("lines");
   const [selectedGamemode, setSelectedGamemode] = useState<string | null>(null);
   const [visibleModes, setVisibleModes] = useState<Set<string>>(new Set());
+  const [visibleServerGroups, setVisibleServerGroups] = useState<Set<string>>(new Set());
 
   const gamemodeList = useGamemodeList();
   const { data: gamemodeData, loading, error, peakPlayers } = useGamemodeHistory(selectedRange);
   const { data: serverShareData, loading: serverShareLoading, error: serverShareError } =
       useServerShare(selectedGamemode, selectedRange);
 
-  // Parse peak player history per gamemode directly from metrics
   const computedPeaks = useMemo(() => {
     const peaks: Record<string, number> = {};
     if (!gamemodeData) return peaks;
@@ -33,23 +33,45 @@ const GlobalStatsChart: React.FC = () => {
     return peaks;
   }, [gamemodeData]);
 
-  // Order gamemodes by telemetry peak performance
   const sortedGamemodes = useMemo(() => {
     if (!gamemodeData) return [];
     const unique = [...new Set(gamemodeData.map((d) => d.modeName))];
     return unique.sort((a, b) => (computedPeaks[b] || 0) - (computedPeaks[a] || 0));
   }, [gamemodeData, computedPeaks]);
 
-  // Handle auto-initializing the visible state to the top 8 performing models
   useEffect(() => {
     if (sortedGamemodes.length > 0) {
       setVisibleModes(new Set(sortedGamemodes.slice(0, 8)));
     }
   }, [sortedGamemodes]);
 
+  const computedServerGroupPeaks = useMemo(() => {
+    const peaks: Record<string, number> = {};
+    if (!serverShareData) return peaks;
+
+    serverShareData.forEach((d) => {
+      if (d.groupName === null || d.players === null) return;
+      if (!peaks[d.groupName] || d.players > peaks[d.groupName]) {
+        peaks[d.groupName] = d.players;
+      }
+    });
+    return peaks;
+  }, [serverShareData]);
+
+  const sortedServerGroups = useMemo(() => {
+    if (!serverShareData) return [];
+    const unique = [...new Set(serverShareData.map((d) => d.groupName))];
+    return unique.sort((a, b) => (computedServerGroupPeaks[b] || 0) - (computedServerGroupPeaks[a] || 0));
+  }, [serverShareData, computedServerGroupPeaks]);
+
+  useEffect(() => {
+    if (sortedServerGroups.length > 0) {
+      setVisibleServerGroups(new Set(sortedServerGroups.slice(0, 8)));
+    }
+  }, [sortedServerGroups]);
+
   return (
       <div className="h-full overflow-auto p-6 space-y-5 text-neutral-100 custom-scrollbar">
-        {/* Top Controls Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-900 pb-4">
           <div>
             <h1 className="text-xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-500">
@@ -71,7 +93,6 @@ const GlobalStatsChart: React.FC = () => {
           />
         </div>
 
-        {/* Stats Cards Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-neutral-800 border-neutral-800 border rounded-xl p-4 flex items-center justify-between shadow-sm">
             <div>
@@ -107,9 +128,7 @@ const GlobalStatsChart: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Responsive Grid Panel */}
         <div className="flex flex-col lg:flex-row gap-5 items-stretch w-full min-h-[460px] h-[60vh]">
-          {/* Core Timeline View */}
           <div className="flex-1 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900 flex flex-col min-h-[340px] lg:min-h-0">
             <div className="mb-3">
               <h4 className="text-neutral-400">
@@ -128,7 +147,6 @@ const GlobalStatsChart: React.FC = () => {
             </div>
           </div>
 
-          {/* Dynamic Sidebar Legend - Flows underneath on mobile layouts natively */}
           {viewMode === "lines" && (
               <div className="w-full lg:w-76 shrink-0 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900 flex flex-col overflow-hidden">
                 <div className="mb-3">
@@ -150,7 +168,6 @@ const GlobalStatsChart: React.FC = () => {
 
         {selectedGamemode && (
             <div className="flex flex-col lg:flex-row gap-5 items-stretch w-full min-h-[460px] h-[60vh]">
-              {/* Core Timeline View */}
               <div className="flex-1 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900 flex flex-col min-h-[340px] lg:min-h-0">
                 <div className="mb-3">
                   <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
@@ -167,6 +184,7 @@ const GlobalStatsChart: React.FC = () => {
                       error={serverShareError}
                       selectedRange={selectedRange}
                       gamemode={selectedGamemode}
+                      visibleGroups={visibleServerGroups}
                   />
                 </div>
               </div>
@@ -174,15 +192,15 @@ const GlobalStatsChart: React.FC = () => {
               <div className="w-full lg:w-76 shrink-0 border border-neutral-800/50 rounded-2xl p-4 bg-neutral-900 flex flex-col overflow-hidden">
                 <div className="mb-3">
                   <h4 className="font-bold text-orange-400/80">
-                    Gamemodes
+                    Server Groups
                   </h4>
                 </div>
                 <div className="flex-1 min-h-0">
                   <ChartSidebarLegend
-                      gamemodes={sortedGamemodes}
-                      peaks={computedPeaks}
-                      visibleModes={visibleModes}
-                      onChange={setVisibleModes}
+                      gamemodes={sortedServerGroups}
+                      peaks={computedServerGroupPeaks}
+                      visibleModes={visibleServerGroups}
+                      onChange={setVisibleServerGroups}
                   />
                 </div>
               </div>

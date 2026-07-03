@@ -3,7 +3,7 @@ import { QueryTypes } from 'sequelize';
 import { GamemodeHistoryEntry, GamemodeInfo, ServerShareEntry } from '../../../common/models/GlobalStatsTypes.js';
 import {removeColorsFromMindustry} from "../../../common/Mindustry.js";
 import { MAX_REALISTIC_PLAYERCOUNT } from '../const.js';
-import {getModeName} from "../../../common/Gamemode";
+import {getModeName, modeNameToIntOrNull} from "../../../common/Gamemode";
 
 interface RawGamemodeHistoryRow {
     timestamp: number;
@@ -141,51 +141,37 @@ function buildServerShareQuery(
             : "time_bucket(:bucketSeconds * INTERVAL '1 second', NOW())";
 
     const query = `
-        WITH time_range AS (
-            SELECT ${rangeStart} AS range_start,
-                   ${rangeEnd}   AS range_end
-        ),
-             all_buckets AS (
-                 SELECT generate_series(
-                                (SELECT range_start FROM time_range),
-                                (SELECT range_end   FROM time_range),
-                                :bucketSeconds * INTERVAL '1 second'
-                        ) AS bucket
-             ),
-             bucketed AS (
-                 SELECT
-                     time_bucket(:bucketSeconds * INTERVAL '1 second', ss.timestamp) AS bucket,
-                     ss.server_id,
-                     s.server_group_id,
-                     '' AS server_name,
-                     sg.name AS group_name,
-                     MAX(ss.players) AS players
-                 FROM server_stats ss
-                          JOIN servers s ON ss.server_id = s.id
-                          JOIN server_groups sg ON s.server_group_id = sg.id
-                          JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
-                 WHERE smr.mode_name = :modeName AND ${timeFilter} AND ss.players >= 0 AND ss.players < :maxRealisticPlayerCount
-                 GROUP BY bucket, ss.server_id, s.server_group_id, sg.name
-             ),
-             aggregated AS (
-                 SELECT bucket, server_id, server_group_id, server_name, group_name, MAX(players) AS players
-                 FROM bucketed
-                 GROUP BY bucket, server_id, server_group_id, server_name, group_name
-             ),
-             all_servers AS (
-                 SELECT DISTINCT server_id, server_group_id, server_name, group_name
-                 FROM aggregated
-             )
-        SELECT extract(epoch FROM b.bucket) * 1000 AS timestamp,
-               s.server_id,
-               s.server_group_id,
-               s.server_name,
-               s.group_name,
-               a.players
-        FROM all_buckets b
-                 CROSS JOIN all_servers s
-                 LEFT JOIN aggregated a ON a.bucket = b.bucket AND a.server_id = s.server_id
-        ORDER BY b.bucket, s.server_id
+        WITH bucketed_stats AS (
+            SELECT
+                -- time_bucket_gapfill automatically creates rows for missing time intervals
+                time_bucket_gapfill(
+                        :bucketSeconds * INTERVAL '1 second',
+                        ss.timestamp,
+                        ${rangeStart}, -- Start bound: ensures gapfill covers the start of your graph
+                        ${rangeEnd}    -- End bound: ensures gapfill covers the end of your graph
+                ) AS bucket,
+                ss.server_id,
+                MAX(ss.players) AS players -- Leaves gaps as NULL automatically
+            FROM server_stats ss
+                     JOIN server_maps_registry smr ON ss.map_registry_id = smr.id
+            WHERE smr.mode_name = :modeName OR smr.game_mode = :modeInt
+              AND ${timeFilter}
+              AND ss.players >= 0
+              AND ss.players < :maxRealisticPlayerCount
+            GROUP BY bucket, ss.server_id
+        )
+        SELECT
+            extract(epoch FROM bs.bucket) * 1000 AS timestamp,
+            bs.server_id,
+            s.server_group_id,
+            '' AS server_name,
+            sg.name AS group_name,
+            bs.players
+        FROM bucketed_stats bs
+-- Join the metadata AFTER the heavy lifting is done
+                 JOIN servers s ON bs.server_id = s.id
+                 JOIN server_groups sg ON s.server_group_id = sg.id
+        ORDER BY bs.bucket, bs.server_id;
     `;
 
     const replacements = {
@@ -193,6 +179,7 @@ function buildServerShareQuery(
         bucketSeconds,
         modeName,
         maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT,
+        modeInt: modeNameToIntOrNull(modeName),
     };
     return { query, replacements };
 }

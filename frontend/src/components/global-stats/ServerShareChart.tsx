@@ -101,7 +101,7 @@ export const ServerShareChart: React.FC<ServerShareChartProps> = ({
                 x: { time: true },
                 y: { range: (_u, _min, max) => [0, max * 1.05] },
             },
-            legend: { show: true },
+            legend: { show: false },
             cursor: {
                 drag: { x: false, y: false },
                 sync: { key: "servershare-chart" },
