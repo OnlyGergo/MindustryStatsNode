@@ -228,8 +228,8 @@ export async function getGlobalGamemodeHistory(
         const modeName = getModeName(r.mode_name, r.game_mode);
         return {
             timestamp: Number(r.timestamp),
-            modeName: r.mode_name ?? 'Unknown',
-            cleanName: r.mode_name ? removeColorsFromMindustry(r.mode_name) ?? 'Unknown' : 'Unknown',
+            modeName: modeName ?? 'Unknown',
+            cleanName: modeName ?? 'Unknown',
             players: r.players == null ? null : Number(r.players)
         }
     });

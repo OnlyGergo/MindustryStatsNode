@@ -426,10 +426,10 @@ export class ApiService {
       try {
         const inactiveServers = await getInactiveServers();
 
-        // Remove "old" servers which aren't in any list, just also arent pruned from database
-        res.json(inactiveServers.filter(server => {
+        // Remove "old" servers which aren't in any list, just also aren't pruned from database
+        res.json(ApiPacker.pack(inactiveServers.filter(server => {
           return server.serverLists.length >= 1
-        }));
+        })));
       } catch (error) {
         logger.error('Error fetching inactive servers:', error);
         res.status(500).json({ error: 'Internal server error' });
