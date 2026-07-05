@@ -5,7 +5,7 @@ import {readString} from '../utils/buffer.js';
 import {MINDUSTRY_TIMEOUT_MILLISECONDS} from '../const.js';
 import {createLogger} from '../logger.js';
 import {lookupCountryFromIPSync} from "../utils/countryLookup.js";
-import {decodeGamemode} from "../utils/GamemodeDecoder";
+import {decodeGamemode} from "../utils/GamemodeDecoder.js";
 
 const failedServersCache = new Set<string>();
 const logger = createLogger('Mindustry Service');

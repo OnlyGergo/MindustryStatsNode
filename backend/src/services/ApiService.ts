@@ -17,7 +17,7 @@ import {getGlobalGamemodeHistory, getGamemodeList, getServerShareByGamemode} fro
 import {removeColorsFromMindustry} from "../../../common/Mindustry.js";
 import {ServerShareEntry} from "../../../common/models/GlobalStatsTypes.js";
 import {ApiPacker} from "../../../common/Packer.js";
-import {modeNameToIntOrNull} from "../../../common/Gamemode";
+import {modeNameToIntOrNull} from "../../../common/Gamemode.js";
 
 const logger = createLogger('ApiService');
 const cache = apicache.middleware;
