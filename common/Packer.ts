@@ -5,7 +5,7 @@ export interface ApiError {
 }
 
 // Envelope structure: [Success Status, Payload OR Error]
-export type ApiResponsePacket<T = any> =
+export type ApiResponsePacket =
     | [success: true, data: any[][], keys: string[]]
     | [success: false, error: ApiError];
 

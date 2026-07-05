@@ -17,6 +17,7 @@ interface ServerShareChartProps {
     error: string | null;
     selectedRange: DateRangeOption;
     gamemode: string;
+    visibleGroups: Set<string>;
 }
 
 export const ServerShareChart: React.FC<ServerShareChartProps> = ({
@@ -24,6 +25,7 @@ export const ServerShareChart: React.FC<ServerShareChartProps> = ({
                                                                       loading,
                                                                       error,
                                                                       selectedRange,
+                                                                      visibleGroups,
                                                                   }) => {
     const outerRef = useRef<HTMLDivElement>(null);
     const mountRef = useRef<HTMLDivElement>(null);
@@ -49,6 +51,7 @@ export const ServerShareChart: React.FC<ServerShareChartProps> = ({
                 label,
                 stroke: getModeColor(label),
                 width: 2,
+                show: visibleGroups.has(label),
                 spanGaps: false,
                 points: { show: timestamps.length <= 80, size: 5 },
             })),
@@ -64,9 +67,11 @@ export const ServerShareChart: React.FC<ServerShareChartProps> = ({
                 const rows: { label: string; value: number; color: string }[] = [];
 
                 labels.forEach((label, si) => {
-                    const raw = (u.data[si + 1] as (number | null)[])[idx];
-                    if (raw != null && raw > 0) {
-                        rows.push({ label, value: raw, color: getModeColor(label) });
+                    if (u.series[si + 1].show) {
+                        const raw = (u.data[si + 1] as (number | null)[])[idx];
+                        if (raw != null && raw > 0) {
+                            rows.push({ label, value: raw, color: getModeColor(label) });
+                        }
                     }
                 });
 
@@ -135,7 +140,7 @@ export const ServerShareChart: React.FC<ServerShareChartProps> = ({
             uplotRef.current?.destroy();
             uplotRef.current = null;
         };
-    }, [data, selectedRange]);
+    }, [data, selectedRange, visibleGroups]);
 
     return (
         <div className="w-full h-full relative">
