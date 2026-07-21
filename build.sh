@@ -35,8 +35,8 @@ EOF
 # Build frontend
 echo "Building frontend..."
 cd ./frontend
-npm install  # Optional: ensures dependencies are there
-npm run build
+bun install  # Optional: ensures dependencies are there
+bun run build
 cp -r ./dist/* ../build/public/
 cd ..
 
