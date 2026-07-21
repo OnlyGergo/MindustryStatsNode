@@ -2,7 +2,7 @@ import {createLogger} from '../logger.js';
 import {InMemoryCache} from '../utils/in-memory-queue.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import {ApiServiceConfig} from '../shared/config.js';
-import {Elysia} from 'elysia';
+import {Elysia, t} from 'elysia';
 import {staticPlugin} from '@elysia/static';
 import http from 'http';
 import path from "path";
@@ -17,12 +17,31 @@ import {removeColorsFromMindustry} from "../../../common/Mindustry.js";
 import {ServerShareEntry} from "../../../common/models/GlobalStatsTypes.js";
 import {ApiPacker} from "../../../common/Packer.js";
 import {modeNameToIntOrNull} from "../../../common/Gamemode.js";
+import { withCache } from '../utils/RouteCache.js';
 
 const logger = createLogger('ApiService');
 
+// Reusable strict query parameter schemas (disallow any additional/unexpected query parameters)
+const StrictNoQuery = t.Object({}, { additionalProperties: false });
+
+const StrictPaginationQuery = t.Object({
+  page: t.Optional(t.String()),
+  perPage: t.Optional(t.String())
+}, { additionalProperties: false });
+
+const StrictRangeQuery = t.Object({
+  range: t.Optional(t.String())
+}, { additionalProperties: false });
+
+const StrictHistoryQuery = t.Object({
+  range: t.Optional(t.String()),
+  startDate: t.Optional(t.String()),
+  endDate: t.Optional(t.String())
+}, { additionalProperties: false });
+
 /**
  * API Service
- * Exposes REST API endpoints with caching
+ * Exposes REST API endpoints with caching and strict query parameter validation
  */
 export class ApiService {
   private serverDataCache: InMemoryCache;
@@ -123,12 +142,12 @@ export class ApiService {
         timestamp: new Date().toISOString(),
         pid: process.pid,
         build: {
-            commit: COMMIT,
-            buildDate: BUILD_DATE,
-            version: VERSION
+          commit: COMMIT,
+          buildDate: BUILD_DATE,
+          version: VERSION
         }
       };
-    });
+    }, { query: StrictNoQuery });
 
     // API Routes
     this.app.get('/api/servers/:id/details', async ({params, set}) => {
@@ -156,6 +175,16 @@ export class ApiService {
         set.status = 500;
         return { error: 'Internal server error' };
       }
+    }, {
+      query: StrictNoQuery,
+      use: [
+        withCache({
+          ttlMs: 180_000, // 3 minutes TTL
+          getKey: ({ path, params }) => {
+            return `${path}:${params.id}`;
+          }
+        })
+      ]
     });
 
     this.app.get('/api/servers/:id/motd-history', async ({params, query, set}) => {
@@ -181,6 +210,16 @@ export class ApiService {
         set.status = 500;
         return { error: 'Failed to fetch MOTD history' };
       }
+    }, {
+      query: StrictPaginationQuery,
+      use: [
+        withCache({
+          ttlMs: 300_000, // 5 minutes TTL
+          getKey: ({ path, params, query }) => {
+            return `${path}:${params.id}:${query.page || '1'}:${query.perPage || '20'}`;
+          }
+        })
+      ]
     });
 
     this.app.get('/api/servers/:id/map-history', async ({params, query, set}) => {
@@ -206,6 +245,16 @@ export class ApiService {
         set.status = 500;
         return { error: 'Failed to fetch map history' };
       }
+    }, {
+      query: StrictPaginationQuery,
+      use: [
+        withCache({
+          ttlMs: 300_000, // 5 minutes TTL
+          getKey: ({ path, params, query }) => {
+            return `${path}:${params.id}:${query.page || '1'}:${query.perPage || '20'}`;
+          }
+        })
+      ]
     });
 
     this.app.get('/api/servers/:id/history', async ({params, query, set}) => {
@@ -220,7 +269,7 @@ export class ApiService {
         }
 
         const history = await this.getServerHistory(
-          idNumber, 
+          idNumber,
           range as string | undefined,
           startDate ? parseInt(startDate as string, 10) : undefined,
           endDate ? parseInt(endDate as string, 10) : undefined
@@ -234,6 +283,16 @@ export class ApiService {
         set.status = 500;
         return { error: 'Failed to fetch server history' };
       }
+    }, {
+      query: StrictHistoryQuery,
+      use: [
+        withCache({
+          ttlMs: 300_000, // 5 minutes TTL
+          getKey: ({ path, params, query }) => {
+            return `${path}:${params.id}:${query.range || ''}:${query.startDate || ''}:${query.endDate || ''}`;
+          }
+        })
+      ]
     });
 
     this.app.get('/api/servers', async ({set}) => {
@@ -253,6 +312,16 @@ export class ApiService {
         set.status = 500;
         return { error: 'Internal server error' };
       }
+    }, {
+      query: StrictNoQuery,
+      use: [
+        withCache({
+          ttlMs: 180_000, // 3 minutes TTL
+          getKey: ({ path, params }) => {
+            return `${path}:${params.id}`;
+          }
+        })
+      ]
     });
 
     // Network player history endpoint
@@ -296,6 +365,16 @@ export class ApiService {
         set.status = 500;
         return { error: 'Failed to fetch network history' };
       }
+    }, {
+      query: StrictRangeQuery,
+      use: [
+        withCache({
+          ttlMs: 600_000, // 10 minutes TTL
+          getKey: ({ path, params }) => {
+            return `${path}:${params.range || ''}`;
+          }
+        })
+      ]
     });
 
     // Network details endpoint
@@ -324,9 +403,19 @@ export class ApiService {
         set.status = 500;
         return { error: 'Failed to fetch network details' };
       }
+    }, {
+      query: StrictNoQuery,
+      use: [
+        withCache({
+          ttlMs: 300_000, // 5 minutes TTL
+          getKey: ({ path, params }) => {
+            return `${path}:${params.id}`;
+          }
+        })
+      ]
     });
 
-    // Global player history endpoint //todo is this unused? Client aggregates this data now...
+    // Global player history endpoint
     this.app.get('/api/global/history', async ({query, set}) => {
       try {
         const { range } = query;
@@ -340,6 +429,16 @@ export class ApiService {
         set.status = 500;
         return { error: 'Failed to fetch global history' };
       }
+    }, {
+      query: StrictRangeQuery,
+      use: [
+        withCache({
+          ttlMs: 300_000, // 5 minutes TTL
+          getKey: ({ path, params }) => {
+            return `${path}:${params.range || ''}`;
+          }
+        })
+      ]
     });
 
     // Global gamemode history endpoint
@@ -381,6 +480,16 @@ export class ApiService {
         set.status = 500;
         return { error: 'Failed to fetch global gamemode history' };
       }
+    }, {
+      query: StrictHistoryQuery,
+      use: [
+        withCache({
+          ttlMs: 600_000, // 10 minutes TTL
+          getKey: ({ path, params }) => {
+            return `${path}:${params.range || ''}:${params.startDate || ''}:${params.endDate || ''}`;
+          }
+        })
+      ]
     });
 
     // Gamemode list endpoint
@@ -396,6 +505,13 @@ export class ApiService {
         set.status = 500;
         return { error: 'Failed to fetch gamemode list' };
       }
+    }, {
+      query: StrictNoQuery,
+      use: [
+        withCache({
+          ttlMs: 600_000, // 10 minutes TTL
+        })
+      ]
     });
 
     // Server share by gamemode endpoint
@@ -452,6 +568,16 @@ export class ApiService {
         set.status = 500;
         return { error: 'Failed to fetch server share by gamemode' };
       }
+    }, {
+      query: StrictHistoryQuery,
+      use: [
+        withCache({
+          ttlMs: 600_000, // 10 minutes TTL
+          getKey: ({ path, params }) => {
+            return `${path}:${params.modeName}:${params.range || ''}:${params.startDate || ''}:${params.endDate || ''}`;
+          }
+        })
+      ]
     });
 
     // Get inactive servers with their source list info
@@ -468,6 +594,13 @@ export class ApiService {
         set.status = 500;
         return { error: 'Internal server error' };
       }
+    }, {
+      query: StrictNoQuery,
+      use: [
+        withCache({
+          ttlMs: 3600_000 // 1 hour TTL
+        })
+      ]
     });
 
     // Get server list statistics
@@ -480,6 +613,13 @@ export class ApiService {
         set.status = 500;
         return { error: 'Internal server error' };
       }
+    }, {
+      query: StrictNoQuery,
+      use: [
+        withCache({
+          ttlMs: 3600_000 * 60 // 60 minutes TTL
+        })
+      ]
     });
   }
 
@@ -503,7 +643,7 @@ export class ApiService {
    * Get aggregated server history for different date ranges
    */
   private async getServerHistory(
-    id: number, 
+    id: number,
     range?: string,
     startDate?: number,
     endDate?: number
