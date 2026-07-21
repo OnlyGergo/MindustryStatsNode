@@ -7,7 +7,7 @@
   "main": "src/main.ts",
   "scripts": {
     "start": "bun src/index.ts",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --inspect-wait src/index.ts"
   },
   "dependencies": {
     "@elysia/static": "^1.4.11",
