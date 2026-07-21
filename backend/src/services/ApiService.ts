@@ -2,8 +2,8 @@ import {createLogger} from '../logger.js';
 import {InMemoryCache} from '../utils/in-memory-queue.js';
 import * as serverRepository from '../repositories/serverRepository.js';
 import {ApiServiceConfig} from '../shared/config.js';
-import express from 'express';
-import cors from 'cors';
+import {Elysia} from 'elysia';
+import {staticPlugin} from '@elysia/static';
 import http from 'http';
 import path from "path";
 import {BUILD_DATE, COMMIT, VERSION} from "../../../common/version.js";
@@ -29,7 +29,7 @@ const cache = apicache.middleware;
 export class ApiService {
   private serverDataCache: InMemoryCache;
   private config: ApiServiceConfig;
-  private app!: express.Application;
+  private app!: Elysia;
   private httpServer!: http.Server;
 
   constructor(serverDataCache: InMemoryCache, config: ApiServiceConfig) {
@@ -40,31 +40,49 @@ export class ApiService {
   async start(): Promise<void> {
     logger.info('Starting API Service...');
 
-    this.app = express();
+    this.app = new Elysia();
 
-    this.app.use(cors({
-      origin: this.config.CORS_ORIGIN,
-      credentials: true
-    }));
-    this.app.use(express.json());
+    this.app.onRequest(({request, set}) => {
+      const origin = request.headers.get('origin');
+      const allowedOrigin = this.config.CORS_ORIGIN;
+
+      if (allowedOrigin) {
+        set.headers['Access-Control-Allow-Origin'] = Array.isArray(allowedOrigin)
+          ? (origin && allowedOrigin.includes(origin) ? origin : allowedOrigin[0])
+          : allowedOrigin;
+      }
+      set.headers['Access-Control-Allow-Credentials'] = 'true';
+      set.headers['Access-Control-Allow-Methods'] = 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS';
+      set.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
+    });
+
+    this.app.options('*', ({set}) => {
+      set.status = 204;
+      return '';
+    });
 
     // Expose web files
-    this.app.use(express.static(path.join(process.cwd(), 'public')));
+    this.app.use(staticPlugin({
+      assets: path.join(process.cwd(), 'public'),
+      prefix: '/'
+    }));
 
     this.setupRoutes();
 
     // SPA catch-all: serve index.html for any non-API routes (enables deep linking)
-    this.app.get('*', (req, res) => {
-      if (!req.path.startsWith('/api')) {
-        res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+    this.app.get('*', ({request, set}) => {
+      const urlPath = new URL(request.url).pathname;
+      if (!urlPath.startsWith('/api')) {
+        return Bun.file(path.join(process.cwd(), 'public', 'index.html'));
       } else {
-        res.status(404).json({ error: 'Not found' });
+        set.status = 404;
+        return {error: 'Not found'};
       }
     });
 
     // Create HTTP server but don't start it yet - will be started by main app
-    this.httpServer = http.createServer(this.app);
-    
+    this.httpServer = http.createServer();
+
     logger.info('API Service initialized (HTTP server will be started by main app)');
   }
 
@@ -73,12 +91,14 @@ export class ApiService {
    */
   async listen(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
-      this.httpServer.listen(this.config.PORT, () => {
-        logger.info(`API Service HTTP server started on port ${this.config.PORT}`);
-        resolve();
-      });
-
-      this.httpServer.on('error', reject);
+      try {
+        this.app.listen(this.config.PORT, () => {
+          logger.info(`API Service HTTP server started on port ${this.config.PORT}`);
+          resolve();
+        });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -90,18 +110,16 @@ export class ApiService {
   }
 
   async stop(): Promise<void> {
-    if (this.httpServer) {
-      await new Promise<void>((resolve) => {
-        this.httpServer.close(() => resolve());
-      });
+    if (this.app) {
+      await this.app.stop();
     }
     logger.info('API Service stopped');
   }
 
   private setupRoutes(): void {
     // Health check endpoint
-    this.app.get('/health', cache("3 minutes"), async (req, res) => {
-      res.json({
+    this.app.get('/health', async () => {
+      return {
         status: 'healthy',
         service: 'mindustry-stats',
         timestamp: new Date().toISOString(),
@@ -111,93 +129,96 @@ export class ApiService {
             buildDate: BUILD_DATE,
             version: VERSION
         }
-      });
+      };
     });
 
     // API Routes
-    this.app.get('/api/servers/:id/details', cache("3 minutes"), async (req, res) => {
+    this.app.get('/api/servers/:id/details', async ({params, set}) => {
       try {
-        const { id } = req.params;
+        const { id } = params;
         const idNumber = parseInt(id, 10);
 
         if (isNaN(idNumber)) {
-          res.status(400).json({ error: 'Invalid ID number' });
-          return;
+          set.status = 400;
+          return { error: 'Invalid ID number' };
         }
 
         const server = await serverRepository.getServer(idNumber);
 
         if (!server) {
-          res.status(404).json({ error: 'Server not found' });
-          return;
+          set.status = 404;
+          return { error: 'Server not found' };
         }
 
         logger.debug(`Served server details for ID ${idNumber}`);
-        res.json(server);
+        return server;
 
       } catch (error) {
         logger.error('Error fetching server details:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        set.status = 500;
+        return { error: 'Internal server error' };
       }
     });
 
-    this.app.get('/api/servers/:id/motd-history', cache("3 minutes"), async (req, res) => {
+    this.app.get('/api/servers/:id/motd-history', async ({params, query, set}) => {
       try {
-        const { id } = req.params;
-        const { page = '1', perPage = '20' } = req.query;
+        const { id } = params;
+        const { page = '1', perPage = '20' } = query;
         const idNumber = parseInt(id, 10);
         const pageNumber = parseInt(page as string, 10) || 1;
         const perPageNumber = Math.min(parseInt(perPage as string, 10) || 20, 100);
 
         if (isNaN(idNumber)) {
-          res.status(400).json({ error: 'Invalid ID number' });
-          return;
+          set.status = 400;
+          return { error: 'Invalid ID number' };
         }
 
         const history = await this.getServerMotdHistory(idNumber, pageNumber, perPageNumber);
 
         logger.debug(`Served MOTD history for server ID ${idNumber}`);
-        res.json(history);
+        return history;
 
       } catch (error) {
         logger.error('Failed to fetch MOTD history:', error);
-        res.status(500).json({ error: 'Failed to fetch MOTD history' });
+        set.status = 500;
+        return { error: 'Failed to fetch MOTD history' };
       }
     });
 
-    this.app.get('/api/servers/:id/map-history', cache("3 minutes"), async (req, res) => {
+    this.app.get('/api/servers/:id/map-history', async ({params, query, set}) => {
       try {
-        const { id } = req.params;
-        const { page = '1', perPage = '20' } = req.query;
+        const { id } = params;
+        const { page = '1', perPage = '20' } = query;
         const idNumber = parseInt(id, 10);
         const pageNumber = parseInt(page as string, 10) || 1;
         const perPageNumber = Math.min(parseInt(perPage as string, 10) || 20, 100);
 
         if (isNaN(idNumber)) {
-          res.status(400).json({ error: 'Invalid ID number' });
-          return;
+          set.status = 400;
+          return { error: 'Invalid ID number' };
         }
 
         const history = await this.getServerMapHistory(idNumber, pageNumber, perPageNumber);
 
         logger.debug(`Served map history for server ID ${idNumber}`);
-        res.json(history);
+        return history;
 
       } catch (error) {
         logger.error('Failed to fetch map history:', error);
-        res.status(500).json({ error: 'Failed to fetch map history' });
+        set.status = 500;
+        return { error: 'Failed to fetch map history' };
       }
     });
 
-    this.app.get('/api/servers/:id/history', cache("5 minutes"), async (req, res) => {
+    this.app.get('/api/servers/:id/history', async ({params, query, set}) => {
       try {
-        const { id } = req.params;
-        const { range, startDate, endDate } = req.query;
+        const { id } = params;
+        const { range, startDate, endDate } = query;
         const idNumber = parseInt(id, 10);
 
         if (isNaN(idNumber)) {
-          res.status(400).json({ error: 'Invalid ID number' });
-          return;
+          set.status = 400;
+          return { error: 'Invalid ID number' };
         }
 
         const history = await this.getServerHistory(
@@ -208,42 +229,44 @@ export class ApiService {
         );
 
         logger.debug(`Served history for server ID ${idNumber} with range ${range || 'custom'}`);
-        res.json(history);
+        return history;
 
       } catch (error) {
         logger.error('Failed to fetch server history:', error);
-        res.status(500).json({ error: 'Failed to fetch server history' });
+        set.status = 500;
+        return { error: 'Failed to fetch server history' };
       }
     });
 
-    this.app.get('/api/servers', cache("1 minutes"), async (req, res) => {
+    this.app.get('/api/servers', async ({set}) => {
       try {
         const servers: ServerElement[] = mindustryApp.processorService.getCachedServerElements();
 
         if (!servers) {
-          res.status(503).json({ error: 'Server data not available' });
-          return;
+          set.status = 503;
+          return { error: 'Server data not available' };
         }
 
         logger.debug(`Served ${servers.length} servers from cache`);
-        res.json(ApiPacker.pack(servers));
+        return ApiPacker.pack(servers);
 
       } catch (error) {
         logger.error('Error fetching servers:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        set.status = 500;
+        return { error: 'Internal server error' };
       }
     });
 
     // Network player history endpoint
-    this.app.get('/api/networks/:id/history', cache("5 minutes"), async (req, res) => {
+    this.app.get('/api/networks/:id/history', async ({params, query, set}) => {
       try {
-        const { id } = req.params;
-        const { range } = req.query;
+        const { id } = params;
+        const { range } = query;
         const idNumber = parseInt(id, 10);
 
         if (isNaN(idNumber)) {
-          res.status(400).json({ error: 'Invalid network ID number' });
-          return;
+          set.status = 400;
+          return { error: 'Invalid network ID number' };
         }
 
         let hoursBack: number;
@@ -268,60 +291,63 @@ export class ApiService {
         const history = await getNetworkPlayerHistory(idNumber, hoursBack, bucketMinutes);
 
         logger.debug(`Served network history for network ID ${idNumber} with range ${range || '1d'}`);
-        res.json(ApiPacker.pack(history));
+        return ApiPacker.pack(history);
 
       } catch (error) {
         logger.error('Failed to fetch network history:', error);
-        res.status(500).json({ error: 'Failed to fetch network history' });
+        set.status = 500;
+        return { error: 'Failed to fetch network history' };
       }
     });
 
     // Network details endpoint
-    this.app.get('/api/networks/:id/details', cache("3 minutes"), async (req, res) => {
+    this.app.get('/api/networks/:id/details', async ({params, set}) => {
       try {
-        const { id } = req.params;
+        const { id } = params;
         const idNumber = parseInt(id, 10);
 
         if (isNaN(idNumber)) {
-          res.status(400).json({ error: 'Invalid network ID number' });
-          return;
+          set.status = 400;
+          return { error: 'Invalid network ID number' };
         }
 
         const details = await serverRepository.getNetworkDetails(idNumber);
 
         if (!details) {
-          res.status(404).json({ error: 'Network not found' });
-          return;
+          set.status = 404;
+          return { error: 'Network not found' };
         }
 
         logger.debug(`Served network details for network ID ${idNumber}`);
-        res.json(details);
+        return details;
 
       } catch (error) {
         logger.error('Failed to fetch network details:', error);
-        res.status(500).json({ error: 'Failed to fetch network details' });
+        set.status = 500;
+        return { error: 'Failed to fetch network details' };
       }
     });
 
     // Global player history endpoint //todo is this unused? Client aggregates this data now...
-    this.app.get('/api/global/history', cache("3 minutes"), async (req, res) => {
+    this.app.get('/api/global/history', async ({query, set}) => {
       try {
-        const { range } = req.query;
+        const { range } = query;
         const history = await this.getGlobalHistory(range as string | undefined);
 
         logger.debug(`Served global history with range ${range || '1d'}`);
-        res.json(history);
+        return history;
 
       } catch (error) {
         logger.error('Failed to fetch global history:', error);
-        res.status(500).json({ error: 'Failed to fetch global history' });
+        set.status = 500;
+        return { error: 'Failed to fetch global history' };
       }
     });
 
     // Global gamemode history endpoint
-    this.app.get('/api/global/gamemode-history', cache("15 minutes"), async (req, res) => {
+    this.app.get('/api/global/gamemode-history', async ({query, set}) => {
       try {
-        const { range, startDate, endDate } = req.query;
+        const { range, startDate, endDate } = query;
 
         let hoursBack: number;
         switch (range as string | undefined) {
@@ -350,35 +376,40 @@ export class ApiService {
         );
 
         logger.debug(`Served global gamemode history with range ${range || '1d'}`);
-        res.json(ApiPacker.pack(history));
+        return ApiPacker.pack(history);
 
       } catch (error) {
         logger.error('Failed to fetch global gamemode history:', error);
-        res.status(500).json({ error: 'Failed to fetch global gamemode history' });
+        set.status = 500;
+        return { error: 'Failed to fetch global gamemode history' };
       }
     });
 
     // Gamemode list endpoint
-    this.app.get('/api/gamemodes', cache("1 hour"), async (req, res) => {
+    this.app.get('/api/gamemodes', async ({set}) => {
       try {
         const gamemodes = await getGamemodeList();
 
         logger.debug(`Served ${gamemodes.length} gamemodes`);
-        res.json(ApiPacker.pack(gamemodes));
+        return ApiPacker.pack(gamemodes);
 
       } catch (error) {
         logger.error('Failed to fetch gamemode list:', error);
-        res.status(500).json({ error: 'Failed to fetch gamemode list' });
+        set.status = 500;
+        return { error: 'Failed to fetch gamemode list' };
       }
     });
 
     // Server share by gamemode endpoint
-    this.app.get('/api/gamemodes/:modeName/servers', cache("15 minutes"), async (req, res) => {
+    this.app.get('/api/gamemodes/:modeName/servers', async ({params, query, set}) => {
       try {
-        const { modeName } = req.params;
-        const { range, startDate, endDate } = req.query;
+        const { modeName } = params;
+        const { range, startDate, endDate } = query;
 
-        if (modeNameToIntOrNull(modeName) === null) return res.status(400).json({ error: 'GO away bot!' });
+        if (modeNameToIntOrNull(modeName) === null) {
+          set.status = 400;
+          return { error: 'GO away bot!' };
+        }
 
         let hoursBack: number;
         switch (range as string | undefined) {
@@ -416,37 +447,40 @@ export class ApiService {
         })
 
         logger.debug(`Served server share for gamemode ${modeName} with range ${range || '1d'}`);
-        res.json(ApiPacker.pack(serverShare));
+        return ApiPacker.pack(serverShare);
 
       } catch (error) {
         logger.error('Failed to fetch server share by gamemode:', error);
-        res.status(500).json({ error: 'Failed to fetch server share by gamemode' });
+        set.status = 500;
+        return { error: 'Failed to fetch server share by gamemode' };
       }
     });
 
     // Get inactive servers with their source list info
-    this.app.get('/api/inactive-servers', cache("5 minutes"), async (req, res) => {
+    this.app.get('/api/inactive-servers', async ({set}) => {
       try {
         const inactiveServers = await getInactiveServers();
 
         // Remove "old" servers which aren't in any list, just also aren't pruned from database
-        res.json(ApiPacker.pack(inactiveServers.filter(server => {
+        return ApiPacker.pack(inactiveServers.filter(server => {
           return server.serverLists.length >= 1
-        })));
+        }));
       } catch (error) {
         logger.error('Error fetching inactive servers:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        set.status = 500;
+        return { error: 'Internal server error' };
       }
     });
 
     // Get server list statistics
-    this.app.get('/api/serverlist-stats', cache("5 minutes"), async (req, res) => {
+    this.app.get('/api/serverlist-stats', async ({set}) => {
       try {
         const stats = await getServerListStats();
-        res.json(ApiPacker.pack(stats));
+        return ApiPacker.pack(stats);
       } catch (error) {
         logger.error('Error fetching server list stats:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        set.status = 500;
+        return { error: 'Internal server error' };
       }
     });
   }

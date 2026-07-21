@@ -6,6 +6,7 @@
       "name": "mindustry-stats",
       "dependencies": {
         "@elysia/static": "^1.4.11",
+        "@types/bun": "^1.3.14",
         "apicache": "^1.6.3",
         "bytebuffer": "^5.0.1",
         "cors": "^2.8.5",
@@ -123,6 +124,8 @@
     "@types/apicache": ["@types/apicache@1.6.8", "", { "dependencies": { "@types/express": "*", "@types/redis": "^2.8.0" } }, "sha512-PDBHDA9p/YEYRLL2KN2kr2UXRAWvZq/WM+GBN94MwPQRZORUnoazd1A1plZXWDOvCvGTgcKriRIIECnRpHhC/g=="],
 
     "@types/body-parser": ["@types/body-parser@1.19.6", "", { "dependencies": { "@types/connect": "*", "@types/node": "*" } }, "sha512-HLFeCYgz89uk22N5Qg3dvGvsv46B8GLvKKo1zKG4NybA8U2DiEO3w9lqGg29t/tfLRJpJ6iQxnVw4OnB7MoM9g=="],
+
+    "@types/bun": ["@types/bun@1.3.14", "", { "dependencies": { "bun-types": "1.3.14" } }, "sha512-h1hFqFVcvAvD9j9K7ZW7vd82aSA+rTdznZa+5bwvCwqSB1jmmfLcbIWhOLx1/+boy/xmjgCs/OMUL8hRJSmnPw=="],
 
     "@types/connect": ["@types/connect@3.4.38", "", { "dependencies": { "@types/node": "*" } }, "sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug=="],
 
