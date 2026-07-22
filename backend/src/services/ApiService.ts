@@ -81,7 +81,8 @@ export class ApiService {
     // Expose web files
     this.app.use(staticPlugin({
       assets: path.join(process.cwd(), 'public'),
-      prefix: '/'
+      prefix: '/',
+      indexHTML: true,
     }));
 
     this.setupRoutes();
