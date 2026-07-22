@@ -1,3 +1,4 @@
+import dgram from 'dgram';
 import dns from 'dns/promises';
 import {GameMode, ServerData} from '../../../common/models/serverData.js';
 import {readString} from '../utils/buffer.js';
@@ -8,6 +9,27 @@ import {decodeGamemode} from "../utils/GamemodeDecoder.js";
 
 const failedServersCache = new Set<string>();
 const logger = createLogger('Mindustry Service');
+// Covers errors from failed DNS lookups and anything related to wrong packet or firewall closed
+const offlineErrors: string[] = ["EHOSTUNREACH", "ECONNREFUSED", "EPROTO", "ETIMEDOUT"];
+const offlineDnsErrors: string[] = ["getaddrinfo ESERVFAIL", "getaddrinfo ENOTFOUND"];
+
+function startsWithArray(prefix: string, arr: string[]): boolean {
+  for (const item of arr) {
+    if (prefix.startsWith(item)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Checks if the error message indicates an offline error, startsWith so bit better for perf
+function isOfflineErrorMessage(error: string): boolean {
+  return startsWithArray(error, offlineErrors);
+}
+
+function isOfflineDnsMessage(error: string): boolean {
+  return startsWithArray(error, offlineDnsErrors);
+}
 
 // Turns out this isn't needed, the synchronous lookups were enough
 /*const CUSTOM_DNS_SERVERS: string[] = [];
@@ -38,7 +60,7 @@ async function resolveHost(host: string): Promise<string | null> {
     return lookupResult.address;
   } catch (err) {
     // Annoying but exists. This needs to be here.
-    if((err as Error).message.includes('ENOTFOUND')) {
+    if (err instanceof Error && isOfflineDnsMessage(err.message)) {
       logger.debug((err as Error).message);
       return null;
     }
@@ -70,94 +92,89 @@ export async function getServerData(host: string, port: number | string, serverK
     return null;
   }
 
-  // 2. Network Query Step using native Bun UDP API
+  // 2. Network Query Step
   return new Promise((resolve) => {
+    const socket = dgram.createSocket('udp4');
     const pingTime = Date.now();
-    let socket: any; // Store the native Bun socket reference
-
-    const cleanup = () => {
-      clearTimeout(timeout);
-      try { if (socket) socket.close(); } catch {}
-    };
 
     const timeout = setTimeout(() => {
       cleanup();
       resolve(null);
     }, MINDUSTRY_TIMEOUT_MILLISECONDS);
 
-    Bun.udpSocket({
-      socket: {
-        data(sock, message, port, addr) {
-          cleanup();
-          try {
-            const buffer = Buffer.from(message);
-            const offset = { value: 0 };
+    const cleanup = () => {
+      clearTimeout(timeout);
+      try { socket.close(); } catch {}
+    };
 
-            // Parse Mindustry protocol payload
-            const serverName = readString(buffer, offset);
-            const mapName = readString(buffer, offset);
-
-            const players = buffer.readInt32BE(offset.value); offset.value += 4;
-            const wave = buffer.readInt32BE(offset.value); offset.value += 4;
-            const version = buffer.readInt32BE(offset.value); offset.value += 4;
-
-            const versionType = readString(buffer, offset);
-
-            const gameModeIdx = buffer[offset.value] & 0xFF; offset.value += 1;
-            const mode = gameModeIdx < Object.keys(GameMode).length / 2 ? (gameModeIdx as GameMode) : GameMode.SURVIVAL;
-
-            const playerLimit = buffer.readInt32BE(offset.value); offset.value += 4;
-            const description = readString(buffer, offset);
-            const modeName = decodeGamemode(readString(buffer, offset), mode);
-
-            failedServersCache.delete(serverKey);
-
-            resolve({
-              ping: Date.now() - pingTime,
-              host,
-              port: numericPort,
-              serverName,
-              mapName,
-              players,
-              wave,
-              version,
-              versionType,
-              mode,
-              playerLimit,
-              description,
-              modeName,
-              online: true,
-              countryCode: lookupCountryFromIPSync(ipAddress as string)
-            });
-          } catch (err) {
-            logger.error(`Failed to parse packet from ${serverKey}: ${(err as Error).message}`);
-            resolve(null);
-          }
-        },
-        error(sock, err) {
-          cleanup();
-          // Filter out the ICMP Port Unreachable error so it behaves like Node
-          // This allows offline servers to just return null instead of logging as a crash
-          if (err.message && err.message.includes('ECONNREFUSED')) {
-            resolve(null);
-            return;
-          }
-          
-          if (!failedServersCache.has(serverKey)) {
-            logger.warn(`Socket error for ${serverKey}: ${err.message}`);
-            failedServersCache.add(serverKey);
-          }
-          resolve(null); // Resolve null rather than rejecting to prevent upstream app crashes
-        }
-      }
-    }).then((createdSocket) => {
-      socket = createdSocket;
-      const packet = Buffer.from([0xFE, 0x01]);
-      socket.send(packet, numericPort, ipAddress as string);
-    }).catch((err) => {
+    socket.on('error', (err) => {
       cleanup();
-      logger.warn(`Socket creation error for ${serverKey}: ${err.message}`);
-      resolve(null);
+      if (err.message && isOfflineErrorMessage(err.message)) {
+        resolve(null);
+        return;
+      }
+      if (!failedServersCache.has(serverKey)) {
+        logger.warn(`Socket error for ${serverKey}: ${err.message}`);
+        failedServersCache.add(serverKey);
+      }
+      resolve(null); // Resolve null rather than rejecting to prevent upstream app crashes
+    });
+
+    socket.on('message', (message) => {
+      cleanup();
+      try {
+        const buffer = Buffer.from(message);
+        const offset = { value: 0 };
+
+        // Parse Mindustry protocol payload
+        const serverName = readString(buffer, offset);
+        const mapName = readString(buffer, offset);
+
+        const players = buffer.readInt32BE(offset.value); offset.value += 4;
+        const wave = buffer.readInt32BE(offset.value); offset.value += 4;
+        const version = buffer.readInt32BE(offset.value); offset.value += 4;
+
+        const versionType = readString(buffer, offset);
+
+        const gameModeIdx = buffer[offset.value] & 0xFF; offset.value += 1;
+        const mode = gameModeIdx < Object.keys(GameMode).length / 2 ? (gameModeIdx as GameMode) : GameMode.SURVIVAL;
+
+        const playerLimit = buffer.readInt32BE(offset.value); offset.value += 4;
+        const description = readString(buffer, offset);
+        const modeName = decodeGamemode(readString(buffer, offset), mode);
+
+        failedServersCache.delete(serverKey);
+
+        resolve({
+          ping: Date.now() - pingTime,
+          host,
+          port: numericPort,
+          serverName,
+          mapName,
+          players,
+          wave,
+          version,
+          versionType,
+          mode,
+          playerLimit,
+          description,
+          modeName,
+          online: true,
+          countryCode: lookupCountryFromIPSync(ipAddress)
+        });
+      } catch (err) {
+        logger.error(`Failed to parse packet from ${serverKey}: ${(err as Error).message}`);
+        resolve(null);
+      }
+    });
+
+    const packet = Buffer.from([0xFE, 0x01]);
+
+    socket.send(packet, numericPort, ipAddress, (err) => {
+      if (err) {
+        cleanup();
+        resolve(null);
+      }
     });
   });
 }
