@@ -258,7 +258,7 @@ function RootLayout() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-stone-900 via-neutral-900 to-stone-900 text-white flex overflow-hidden">
+    <div className="h-screen bg-linear-to-br from-stone-900 via-neutral-900 to-stone-900 text-white flex overflow-hidden">
       <AnimatedBackground />
       {(!isMobile || showMasterPanel) && (
         <MasterPanel
