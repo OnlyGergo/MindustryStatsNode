@@ -2,6 +2,12 @@ import {useMemo, useState} from 'react';
 import {ServerElement} from '../../../common/models/serverData';
 import {isHub} from '../util/mindustry';
 
+// NOTE: This hook is purely client-side derived state (search/sort/group UI
+// preferences) over data that's already fetched by `useApi`/the route loader.
+// It doesn't perform its own network fetching, so no server function is
+// needed here for the TanStack Start migration -- it keeps working as-is
+// against whatever `rawServers` (SSR-hydrated or polled) is passed in.
+
 export type SortCriteria = 'ping' | 'playerCount' | 'name';
 export type SortDirection = 'asc' | 'desc';
 
