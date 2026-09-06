@@ -12,6 +12,7 @@ type ServerListRecord struct {
 	Name        string
 	URL         string
 	DisplayName string
+	Active      bool
 }
 
 // SourceListEntry is one (server, serverlist) membership discovered this cycle.
@@ -20,6 +21,7 @@ type SourceListEntry struct {
 	Port         int
 	ServerListID int
 	DisplayName  string
+	Active       bool
 }
 
 // sourceListRow is the resolved form written to server_source_list.
@@ -35,8 +37,9 @@ func (r *Repository) GetAllServerLists(ctx context.Context) ([]ServerListRecord,
 	const op = "getAllServerLists"
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, name, url, display_name
+		SELECT id, name, url, display_name, active
 		FROM serverlists
+		WHERE active = true
 		ORDER BY id
 	`)
 	if err != nil {
@@ -47,7 +50,7 @@ func (r *Repository) GetAllServerLists(ctx context.Context) ([]ServerListRecord,
 	var lists []ServerListRecord
 	for rows.Next() {
 		var l ServerListRecord
-		if err := rows.Scan(&l.ID, &l.Name, &l.URL, &l.DisplayName); err != nil {
+		if err := rows.Scan(&l.ID, &l.Name, &l.URL, &l.DisplayName, &l.Active); err != nil {
 			return nil, &OperationError{Operation: op, Err: err}
 		}
 		lists = append(lists, l)
