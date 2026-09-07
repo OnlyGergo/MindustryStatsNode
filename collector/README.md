@@ -11,26 +11,6 @@ collection loop (5min) ├─► Postgres  ◄── TS backend (reads only)
 processor / batch writer ┘
 ```
 
-## Layout
-
-| Path | TypeScript it replaces |
-|---|---|
-| `internal/poller/poller.go` | `services/mindustryService.ts` |
-| `internal/poller/buffer.go` | `utils/buffer.ts` |
-| `internal/poller/gamemode.go` | `utils/GamemodeDecoder.ts` |
-| `internal/mindustry/text.go` | `common/Mindustry.ts`, `common/Gamemode.ts` |
-| `internal/collector/collector.go` | `services/ServerCollectorService.ts` |
-| `internal/discovery/discovery.go` | `services/ServerDiscoveryService.ts` |
-| `internal/processor/processor.go` | `services/ServerProcessorService.ts` |
-| `internal/repository/*` | the write half of `repositories/serverRepository.ts` and `repositories/ServerListRepository.ts` |
-| `internal/geoip/geoip.go` | `utils/countryLookup.ts` (ip3country → mmdb) |
-| `internal/db/migrate.go` | `runMigrations()` in `config/database.ts` |
-
-The SQL is a straight port: same statements, same `jsonb_to_recordset` shapes,
-issued through pgx instead of Sequelize's raw query wrapper. Nothing was
-"improved" in the porting pass — parity with the TS writer is what makes the
-cutover safe to reason about.
-
 ## Build and run
 
 ```bash
@@ -96,13 +76,3 @@ They skip unless `COLLECTOR_TEST_DSN` points at a database loaded with
 ```bash
 COLLECTOR_TEST_DSN=postgres://postgres@127.0.0.1:5432/mindustry_test go test ./internal/repository/
 ```
-
-## Cutover notes
-
-The collector and the TS write services must never run at once — they would
-both poll and both write. Stop `ServerDiscoveryService` / `ServerCollectorService`
-/ `ServerProcessorService` in `backend/src/index.ts` in the same deploy that
-starts this binary.
-
-`servers.country_code` is written here. The TS path looked the country up and
-then dropped it, which is why the column is empty.
