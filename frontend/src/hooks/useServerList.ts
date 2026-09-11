@@ -66,11 +66,16 @@ export const SORT_OPTIONS: SortOption[] = [
       ? server.currentData.ping
       : null,
     getGroupValue: (servers) => {
-      const pings = servers
-        .filter(server => server.online && typeof server.currentData?.ping === 'number')
-        .map(server => server.currentData!.ping as number);
-      if (pings.length === 0) return null;
-      return pings.reduce((sum, ping) => sum + ping, 0) / pings.length;
+      let total = 0;
+      let counted = 0;
+      servers.forEach(server => {
+        const ping = server.currentData?.ping;
+        if (server.online && typeof ping === 'number') {
+          total += ping;
+          counted += 1;
+        }
+      });
+      return counted === 0 ? null : total / counted;
     }
   },
   {
@@ -95,9 +100,9 @@ const compareValues = (a: number | string, b: number | string): number => {
   return compareStrings(String(a), String(b));
 };
 
-// Direction only ever flips servers we actually have a value for: a server with
-// an unknown ping sinks to the bottom of "lowest first" AND of "highest first",
-// instead of topping the list because `Infinity` happens to be the largest number.
+// Direction only ever flips entries we actually have a value for, so a server
+// with an unknown ping sinks to the bottom of "lowest ping first" and of
+// "highest ping first" alike, instead of counting as the largest ping.
 const compareSortValues = (
   a: number | string | null,
   b: number | string | null,

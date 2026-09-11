@@ -63,12 +63,14 @@ const MasterPanel: React.FC = () => {
             <SearchBar onSearchValueChange={setSearchTerm} value={searchTerm} />
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Wraps to a second row when the panel is too narrow for three
+              controls, rather than truncating their labels. */}
+          <div className="flex flex-wrap items-center gap-2">
             <Tooltip
                 content={isGrouped ? "Switch to flat list view showing all servers" : "Group servers by their cluster names"}
                 position="top"
                 delay={300}
-                className="flex-1"
+                className="flex-1 basis-28 min-w-0"
             >
               <ToggleButton
                   isActive={isGrouped}
@@ -84,7 +86,7 @@ const MasterPanel: React.FC = () => {
                 content={hideInactiveEnabled ? "Show all servers including inactive ones" : "Hide servers offline for more than 7 days"}
                 position="top"
                 delay={300}
-                className="flex-1"
+                className="flex-1 basis-28 min-w-0"
             >
               <ToggleButton
                   isActive={hideInactiveEnabled}
@@ -98,7 +100,7 @@ const MasterPanel: React.FC = () => {
               />
             </Tooltip>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 basis-28 min-w-0">
               <SortDropdown
                   sortOptions={sortOptions}
                   currentCriteria={sortCriteria}
