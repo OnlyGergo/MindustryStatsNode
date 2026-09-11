@@ -75,7 +75,8 @@ const MasterPanel: React.FC = () => {
                   onClick={toggleGrouping}
                   activeText="Ungroup"
                   inactiveText="Group"
-                  className="w-full text-sm py-2"
+                  sizeClassName="px-3 py-2 text-sm"
+                  className="w-full"
               />
             </Tooltip>
 
@@ -92,16 +93,20 @@ const MasterPanel: React.FC = () => {
                   inactiveText="Hide Inactive"
                   activeColor="bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 border-orange-500/40"
                   inactiveColor="bg-neutral-600/20 hover:bg-neutral-600/40 text-neutral-400 border-neutral-600/40"
-                  className="w-full text-sm py-2"
+                  sizeClassName="px-3 py-2 text-sm"
+                  className="w-full"
               />
             </Tooltip>
 
-            <SortDropdown
-                sortOptions={sortOptions}
-                currentCriteria={sortCriteria}
-                currentDirection={sortDirection}
-                onSortChange={handleSortChange}
-            />
+            <div className="flex-1 min-w-0">
+              <SortDropdown
+                  sortOptions={sortOptions}
+                  currentCriteria={sortCriteria}
+                  currentDirection={sortDirection}
+                  isGrouped={isGrouped}
+                  onSortChange={handleSortChange}
+              />
+            </div>
           </div>
         </div>
 
@@ -123,7 +128,7 @@ const MasterPanel: React.FC = () => {
           {!loading && !error && (
               <div className="space-y-1.5">
                 {isGrouped ? (
-                    Object.entries(processedServerGroups).map(([groupName, servers]) => {
+                    processedServerGroups.map(({ name: groupName, servers }) => {
                       const groupId = servers.length > 0 ? servers[0].groupId : 0;
                       const isNetworkSelected = selectedNetworkId === groupId;
                       return (
