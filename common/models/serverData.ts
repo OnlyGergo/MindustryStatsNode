@@ -29,10 +29,18 @@ export interface ServerHistory {
   players: number | null;
 }
 
+/**
+ * A server as the site refers to it: one *identity*, which may be several
+ * observation streams stitched together (see migration 29).  `id` is the
+ * canonical server id — the only id any endpoint accepts or returns.
+ */
 export interface ServerElement {
   id: number;
+  /** Public sequential reference, numbered in first-seen order. */
+  displayRef: number;
   name: string;
   groupId: number;
+  /** Address the identity is answering on today, not the one it started on. */
   host: string;
   port: number;
   currentData?: ServerData;
@@ -41,6 +49,25 @@ export interface ServerElement {
   online: boolean;
   consecutiveFailures?: number;
   countryCode?: string | null;
+}
+
+/**
+ * Chart annotations.  One stream drives both shapes: `endsAt === null` is a
+ * point event (drawn as a dashed vertical line), a set `endsAt` is a span
+ * (drawn as a shaded band).
+ */
+export type ServerEventKind = 'address_change' | 'version_change' | 'data_quality';
+
+export interface ServerEvent {
+  id: number;
+  /** null = a global event, annotating every chart rather than one server's. */
+  serverId: number | null;
+  kind: ServerEventKind;
+  /** ms epoch. */
+  occurredAt: number;
+  /** ms epoch, or null for a point event. */
+  endsAt: number | null;
+  detail: Record<string, unknown> | null;
 }
 
 export interface ServerMotdData {

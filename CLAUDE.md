@@ -34,6 +34,46 @@ Tanstack Start Router is used for routing and SSR.
 To get data hooks are used. A typed Eden Treaty client is available at `frontend/src/util/api.ts`; the existing hooks still hand-fetch against `common/models` types and can be migrated onto it incrementally.
 uPlot is used for graphs, Chart.js too, but moving away from it. For tooltips use `frontend/src/util/chartTooltip.ts` and a useful helper is at `frontend/src/util/chartHelpers.ts`.
 
+## Server Identity
+
+`servers` is an *observation stream* table, not a list of servers. A server that changes address (a new IP, a
+re-pointed DNS name) gains a second row; `UNIQUE (host, port)` only holds among live streams
+(`WHERE retired_at IS NULL`), so a retired stream keeps its address and its history stays attributable.
+
+Streams are stitched into an **identity** by `server_canonical` (union-find, depth always 1, every server has a row —
+an unmerged one points at itself). Merging never rewrites a `server_stats` row, which is the whole point: rewriting
+`server_id` on history would invalidate every continuous aggregate, and chunks already dropped by a retention policy
+could not be rewritten at all. A merge is one UPDATE, and it is reversible.
+
+**Merges are manual** — there is deliberately no UI or automatic detection. The SQL for merge, unmerge and the
+follow-up retire/annotate is written out in the comments of `collector/migrations/29_server_identity.sql`. Two
+deferred constraint triggers keep the structure honest: you cannot merge onto an alias, and you cannot demote a root
+that still has aliases.
+
+Reading rules, in order — getting them the wrong way round is the easy mistake:
+- Peak per raw `server_id` first (the existing per-server dedup), *then* collapse via `server_canonical` with
+  `MAX` — **never SUM across aliases**: the two streams of a migrating server overlap while the old address still
+  answers, and summing there invents players. Only after that do you sum across *different* servers.
+- Anything counting servers uses `COUNT(DISTINCT canonical_id)`.
+- Joins to `servers` / `server_groups` for display metadata happen on the canonical id, at the end, over the reduced
+  row set.
+
+The `server_identity` view resolves the two halves of an identity so no query has to re-derive them: `id`,
+`display_ref` and `first_seen` come from the canonical **root** (which owns the identity), while `host`, `port`,
+`country_code`, `server_group_id` and `role` come from the **current** live stream — after a migration the root holds
+the address the server has already left. `server_family(canonical_id)` returns the stream ids behind one identity.
+
+`role` (`game` | `hub` | `test` | `unknown`) keeps hubs and test servers in the same table without polluting default
+listings or aggregate stats — a hub mirrors other servers' player counts, so counting it double counts players. It is
+filtered cheaply: the partial index only covers the exceptions. Non-`game` servers are still polled.
+
+`display_ref` is a public sequential id, numbered in first-seen order. Nothing routes on it; the API takes and returns
+canonical `servers.id` everywhere.
+
+`server_events` is the chart annotation stream — `ends_at IS NULL` is a point event (version bump, address change)
+drawn as a dashed line, a set `ends_at` is a span (a poor-DNS era, an outage) drawn as a band, and a NULL `server_id`
+is a global event. Colour stays reserved for series identity; annotations are bands and lines.
+
 ## Notable Design Decisions
 
 The app is a monorepo, for simplicity.
