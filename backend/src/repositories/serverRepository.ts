@@ -7,10 +7,6 @@
 
 import sequelize from '../config/database.js';
 import {
-    Server,
-    ServerGroup,
-} from '../models/index.js';
-import {
     GameMode,
     type ServerDetails,
     type ServerElement,
@@ -18,83 +14,126 @@ import {
     type ServerMotdData,
 } from '../../../common/models/serverData.js';
 import { QueryTypes } from 'sequelize';
-import {
-    type NetworkDetails,
-    type ServerRecord,
-} from '../../../common/models/RepositoryTypes.js';
+import { type NetworkDetails } from '../../../common/models/RepositoryTypes.js';
 import {CURRENT_DATA_FRESH_THRESHOLD, MAX_REALISTIC_PLAYERCOUNT} from "../const.js";
 
 // ─── Servers ─────────────────────────────────────────────────────────────────
 
-/** Returns all server and network/group IDs, for sitemap generation. */
+/**
+ * Returns all server and network/group IDs, for sitemap generation.
+ *
+ * Identities, not streams: /server/:id takes a canonical id, so the alias rows
+ * of a server that has moved address are not pages of their own.  Retired
+ * identities (every stream in the family dead) and non-'game' roles are left
+ * out — they are still reachable, just not worth asking a crawler to index.
+ */
 export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds: number[] }> {
+    // Networks are derived from the listable identities rather than read off
+    // server_groups: a group whose only members are hubs, test servers or
+    // retired streams renders an empty page, and advertising it in the sitemap
+    // asks a crawler to index nothing.
     const [servers, serverGroups] = await Promise.all([
-        Server.findAll({ raw: true, attributes: ['id'] }),
-        ServerGroup.findAll({ raw: true, attributes: ['id'] }),
+        sequelize.query(
+            `SELECT si.id
+             FROM server_identity si
+             WHERE si.role = 'game'
+               AND NOT si.retired
+             ORDER BY si.id`,
+            { type: QueryTypes.SELECT }
+        ) as Promise<{ id: number }[]>,
+        sequelize.query(
+            `SELECT DISTINCT si.server_group_id AS id
+             FROM server_identity si
+             WHERE si.role = 'game'
+               AND NOT si.retired
+             ORDER BY id`,
+            { type: QueryTypes.SELECT }
+        ) as Promise<{ id: number }[]>,
     ]);
 
     return {
-        serverIds: servers.map((s: any) => s.id),
-        networkIds: serverGroups.map((g: any) => g.id),
+        serverIds: servers.map((s) => s.id),
+        networkIds: serverGroups.map((g) => g.id),
     };
 }
 
-/** Returns all servers with their latest stats, map, and MOTD in one query. */
+/**
+ * Returns all listed server identities with their latest stats, map, and MOTD
+ * in one query.
+ *
+ * One row per identity, not per observation stream (migration 29).  Address,
+ * group and country come from server_identity — i.e. from the stream the server
+ * answers on today — while the stats, MOTD and map are taken across the whole
+ * family with the newest sample winning: after a migration the retired stream's
+ * rows go stale but do not disappear, and DISTINCT ON over the family is what
+ * keeps the listing showing the live ones.
+ *
+ * Hubs and test servers are left out (they mirror other servers' player counts),
+ * as are identities whose every stream is retired.
+ */
 export async function getAllServerElements(hoursBack: number = 36): Promise<ServerElement[]> {
     const rows: any[] = await sequelize.query(`
         WITH latest_motds AS (
-            SELECT DISTINCT ON (h.server_id)
-                h.server_id,
+            SELECT DISTINCT ON (sc.canonical_id)
+                sc.canonical_id,
                 r.server_name  AS "serverName",
-                r.description,
-                h.valid_from
+                r.description
             FROM server_motds_history h
             JOIN server_motds_registry r ON h.motd_id = r.id
+            JOIN server_canonical sc     ON sc.server_id = h.server_id
             WHERE h.valid_to IS NULL
-            ORDER BY h.server_id, h.valid_from DESC
+            ORDER BY sc.canonical_id, h.valid_from DESC
         ),
         latest_maps AS (
-            SELECT DISTINCT ON (h.server_id)
-                h.server_id,
+            SELECT DISTINCT ON (sc.canonical_id)
+                sc.canonical_id,
                 r.map_name   AS "mapName",
                 r.game_mode  AS mode,
-                r.mode_name  AS "modeName",
-                h.valid_from
+                r.mode_name  AS "modeName"
             FROM server_maps_history h
             JOIN server_maps_registry r ON h.map_id = r.id
+            JOIN server_canonical sc    ON sc.server_id = h.server_id
             WHERE h.valid_to IS NULL
-            ORDER BY h.server_id, h.valid_from DESC
+            ORDER BY sc.canonical_id, h.valid_from DESC
         ),
         latest_stats AS (
-            -- One row per server, upserted by bulkSaveServerStats() each poll
+            -- One row per stream, upserted by bulkSaveServerStats() each poll
             -- cycle, so this is a small table scan instead of a DISTINCT ON
-            -- across every chunk of the hypertable.
-            SELECT server_id, timestamp, players, max_players, wave,
-                   version, version_type, ping, online
-            FROM server_current
-            WHERE timestamp > NOW() - interval '1 hour' * :hoursBack
-              AND players >= 0 AND players < :maxRealisticPlayerCount
+            -- across every chunk of the hypertable.  The DISTINCT ON here is
+            -- over the family, picking the freshest of an identity's streams.
+            SELECT DISTINCT ON (sc.canonical_id)
+                   sc.canonical_id, c.timestamp, c.players, c.max_players, c.wave,
+                   c.version, c.version_type, c.ping, c.online
+            FROM server_current c
+            JOIN server_canonical sc ON sc.server_id = c.server_id
+            WHERE c.timestamp > NOW() - interval '1 hour' * :hoursBack
+              AND c.players >= 0 AND c.players < :maxRealisticPlayerCount
+            ORDER BY sc.canonical_id, c.timestamp DESC
         )
         SELECT
-            s.id, sg.name, s.server_group_id AS "groupId",
-            s.host, s.port, s.country_code,
-            s.updated_at AS "lastUpdated", s.last_seen,
+            si.id, si.display_ref AS "displayRef",
+            sg.name, si.server_group_id AS "groupId",
+            si.host, si.port, si.country_code,
+            si.updated_at AS "lastUpdated", si.last_seen,
             stats.online, stats.timestamp, stats.players,
             stats.max_players AS "playerLimit",
             stats.wave, stats.version, stats.version_type AS "versionType", stats.ping,
             motds."serverName", motds.description,
             maps."modeName", maps."mapName", maps.mode
-        FROM servers s
-        LEFT JOIN latest_stats stats ON s.id = stats.server_id
-        LEFT JOIN latest_motds motds ON s.id = motds.server_id
-        LEFT JOIN latest_maps  maps  ON s.id = maps.server_id
-        LEFT JOIN server_groups sg   ON s.server_group_id = sg.id
-        ORDER BY sg.name, s.host, s.port
+        FROM server_identity si
+        LEFT JOIN latest_stats stats ON si.id = stats.canonical_id
+        LEFT JOIN latest_motds motds ON si.id = motds.canonical_id
+        LEFT JOIN latest_maps  maps  ON si.id = maps.canonical_id
+        LEFT JOIN server_groups sg   ON si.server_group_id = sg.id
+        WHERE si.role = 'game'
+          AND NOT si.retired
+        ORDER BY sg.name, si.host, si.port
     `, { replacements: { hoursBack, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT }, type: QueryTypes.SELECT });
 
     return rows.map((row): ServerElement => {
         const element: ServerElement = {
             id:          row.id,
+            displayRef:  row.displayRef,
             name:        row.name,
             groupId:     row.groupId,
             host:        row.host,
@@ -129,10 +168,22 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
     });
 }
 
-/** Full detail for a single server — delegates to the get_server_details() DB function. */
+/**
+ * Full detail for a single server identity — delegates to the
+ * get_server_details() DB function, which takes a canonical id and is
+ * family-aware (migration 30).  An alias id returns nothing, which the route
+ * turns into a 404: aliases are not addressable.
+ *
+ * display_ref is not in the function's column list and that list is fixed, so
+ * it is joined on here rather than fetched in a second round trip.  The join is
+ * also what makes an unknown id come back empty even if the function itself
+ * ever stopped being strict about it.
+ */
 export async function getServer(serverId: number): Promise<(ServerElement & ServerDetails) | undefined> {
     const [result]: any = await sequelize.query(
-        `SELECT * FROM get_server_details($1)`,
+        `SELECT d.*, si.display_ref AS detail_display_ref
+         FROM get_server_details($1) d
+         JOIN server_identity si ON si.id = $1`,
         { bind: [serverId], type: 'SELECT' as any }
     );
 
@@ -163,6 +214,7 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
 
     const detail: ServerElement & ServerDetails = {
         id:          result.detail_id,
+        displayRef:  result.detail_display_ref,
         name:        result.detail_name,
         host:        result.detail_host,
         port:        result.detail_port,
@@ -209,6 +261,12 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
 }
 
 // ─── Map / MOTD history reads ─────────────────────────────────────────────────
+//
+// Both take a canonical id and return the union of the family's rows, ordered
+// by valid_from across the whole union rather than per stream, so a migration
+// does not truncate the timeline at the switchover or interleave it wrongly.
+// The COUNT is taken over the same set the page is drawn from — server_family()
+// in both halves — so the pager cannot promise pages that do not exist.
 
 export async function getMapHistory(
     serverId: number,
@@ -219,7 +277,8 @@ export async function getMapHistory(
 
     const [[{ count }], data]: any = await Promise.all([
         sequelize.query(
-            `SELECT COUNT(*) AS count FROM server_maps_history WHERE server_id = :serverId`,
+            `SELECT COUNT(*) AS count FROM server_maps_history
+             WHERE server_id IN (SELECT server_family(:serverId))`,
             { replacements: { serverId }, type: QueryTypes.SELECT }
         ),
         sequelize.query(
@@ -227,7 +286,7 @@ export async function getMapHistory(
                     r.map_name, r.game_mode, r.mode_name
              FROM server_maps_history h
              JOIN server_maps_registry r ON h.map_id = r.id
-             WHERE h.server_id = :serverId
+             WHERE h.server_id IN (SELECT server_family(:serverId))
              ORDER BY h.valid_from DESC
              LIMIT :perPage OFFSET :offset`,
             { replacements: { serverId, perPage, offset }, type: QueryTypes.SELECT }
@@ -246,7 +305,8 @@ export async function getMotdHistory(
 
     const [[{ count }], data]: any = await Promise.all([
         sequelize.query(
-            `SELECT COUNT(*) AS count FROM server_motds_history WHERE server_id = :serverId`,
+            `SELECT COUNT(*) AS count FROM server_motds_history
+             WHERE server_id IN (SELECT server_family(:serverId))`,
             { replacements: { serverId }, type: QueryTypes.SELECT }
         ),
         sequelize.query(
@@ -254,7 +314,7 @@ export async function getMotdHistory(
                     r.server_name, r.description
              FROM server_motds_history h
              JOIN server_motds_registry r ON h.motd_id = r.id
-             WHERE h.server_id = :serverId
+             WHERE h.server_id IN (SELECT server_family(:serverId))
              ORDER BY h.valid_from DESC
              LIMIT :perPage OFFSET :offset`,
             { replacements: { serverId, perPage, offset }, type: QueryTypes.SELECT }
@@ -270,44 +330,71 @@ export async function getMotdHistory(
  * Returns aggregate stats for a network in a single query.
  * Previously this was 4 separate round-trips; the bug where activeServers
  * equalled totalServers is also fixed here.
+ *
+ * Everything is counted per identity (migration 29): a server that changed
+ * address is one member of the network, not two, and the id handed back for the
+ * top server is its canonical id so the link on the page resolves.  Hubs and
+ * test servers are excluded — a hub in a network would be reported as its
+ * busiest server while only mirroring the others.
  */
 export async function getNetworkDetails(groupId: number): Promise<NetworkDetails | undefined> {
     const [row]: any = await sequelize.query(`
-        WITH group_servers AS (
-            SELECT id FROM servers WHERE server_group_id = :groupId
+        WITH group_identities AS (
+            -- One row per identity by construction, so COUNT(*) over it is the
+            -- COUNT(DISTINCT canonical_id) the totals want.
+            SELECT si.id, si.host, si.port
+            FROM server_identity si
+            WHERE si.server_group_id = :groupId
+              AND si.role = 'game'
+        ),
+        group_streams AS (
+            -- Back down to raw stream ids: server_current and server_stats_1h
+            -- are keyed by stream, and a retired alias still holds the history
+            -- it collected before the move.
+            SELECT sc.server_id, sc.canonical_id
+            FROM server_canonical sc
+            JOIN group_identities gi ON gi.id = sc.canonical_id
         ),
         latest_stats AS (
-            -- server_current holds exactly one row per server; the hour bound
-            -- keeps long-dead servers from counting towards active_servers.
-            SELECT server_id, players, timestamp
-            FROM server_current
-            WHERE server_id IN (SELECT id FROM group_servers)
-              AND timestamp > NOW() - INTERVAL '1 hour'
+            -- server_current holds exactly one row per stream; the hour bound
+            -- keeps long-dead servers from counting towards active_servers, and
+            -- the DISTINCT ON keeps an identity that is mid-migration from
+            -- counting as two active servers.
+            SELECT DISTINCT ON (gs.canonical_id)
+                   gs.canonical_id, c.players, c.timestamp
+            FROM server_current c
+            JOIN group_streams gs ON gs.server_id = c.server_id
+            WHERE c.timestamp > NOW() - INTERVAL '1 hour'
+            ORDER BY gs.canonical_id, c.timestamp DESC
         ),
         peaks AS (
             -- Hourly continuous aggregate: max() is decomposable, so
             -- max(max_players) is the same number the raw scan produced, without
             -- walking (and decompressing) every chunk back to day one.
+            --
+            -- The family collapse and the network peak are the same operator
+            -- here, so they fold into one MAX: the per-identity step the chart
+            -- queries need before they SUM would not change any of these three
+            -- numbers.
             SELECT
-                MAX(max_players) FILTER (WHERE bucket > NOW() - interval '1 day')  AS daily_peak,
-                MAX(max_players) FILTER (WHERE bucket > NOW() - interval '7 days') AS weekly_peak,
-                MAX(max_players)                                                   AS all_time_peak
-            FROM server_stats_1h
-            WHERE server_id IN (SELECT id FROM group_servers)
+                MAX(h.max_players) FILTER (WHERE h.bucket > NOW() - interval '1 day')  AS daily_peak,
+                MAX(h.max_players) FILTER (WHERE h.bucket > NOW() - interval '7 days') AS weekly_peak,
+                MAX(h.max_players)                                                     AS all_time_peak
+            FROM server_stats_1h h
+            JOIN group_streams gs ON gs.server_id = h.server_id
         ),
         top_server AS (
-            SELECT s.id, s.host, s.port, ls.players, sg2.name AS server_name
-            FROM servers s
-            JOIN server_groups sg2 ON s.server_group_id = sg2.id
-            LEFT JOIN latest_stats ls ON s.id = ls.server_id
-            WHERE s.server_group_id = :groupId
+            SELECT gi.id, gi.host, gi.port, ls.players, sg2.name AS server_name
+            FROM group_identities gi
+            JOIN server_groups sg2 ON sg2.id = :groupId
+            LEFT JOIN latest_stats ls ON ls.canonical_id = gi.id
             ORDER BY ls.players DESC NULLS LAST
             LIMIT 1
         )
         SELECT
             sg.id,
             sg.name,
-            (SELECT COUNT(*)                                   FROM group_servers) AS total_servers,
+            (SELECT COUNT(*)                                   FROM group_identities) AS total_servers,
             (SELECT COUNT(*) FROM latest_stats WHERE players > 0)                 AS active_servers,
             (SELECT daily_peak    FROM peaks)                                      AS daily_peak,
             (SELECT weekly_peak   FROM peaks)                                      AS weekly_peak,

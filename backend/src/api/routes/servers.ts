@@ -3,9 +3,10 @@ import { createLogger } from '../../logger.js';
 import * as serverRepository from '../../repositories/serverRepository.js';
 import { getMapHistory, getMotdHistory } from '../../repositories/serverRepository.js';
 import { getAggregatedHistory } from '../../repositories/StatsRepository.js';
+import { getServerEvents } from '../../repositories/ServerEventsRepository.js';
 import { ApiPacker } from '../../../../common/Packer.js';
 import { IdParam, StrictHistoryQuery, StrictNoQuery, StrictPaginationQuery } from '../lib/schemas.js';
-import { parseTimestamp, resolveRange } from '../lib/timeRange.js';
+import { parseTimestamp, resolveRange, resolveWindow } from '../lib/timeRange.js';
 import { withCache } from '../middleware/cache.js';
 const logger = createLogger('Api');
 
@@ -75,6 +76,24 @@ export const serverRoutes = new Elysia({ prefix: '/api' })
     query: StrictHistoryQuery,
     ...withCache({
       ttlMs: 300_000, // 5 minutes TTL
+      getKey: ({ path, params, query }) => `${path}:${params.id}:${query.range || ''}:${query.startDate || ''}:${query.endDate || ''}`,
+    }),
+  })
+
+  // Chart annotations for the identity, plus the global ones. Deliberately the
+  // same query handling as /history above: the two are drawn on one chart, so
+  // they have to be resolved from the same window.
+  .get('/servers/:id/events', async ({ params, query }) => {
+    const startDate = parseTimestamp(query.startDate);
+    const endDate = parseTimestamp(query.endDate);
+    const { startMs, endMs } = resolveWindow(query.range, startDate, endDate);
+
+    return ApiPacker.pack(await getServerEvents(params.id, startMs, endMs));
+  }, {
+    params: IdParam,
+    query: StrictHistoryQuery,
+    ...withCache({
+      ttlMs: 300_000, // 5 minutes TTL, matching the history it annotates
       getKey: ({ path, params, query }) => `${path}:${params.id}:${query.range || ''}:${query.startDate || ''}:${query.endDate || ''}`,
     }),
   });

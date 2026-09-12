@@ -29,3 +29,22 @@ export function resolveRange(range?: string, startDate?: number, endDate?: numbe
   const bucketMinutes = Math.max(1, Math.round((hoursBack * 60) / apiConfig.GRAPH_MAX_POINTS));
   return { hoursBack, bucketMinutes };
 }
+
+/**
+ * The same window as an absolute [start, end] pair in ms epoch.
+ *
+ * The history queries express their range in SQL (NOW() minus hoursBack, or the
+ * explicit timestamps), which the annotation endpoints cannot reuse — they need
+ * the bounds as values. Resolved from the identical inputs so the annotations
+ * line up with the window the chart actually drew; the rolling case is off by at
+ * most the bucket the chart's range is snapped to.
+ */
+export function resolveWindow(range?: string, startDate?: number, endDate?: number): { startMs: number; endMs: number } {
+  if (startDate != null && endDate != null) {
+    return { startMs: startDate, endMs: endDate };
+  }
+
+  const { hoursBack } = resolveRange(range);
+  const endMs = Date.now();
+  return { startMs: endMs - hoursBack * 60 * 60 * 1000, endMs };
+}

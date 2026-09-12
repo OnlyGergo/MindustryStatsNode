@@ -1,9 +1,10 @@
 import { Elysia } from 'elysia';
 import { getGlobalPlayerHistory } from '../../repositories/StatsRepository.js';
 import { getGlobalGamemodeHistory } from '../../repositories/GlobalStatsRepository.js';
+import { getGlobalEvents } from '../../repositories/ServerEventsRepository.js';
 import { ApiPacker } from '../../../../common/Packer.js';
 import { StrictHistoryQuery, StrictRangeQuery } from '../lib/schemas.js';
-import { parseTimestamp, resolveRange } from '../lib/timeRange.js';
+import { parseTimestamp, resolveRange, resolveWindow } from '../lib/timeRange.js';
 import { withCache } from '../middleware/cache.js';
 
 export const globalRoutes = new Elysia({ prefix: '/api/global' })
@@ -31,6 +32,22 @@ export const globalRoutes = new Elysia({ prefix: '/api/global' })
     query: StrictHistoryQuery,
     ...withCache({
       ttlMs: 600_000, // 10 minutes TTL
+      getKey: ({ path, query }) => `${path}:${query.range || ''}:${query.startDate || ''}:${query.endDate || ''}`,
+    }),
+  })
+
+  // Annotations for the charts that have no server of their own: the events with
+  // no server_id, resolved over the same window /history uses.
+  .get('/events', async ({ query }) => {
+    const startDate = parseTimestamp(query.startDate);
+    const endDate = parseTimestamp(query.endDate);
+    const { startMs, endMs } = resolveWindow(query.range, startDate, endDate);
+
+    return ApiPacker.pack(await getGlobalEvents(startMs, endMs));
+  }, {
+    query: StrictHistoryQuery,
+    ...withCache({
+      ttlMs: 300_000, // 5 minutes TTL, matching the history it annotates
       getKey: ({ path, query }) => `${path}:${query.range || ''}:${query.startDate || ''}:${query.endDate || ''}`,
     }),
   });

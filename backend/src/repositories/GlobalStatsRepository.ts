@@ -6,6 +6,7 @@ import {
     pickAggregateSource,
     playerFilterSql,
 } from './aggregateTiers.js';
+import { gameIdentitiesOnly } from './identitySql.js';
 
 interface RawGamemodeHistoryRow {
     timestamp: number;
@@ -67,6 +68,12 @@ function rangeBounds(startDate?: number, endDate?: number): { rangeStart: string
  * the raw (game_mode, mode_name) pair throughout, which both widened every hash
  * key with a text column and split one gamemode into several series whenever a
  * server dressed its mode name in different colour codes.
+ *
+ * Between the per-stream peak and the sum sits the identity collapse from
+ * migration 29: MAX across a family, never SUM, because a migrating server's
+ * old and new addresses answer at the same time and report the same players.
+ * Hubs and test servers are dropped there too -- a hub mirrors the servers it
+ * lists, so leaving it in would count those players twice in the mode total.
  */
 function buildGamemodeHistoryQuery(
     hoursBack: number,
@@ -99,29 +106,39 @@ function buildGamemodeHistoryQuery(
         FROM (
             SELECT time_bucket_gapfill(
                            :bucketSeconds * INTERVAL '1 second',
-                           ps.bucket,
+                           cs.bucket,
                            ${rangeStart},
                            ${rangeEnd}
                    ) AS gf_bucket,
-                   ps.gamemode_id,
-                   SUM(ps.players) AS players
+                   cs.gamemode_id,
+                   SUM(cs.players) AS players
             FROM (
-                -- Peak per server first, so summing across servers cannot
-                -- double count a server that changed map mid-bucket.
-                SELECT time_bucket(:bucketSeconds * INTERVAL '1 second', src.${time}) AS bucket,
-                       src.server_id,
-                       smr.gamemode_id,
-                       MAX(src.${source.playersColumn}) AS players
-                FROM ${source.mapTable} src
-                         JOIN server_maps_registry smr ON src.map_registry_id = smr.id
-                WHERE ${conditions.join('\n                  AND ')}
-                GROUP BY 1, 2, 3
-            ) ps
-            WHERE ps.bucket >= ${rangeStart}
-              AND ps.bucket < ${rangeEnd}
+                -- Collapse each identity's aliases before anything is summed.
+                SELECT ps.bucket,
+                       sc.canonical_id,
+                       ps.gamemode_id,
+                       MAX(ps.players) AS players
+                FROM (
+                    -- Peak per raw stream first, so summing across servers cannot
+                    -- double count a server that changed map mid-bucket.
+                    SELECT time_bucket(:bucketSeconds * INTERVAL '1 second', src.${time}) AS bucket,
+                           src.server_id,
+                           smr.gamemode_id,
+                           MAX(src.${source.playersColumn}) AS players
+                    FROM ${source.mapTable} src
+                             JOIN server_maps_registry smr ON src.map_registry_id = smr.id
+                    WHERE ${conditions.join('\n                      AND ')}
+                    GROUP BY 1, 2, 3
+                ) ps
+                JOIN server_canonical sc ON sc.server_id = ps.server_id
+                WHERE ${gameIdentitiesOnly('sc.canonical_id')}
+                GROUP BY ps.bucket, sc.canonical_id, ps.gamemode_id
+            ) cs
+            WHERE cs.bucket >= ${rangeStart}
+              AND cs.bucket < ${rangeEnd}
             -- Aliased away from the subquery's own bucket column: an
             -- unqualified GROUP BY name binds to the input column.
-            GROUP BY gf_bucket, ps.gamemode_id
+            GROUP BY gf_bucket, cs.gamemode_id
         ) g
         -- Name resolution last: one hash join against a table small enough to
         -- stay permanently resident, over the already-reduced result.  Merging
@@ -152,6 +169,12 @@ function buildGamemodeHistoryQuery(
  * see the gamemode filter below.  Peaking per (bucket, server) after that widened
  * filter also means a server that flipped between two variants of the same mode
  * inside one bucket counts once, exactly as it does in the history chart.
+ *
+ * One series per *identity*, so a server that changed address is one line on the
+ * chart rather than two half-lines that cross over at the switchover.  Unlike
+ * the totals queries this one has to gapfill per series -- that is the shape of
+ * its output -- so the collapse happens before the gapfill and the gapfill runs
+ * over the collapsed rows.
  */
 function buildServerShareQuery(
     modeId: number,
@@ -189,36 +212,63 @@ function buildServerShareQuery(
     ].filter((c): c is string => c != null);
 
     const query = `
-        WITH bucketed_stats AS (
-            SELECT time_bucket_gapfill(
-                           :bucketSeconds * INTERVAL '1 second',
-                           src.${time},
-                           ${rangeStart},
-                           ${rangeEnd}
-                   ) AS gf_bucket,
+        WITH per_stream AS (
+            -- Peak per raw stream per bucket; plain time_bucket, because the
+            -- gapfill cannot run until the aliases have been folded together.
+            SELECT time_bucket(:bucketSeconds * INTERVAL '1 second', src.${time}) AS bucket,
                    src.server_id,
-                   MAX(src.${source.playersColumn}) AS players -- gaps stay NULL
+                   MAX(src.${source.playersColumn}) AS players
             FROM ${source.mapTable} src
                      JOIN server_maps_registry smr ON src.map_registry_id = smr.id
             WHERE ${conditions.join('\n              AND ')}
-            -- Aliased away from the source's own bucket column: an
+            GROUP BY 1, 2
+        ),
+        collapsed AS (
+            -- MAX across the family, never SUM: while a server migrates, both
+            -- addresses answer and both report the same players.
+            SELECT ps.bucket,
+                   sc.canonical_id,
+                   MAX(ps.players) AS players
+            FROM per_stream ps
+                     JOIN server_canonical sc ON sc.server_id = ps.server_id
+            WHERE ${gameIdentitiesOnly('sc.canonical_id')}
+            GROUP BY ps.bucket, sc.canonical_id
+        ),
+        bucketed_stats AS (
+            SELECT time_bucket_gapfill(
+                           :bucketSeconds * INTERVAL '1 second',
+                           cs.bucket,
+                           ${rangeStart},
+                           ${rangeEnd}
+                   ) AS gf_bucket,
+                   cs.canonical_id,
+                   -- One row per (bucket, identity) already, so this MAX only
+                   -- exists to make the statement an aggregate -- which is what
+                   -- gapfill requires.  Gaps stay NULL.
+                   MAX(cs.players) AS players
+            FROM collapsed cs
+            WHERE cs.bucket >= ${rangeStart}
+              AND cs.bucket < ${rangeEnd}
+            -- Aliased away from the subquery's own bucket column: an
             -- unqualified GROUP BY name binds to the input column, which would
             -- silently group at the source's resolution instead of the
             -- requested one.
-            GROUP BY gf_bucket, src.server_id
+            GROUP BY gf_bucket, cs.canonical_id
         )
         SELECT
             extract(epoch FROM bs.gf_bucket) * 1000 AS timestamp,
-            bs.server_id,
-            s.server_group_id,
+            bs.canonical_id AS server_id,
+            si.server_group_id,
             '' AS server_name,
             sg.name AS group_name,
             bs.players
         FROM bucketed_stats bs
-                 -- Join the metadata AFTER the heavy lifting is done
-                 JOIN servers s ON bs.server_id = s.id
-                 JOIN server_groups sg ON s.server_group_id = sg.id
-        ORDER BY bs.gf_bucket, bs.server_id;
+                 -- Join the metadata AFTER the heavy lifting is done, and join
+                 -- it on the identity: the group shown is the one the address
+                 -- the server answers on today belongs to.
+                 JOIN server_identity si ON si.id = bs.canonical_id
+                 JOIN server_groups sg ON si.server_group_id = sg.id
+        ORDER BY bs.gf_bucket, bs.canonical_id;
     `;
 
     const replacements = {
@@ -277,13 +327,19 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
     // (only the winning variant's) and handed the client an ID that stood for a
     // single registry row rather than the mode as a whole.  MIN(id) is a stable
     // representative of the family; getServerShareByGamemode expands it again.
+    //
+    // Counted over canonical ids, not raw server ids: a server that has changed
+    // address has a map history row under each of its streams and is still one
+    // server (migration 29).
     const query = `
       SELECT MIN(gr.id) AS id,
         gr.clean_name,
-        COUNT(DISTINCT smh.server_id) AS server_count
+        COUNT(DISTINCT sc.canonical_id) AS server_count
       FROM gamemode_registry gr
         JOIN server_maps_registry smr ON smr.gamemode_id = gr.id
         JOIN server_maps_history smh ON smh.map_id = smr.id
+        JOIN server_canonical sc ON sc.server_id = smh.server_id
+      WHERE ${gameIdentitiesOnly('sc.canonical_id')}
       GROUP BY gr.clean_name
       ORDER BY gr.clean_name;
     `;
