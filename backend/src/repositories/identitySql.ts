@@ -29,8 +29,13 @@
  * Evaluated over the *whole family*: an identity is dropped when any of its
  * streams is non-game.  Role describes the machine and not the address it
  * happens to answer on, and a merge only ever stitches together streams of the
- * same machine, so this agrees with `server_identity.role` (which reports the
- * current stream's) while staying cheap enough to sit inside a chart query.
+ * same machine, so the two readings agree for any family a merge produced.
+ *
+ * Used by the listings too, rather than the cheaper `server_identity.role`
+ * those could afford.  The two only diverge for a family with mixed roles —
+ * which should not exist — but if one ever does, the divergence is the worst
+ * possible shape: a server visible in the list and missing from the totals it
+ * is supposed to contribute to.  One rule, applied everywhere, cannot drift.
  */
 export const NON_GAME_CANONICAL_IDS = `
     SELECT role_family.canonical_id

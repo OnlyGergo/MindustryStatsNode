@@ -24,7 +24,7 @@ The HTTP layer lives in `backend/src/api` instead, and is not a service:
 - `routes/*.ts` - one chained Elysia instance per group.
 - `middleware/cache.ts`, `middleware/rateLimit.ts` - spread into a route's hook options (`...withCache({...})`). Do NOT pass them as `use: [...]`, Elysia 1.4 silently ignores beforeHandle/afterHandle supplied that way.
 
-The live server snapshot shared between the processor and the API is `backend/src/state/serversList.ts`.
+There is no longer a live server snapshot shared between the processor and the API — `backend/src/state/serversList.ts` is gone and the API reads server state from the database per request (see the note at the top of `collector/internal/processor/processor.go`).
 
 The server related services, pass data between eachother:
 ServerCollectorService does collections daily, but every few minutes it requeues all servers, ServerDiscoveryService pings them, and places responses into a queue for ServerProcessorService to process and insert into database in efficient batches.

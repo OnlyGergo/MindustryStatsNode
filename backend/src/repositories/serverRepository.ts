@@ -14,6 +14,7 @@ import {
     type ServerMotdData,
 } from '../../../common/models/serverData.js';
 import { QueryTypes } from 'sequelize';
+import { gameIdentitiesOnly } from './identitySql.js';
 import { type NetworkDetails } from '../../../common/models/RepositoryTypes.js';
 import {CURRENT_DATA_FRESH_THRESHOLD, MAX_REALISTIC_PLAYERCOUNT} from "../const.js";
 
@@ -36,7 +37,7 @@ export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds
         sequelize.query(
             `SELECT si.id
              FROM server_identity si
-             WHERE si.role = 'game'
+             WHERE ${gameIdentitiesOnly('si.id')}
                AND NOT si.retired
              ORDER BY si.id`,
             { type: QueryTypes.SELECT }
@@ -44,7 +45,7 @@ export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds
         sequelize.query(
             `SELECT DISTINCT si.server_group_id AS id
              FROM server_identity si
-             WHERE si.role = 'game'
+             WHERE ${gameIdentitiesOnly('si.id')}
                AND NOT si.retired
              ORDER BY id`,
             { type: QueryTypes.SELECT }
@@ -125,7 +126,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
         LEFT JOIN latest_motds motds ON si.id = motds.canonical_id
         LEFT JOIN latest_maps  maps  ON si.id = maps.canonical_id
         LEFT JOIN server_groups sg   ON si.server_group_id = sg.id
-        WHERE si.role = 'game'
+        WHERE ${gameIdentitiesOnly('si.id')}
           AND NOT si.retired
         ORDER BY sg.name, si.host, si.port
     `, { replacements: { hoursBack, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT }, type: QueryTypes.SELECT });
@@ -345,7 +346,7 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             SELECT si.id, si.host, si.port
             FROM server_identity si
             WHERE si.server_group_id = :groupId
-              AND si.role = 'game'
+              AND ${gameIdentitiesOnly('si.id')}
         ),
         group_streams AS (
             -- Back down to raw stream ids: server_current and server_stats_1h
