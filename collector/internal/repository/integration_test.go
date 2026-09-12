@@ -42,10 +42,14 @@ func newTestRepo(t *testing.T) (*repository.Repository, *pgxpool.Pool) {
 
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
+	// server_canonical is seeded by a trigger and server_events references
+	// servers, so both would be swept up by the CASCADE anyway; naming them keeps
+	// their sequences restarted with everything else.
 	_, err := pool.Exec(context.Background(), `
 		TRUNCATE server_stats, server_current, server_maps_history, server_motds_history,
 				 server_source_list, server_maps_registry, server_motds_registry,
-				 gamemode_registry, servers, server_groups, serverlists
+				 gamemode_registry, server_events, server_canonical, servers,
+				 server_groups, serverlists
 		RESTART IDENTITY CASCADE
 	`)
 	if err != nil {
@@ -62,9 +66,20 @@ func scalar[T any](t *testing.T, pool *pgxpool.Pool, sql string, args ...any) T 
 	return v
 }
 
+// serverID is the *live* stream on an address: a retired stream keeps its
+// address, so the lookup is only single-valued among the live ones.
 func serverID(t *testing.T, pool *pgxpool.Pool, host string, port int) int {
 	t.Helper()
-	return scalar[int](t, pool, `SELECT id FROM servers WHERE host = $1 AND port = $2`, host, port)
+	return scalar[int](t, pool, `
+		SELECT id FROM servers WHERE host = $1 AND port = $2 AND retired_at IS NULL
+	`, host, port)
+}
+
+func retire(t *testing.T, pool *pgxpool.Pool, id int) {
+	t.Helper()
+	if _, err := pool.Exec(context.Background(), `UPDATE servers SET retired_at = NOW() WHERE id = $1`, id); err != nil {
+		t.Fatalf("retire server %d: %v", id, err)
+	}
 }
 
 func seedServers(t *testing.T, repo *repository.Repository, servers ...repository.ServerInput) {
@@ -111,6 +126,38 @@ func TestBatchUpsertServers(t *testing.T) {
 	}
 }
 
+func TestBatchUpsertServersStartsANewStreamForARetiredAddress(t *testing.T) {
+	repo, pool := newTestRepo(t)
+	ctx := context.Background()
+
+	seedServers(t, repo, repository.ServerInput{Name: "Network A", Host: "a.example.com", Port: 6567})
+	retired := serverID(t, pool, "a.example.com", 6567)
+	retire(t, pool, retired)
+
+	// The address is free again, so discovering it is a *new* server on a
+	// recycled address, not the old one coming back.
+	if err := repo.BatchUpsertServers(ctx, []repository.ServerInput{
+		{Name: "Network A", Host: "a.example.com", Port: 6567},
+	}); err != nil {
+		t.Fatalf("BatchUpsertServers (rediscovered): %v", err)
+	}
+
+	if got := scalar[int64](t, pool, `SELECT count(*) FROM servers WHERE host = 'a.example.com'`); got != 2 {
+		t.Errorf("servers on the address = %d, want 2 (one retired, one live)", got)
+	}
+	live := serverID(t, pool, "a.example.com", 6567)
+	if live == retired {
+		t.Error("the upsert resurrected the retired stream instead of opening a new one")
+	}
+	if scalar[*time.Time](t, pool, `SELECT retired_at FROM servers WHERE id = $1`, retired) == nil {
+		t.Error("the retired stream was un-retired")
+	}
+	// The trigger owns server_canonical; the collector must not write it.
+	if got := scalar[int](t, pool, `SELECT canonical_id FROM server_canonical WHERE server_id = $1`, live); got != live {
+		t.Errorf("canonical_id = %d, want the new stream (%d) to point at itself", got, live)
+	}
+}
+
 func TestRefreshServerSourceList(t *testing.T) {
 	repo, pool := newTestRepo(t)
 	ctx := context.Background()
@@ -154,6 +201,34 @@ func TestRefreshServerSourceList(t *testing.T) {
 	}
 	if scalar[*time.Time](t, pool, `SELECT last_seen FROM server_source_list`) == nil {
 		t.Error("last_seen was not written")
+	}
+}
+
+func TestRefreshServerSourceListResolvesTheLiveStream(t *testing.T) {
+	repo, pool := newTestRepo(t)
+	ctx := context.Background()
+
+	listID := scalar[int](t, pool, `
+		INSERT INTO serverlists (name, url, display_name)
+		VALUES ('be', 'https://example.com/servers.json', 'BE') RETURNING id
+	`)
+
+	seedServers(t, repo, repository.ServerInput{Name: "N", Host: "a.example.com", Port: 6567})
+	retire(t, pool, serverID(t, pool, "a.example.com", 6567))
+	seedServers(t, repo, repository.ServerInput{Name: "N", Host: "a.example.com", Port: 6567})
+	live := serverID(t, pool, "a.example.com", 6567)
+
+	if err := repo.RefreshServerSourceList(ctx, []repository.SourceListEntry{
+		{Host: "a.example.com", Port: 6567, ServerListID: listID, DisplayName: "A"},
+	}); err != nil {
+		t.Fatalf("RefreshServerSourceList: %v", err)
+	}
+
+	if got := scalar[int64](t, pool, `SELECT count(*) FROM server_source_list`); got != 1 {
+		t.Fatalf("server_source_list = %d rows, want 1", got)
+	}
+	if got := scalar[int](t, pool, `SELECT server_id FROM server_source_list`); got != live {
+		t.Errorf("membership points at %d, want the live stream %d", got, live)
 	}
 }
 
@@ -395,6 +470,101 @@ func TestBulkSaveServerStatsDeduplicatesWithinOneStatement(t *testing.T) {
 	}
 }
 
+func TestBulkSaveServerStatsLogsVersionChanges(t *testing.T) {
+	repo, pool := newTestRepo(t)
+	ctx := context.Background()
+
+	seedServers(t, repo, repository.ServerInput{Name: "N", Host: "a.example.com", Port: 6567})
+	id := serverID(t, pool, "a.example.com", 6567)
+
+	at := time.UnixMilli(1_700_000_000_000)
+	official := "official"
+	v146, v147, v140 := int32(146), int32(147), int32(140)
+
+	sample := func(ts time.Time, version *int32) repository.StatRow {
+		return repository.StatRow{
+			ServerID: id, Timestamp: ts, Version: version, VersionType: &official, Online: true,
+		}
+	}
+	events := func() int64 { return scalar[int64](t, pool, `SELECT count(*) FROM server_events`) }
+
+	if err := repo.BulkSaveServerStats(ctx, []repository.StatRow{sample(at, &v146)}); err != nil {
+		t.Fatalf("BulkSaveServerStats: %v", err)
+	}
+	if got := events(); got != 0 {
+		t.Errorf("server_events = %d rows, want 0 -- the first version seen is not a bump", got)
+	}
+
+	changed := at.Add(time.Minute)
+	if err := repo.BulkSaveServerStats(ctx, []repository.StatRow{sample(changed, &v147)}); err != nil {
+		t.Fatalf("BulkSaveServerStats (bumped): %v", err)
+	}
+	if got := events(); got != 1 {
+		t.Fatalf("server_events = %d rows, want 1", got)
+	}
+	if got := scalar[string](t, pool, `SELECT kind FROM server_events`); got != "version_change" {
+		t.Errorf("kind = %q", got)
+	}
+	if got := scalar[int](t, pool, `SELECT server_id FROM server_events`); got != id {
+		t.Errorf("server_id = %d, want %d", got, id)
+	}
+	if got := scalar[time.Time](t, pool, `SELECT occurred_at FROM server_events`); !got.Equal(changed) {
+		t.Errorf("occurred_at = %s, want the sample's timestamp %s", got, changed)
+	}
+	if got := scalar[int](t, pool, `SELECT (detail->>'from')::int FROM server_events`); got != 146 {
+		t.Errorf("detail.from = %d, want 146", got)
+	}
+	if got := scalar[int](t, pool, `SELECT (detail->>'to')::int FROM server_events`); got != 147 {
+		t.Errorf("detail.to = %d, want 147", got)
+	}
+	if got := scalar[string](t, pool, `SELECT detail->>'versionType' FROM server_events`); got != official {
+		t.Errorf("detail.versionType = %q, want %q", got, official)
+	}
+
+	// Same version again: nothing changed, nothing to annotate.
+	if err := repo.BulkSaveServerStats(ctx, []repository.StatRow{sample(at.Add(2*time.Minute), &v147)}); err != nil {
+		t.Fatalf("BulkSaveServerStats (unchanged): %v", err)
+	}
+	if got := events(); got != 1 {
+		t.Errorf("server_events = %d rows, want 1 -- an unchanged version must not annotate", got)
+	}
+
+	// An out-of-order batch does not move server_current, so it has not observed
+	// a change either -- annotating it would draw a downgrade that never happened.
+	if err := repo.BulkSaveServerStats(ctx, []repository.StatRow{sample(at.Add(-time.Minute), &v140)}); err != nil {
+		t.Fatalf("BulkSaveServerStats (out of order): %v", err)
+	}
+	if got := events(); got != 1 {
+		t.Errorf("server_events = %d rows, want 1 -- a late sample must not annotate", got)
+	}
+	if got := scalar[int32](t, pool, `SELECT version FROM server_current WHERE server_id = $1`, id); got != 147 {
+		t.Errorf("server_current.version = %d, want 147", got)
+	}
+}
+
+func TestBulkSaveServerStatsDoesNotLogAFirstVersion(t *testing.T) {
+	repo, pool := newTestRepo(t)
+	ctx := context.Background()
+
+	seedServers(t, repo, repository.ServerInput{Name: "N", Host: "a.example.com", Port: 6567})
+	id := serverID(t, pool, "a.example.com", 6567)
+
+	at := time.UnixMilli(1_700_000_000_000)
+	version := int32(146)
+
+	// An offline poll reads no version, so server_current holds NULL; the first
+	// version to arrive after it is an observation, not an upgrade.
+	if err := repo.BulkSaveServerStats(ctx, []repository.StatRow{
+		{ServerID: id, Timestamp: at, Online: false},
+		{ServerID: id, Timestamp: at.Add(time.Minute), Version: &version, Online: true},
+	}); err != nil {
+		t.Fatalf("BulkSaveServerStats: %v", err)
+	}
+	if got := scalar[int64](t, pool, `SELECT count(*) FROM server_events`); got != 0 {
+		t.Errorf("server_events = %d rows, want 0 -- a NULL previous version is not a change", got)
+	}
+}
+
 func TestBulkSaveServerStatsOfflineRow(t *testing.T) {
 	repo, pool := newTestRepo(t)
 	ctx := context.Background()
@@ -459,6 +629,41 @@ func TestBulkUpdateLastSeenAndCountryCodes(t *testing.T) {
 	}
 	if after := scalar[time.Time](t, pool, `SELECT updated_at FROM servers WHERE id = $1`, a); !after.Equal(before) {
 		t.Error("an unchanged country code should not touch the row")
+	}
+}
+
+func TestGetServersSkipsRetiredStreamsButKeepsOtherRoles(t *testing.T) {
+	repo, pool := newTestRepo(t)
+	ctx := context.Background()
+
+	seedServers(t, repo,
+		repository.ServerInput{Name: "N", Host: "a.example.com", Port: 6567},
+		repository.ServerInput{Name: "N", Host: "b.example.com", Port: 6567},
+		repository.ServerInput{Name: "N", Host: "c.example.com", Port: 6567},
+	)
+	a := serverID(t, pool, "a.example.com", 6567)
+	retire(t, pool, serverID(t, pool, "b.example.com", 6567))
+	hub := serverID(t, pool, "c.example.com", 6567)
+	if _, err := pool.Exec(ctx, `UPDATE servers SET role = 'hub' WHERE id = $1`, hub); err != nil {
+		t.Fatalf("set role: %v", err)
+	}
+
+	servers, err := repo.GetServers(ctx)
+	if err != nil {
+		t.Fatalf("GetServers: %v", err)
+	}
+
+	queued := make(map[int]bool, len(servers))
+	for _, s := range servers {
+		queued[s.ID] = true
+	}
+	if len(servers) != 2 || !queued[a] {
+		t.Fatalf("GetServers returned %+v, want the two live streams", servers)
+	}
+	// A hub is a real server that answers; it is the read side that keeps it out
+	// of listings and aggregates, not the poller.
+	if !queued[hub] {
+		t.Error("GetServers dropped a 'hub' server; every live role is still polled")
 	}
 }
 

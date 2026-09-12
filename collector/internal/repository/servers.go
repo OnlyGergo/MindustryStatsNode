@@ -39,16 +39,24 @@ type StatRow struct {
 	MapRegistryID  *int      `json:"map_registry_id"`
 }
 
-// GetServers returns every server with its group name, which is what the
+// GetServers returns every live server with its group name, which is what the
 // collector queues.
 //
 // serverRepository.ts read both tables and joined them in JS; one LEFT JOIN is
 // the same result set with one round trip.
+//
+// Retired streams are skipped: their address stays on the row so their history
+// remains attributable, but it may since have been claimed by a live stream, so
+// polling one would file the sample against the wrong server.  Role is
+// deliberately not filtered -- a hub or a test server still answers and is
+// still worth sampling; it is the read side that keeps those out of listings
+// and aggregate stats.
 func (r *Repository) GetServers(ctx context.Context) ([]ServerRecord, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT s.id, s.host, s.port, COALESCE(g.name, 'Unknown') AS name
 		FROM servers s
 		LEFT JOIN server_groups g ON g.id = s.server_group_id
+		WHERE s.retired_at IS NULL
 		ORDER BY s.id
 	`)
 	if err != nil {
@@ -137,7 +145,12 @@ func (r *Repository) BatchUpsertServers(ctx context.Context, servers []ServerInp
 			SELECT sd.host, sd.port, g.id
 			FROM server_data sd
 			LEFT JOIN server_groups g ON g.name = sd.name
-			ON CONFLICT (host, port) DO UPDATE
+			-- Inference against uq_server_address_active, not a (host, port)
+			-- constraint: only a live stream may be updated in place.  A retired
+			-- stream keeps its address, so rediscovering that address opens a new
+			-- stream rather than resurrecting the retired one and appending a
+			-- different server's history to it.
+			ON CONFLICT (host, port) WHERE retired_at IS NULL DO UPDATE
 				SET server_group_id = EXCLUDED.server_group_id,
 					updated_at      = NOW()
 		`, serversJSON)
@@ -297,7 +310,8 @@ type currentRow struct {
 	MapRegistryID  *int      `json:"map_registry_id"`
 }
 
-// upsertServerCurrent keeps server_current in step with the hypertable.
+// upsertServerCurrent keeps server_current in step with the hypertable, and
+// logs a version_change annotation when a server's version actually moves.
 //
 // server_current holds the newest sample per server so the read paths never
 // have to answer "latest value per server" with a DISTINCT ON over
@@ -305,6 +319,12 @@ type currentRow struct {
 // cannot resolve two conflicting rows from the same statement) and the update
 // is guarded on the timestamp, so an out-of-order batch cannot move a server
 // backwards in time.
+//
+// The annotation rides along in the same statement rather than in a second
+// round trip: server_current is the only record of the previous version, so a
+// separate read of it could disagree with the upsert that overwrote it.  A CTE
+// sees the statement's own snapshot, which is precisely the pre-upsert value
+// the comparison needs.
 func (r *Repository) upsertServerCurrent(ctx context.Context, q querier, batch []StatRow) error {
 	rows := make([]currentRow, 0, len(batch))
 	for _, stat := range batch {
@@ -340,31 +360,59 @@ func (r *Repository) upsertServerCurrent(ctx context.Context, q querier, batch [
 	}
 
 	_, err = r.exec(ctx, q, "upsertServerCurrent", `
-		INSERT INTO server_current (
-			server_id, timestamp, players, max_players, wave,
-			version, version_type, ping, online, motd_registry_id, map_registry_id
+		WITH incoming AS (
+			SELECT DISTINCT ON (x.server_id)
+				x.server_id, x.timestamp, x.players, x.max_players, x.wave,
+				x.version, x.version_type, x.ping, x.online, x.motd_registry_id, x.map_registry_id
+			FROM jsonb_to_recordset($1::jsonb) AS x(
+				server_id int, timestamp timestamptz, players int, max_players int, wave int,
+				version int, version_type varchar(50), ping int, online boolean,
+				motd_registry_id int, map_registry_id int
+			)
+			ORDER BY x.server_id, x.timestamp DESC
+		),
+		prev AS (
+			SELECT c.server_id, c.timestamp, c.version
+			FROM server_current c
+			WHERE c.server_id IN (SELECT i.server_id FROM incoming i)
+		),
+		upserted AS (
+			INSERT INTO server_current (
+				server_id, timestamp, players, max_players, wave,
+				version, version_type, ping, online, motd_registry_id, map_registry_id
+			)
+			SELECT
+				i.server_id, i.timestamp, i.players, i.max_players, i.wave,
+				i.version, i.version_type, i.ping, i.online, i.motd_registry_id, i.map_registry_id
+			FROM incoming i
+			ON CONFLICT (server_id) DO UPDATE
+				SET timestamp        = EXCLUDED.timestamp,
+					players          = EXCLUDED.players,
+					max_players      = EXCLUDED.max_players,
+					wave             = EXCLUDED.wave,
+					version          = EXCLUDED.version,
+					version_type     = EXCLUDED.version_type,
+					ping             = EXCLUDED.ping,
+					online           = EXCLUDED.online,
+					motd_registry_id = EXCLUDED.motd_registry_id,
+					map_registry_id  = EXCLUDED.map_registry_id
+				WHERE server_current.timestamp <= EXCLUDED.timestamp
 		)
-		SELECT DISTINCT ON (x.server_id)
-			x.server_id, x.timestamp, x.players, x.max_players, x.wave,
-			x.version, x.version_type, x.ping, x.online, x.motd_registry_id, x.map_registry_id
-		FROM jsonb_to_recordset($1::jsonb) AS x(
-			server_id int, timestamp timestamptz, players int, max_players int, wave int,
-			version int, version_type varchar(50), ping int, online boolean,
-			motd_registry_id int, map_registry_id int
-		)
-		ORDER BY x.server_id, x.timestamp DESC
-		ON CONFLICT (server_id) DO UPDATE
-			SET timestamp        = EXCLUDED.timestamp,
-				players          = EXCLUDED.players,
-				max_players      = EXCLUDED.max_players,
-				wave             = EXCLUDED.wave,
-				version          = EXCLUDED.version,
-				version_type     = EXCLUDED.version_type,
-				ping             = EXCLUDED.ping,
-				online           = EXCLUDED.online,
-				motd_registry_id = EXCLUDED.motd_registry_id,
-				map_registry_id  = EXCLUDED.map_registry_id
-			WHERE server_current.timestamp <= EXCLUDED.timestamp
+		INSERT INTO server_events (server_id, kind, occurred_at, detail)
+		SELECT i.server_id, 'version_change', i.timestamp,
+			jsonb_build_object('from', p.version, 'to', i.version, 'versionType', i.version_type)
+		FROM incoming i
+		JOIN prev p ON p.server_id = i.server_id
+		-- A NULL previous version is the first observation of a server that has
+		-- one, not a bump; a NULL incoming version is a poll that could not read
+		-- one, not a downgrade.
+		WHERE p.version IS NOT NULL
+		  AND i.version IS NOT NULL
+		  AND p.version IS DISTINCT FROM i.version
+		  -- The upsert's own guard, repeated: a late batch that did not move
+		  -- server_current has not observed a change either, it has just
+		  -- rediscovered an older version.
+		  AND p.timestamp <= i.timestamp
 	`, payload)
 	return err
 }

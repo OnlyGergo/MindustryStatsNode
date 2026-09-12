@@ -126,10 +126,15 @@ func (r *Repository) RefreshServerSourceList(ctx context.Context, servers []Sour
 	})
 }
 
+// serverIDsByAddress maps host|port to the live stream answering on it.
+//
+// Retired streams keep their address, so an address can appear on more than one
+// row; only the live one may be handed a membership, and it is the only one the
+// partial unique index guarantees to be single.
 func (r *Repository) serverIDsByAddress(ctx context.Context, q querier) (map[string]int, error) {
 	const op = "refreshServerSourceList: read servers"
 
-	rows, err := q.Query(ctx, `SELECT id, host, port FROM servers`)
+	rows, err := q.Query(ctx, `SELECT id, host, port FROM servers WHERE retired_at IS NULL`)
 	if err != nil {
 		return nil, &OperationError{Operation: op, Err: err}
 	}
