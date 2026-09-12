@@ -1,15 +1,18 @@
 import { useEffect, useRef } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
-import { ServerHistory } from "../../../../common/models/serverData.ts";
+import { ServerEvent, ServerHistory } from "../../../../common/models/serverData.ts";
 import { DateRangeOption } from "../../util/dateRangeConsts.ts";
 import { createChartTooltip } from "../../util/chartTooltip.ts";
+import { ChartAnnotations, createChartAnnotations } from "../../util/chartAnnotations.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
 
 interface PlayerHistoryChartProps {
   data: ServerHistory[];
   loading: boolean;
   selectedRange: DateRangeOption;
+  /** Annotation stream for the same window `data` covers (see useServerEvents). */
+  events?: ServerEvent[];
 }
 
 function formatTime(timestamp: number, range: DateRangeOption): string {
@@ -29,11 +32,19 @@ function formatTime(timestamp: number, range: DateRangeOption): string {
 // Single-series area chart used for both server and network player history.
 // This is the uPlot rendering half of NetworkHistoryChart/ServerHistoryChart -
 // it's a separate, lazily-loaded module so it never needs to run during SSR.
-const PlayerHistoryChart = ({ data, loading, selectedRange }: PlayerHistoryChartProps) => {
+const PlayerHistoryChart = ({ data, loading, selectedRange, events }: PlayerHistoryChartProps) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
   const uplotRef = useRef<uPlot | null>(null);
   const lastSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  // Annotations are fetched alongside the history but usually land after it, and
+  // they are not a reason to tear down and rebuild the whole plot - so they stay
+  // out of the chart effect's deps and are pushed in through the plugin instead.
+  // The ref is what lets a rebuild (a range change, say) pick up the events that
+  // are already loaded without waiting for the effect below to run again.
+  const annotationsRef = useRef<ChartAnnotations | null>(null);
+  const eventsRef = useRef<ServerEvent[]>(events ?? []);
 
   useEffect(() => {
     if (!outerRef.current || !mountRef.current || data.length === 0) return;
@@ -57,6 +68,8 @@ const PlayerHistoryChart = ({ data, loading, selectedRange }: PlayerHistoryChart
     ];
 
     const tooltip = createChartTooltip(mountRef.current);
+    const annotations = createChartAnnotations(eventsRef.current);
+    annotationsRef.current = annotations;
 
     function renderTooltip(u: uPlot, idx: number | null) {
       tooltip.update(u, idx, () => {
@@ -64,11 +77,17 @@ const PlayerHistoryChart = ({ data, loading, selectedRange }: PlayerHistoryChart
         const ts = (u.data[0] as number[])[idx];
         const title = new Date(ts * 1000).toLocaleString();
         const raw = (u.data[1] as (number | null)[])[idx];
-        if (raw == null) return null;
+        const notes = annotations.notesAt(u);
+
+        // A data-quality span is most likely to be sitting exactly where the
+        // series has no value, so a null reading is not a reason to bail if
+        // there's an annotation under the cursor explaining the hole.
+        if (raw == null && notes.length === 0) return null;
 
         return {
           title,
-          rows: [{ label: "Players", value: raw, color: "rgb(249, 115, 22)" }],
+          rows: raw == null ? [] : [{ label: "Players", value: raw, color: "rgb(249, 115, 22)" }],
+          notes,
         };
       });
     }
@@ -103,6 +122,7 @@ const PlayerHistoryChart = ({ data, loading, selectedRange }: PlayerHistoryChart
       cursor: {
         drag: { x: false, y: false },
       },
+      plugins: [annotations.plugin],
       hooks: {
         setCursor: [(u) => renderTooltip(u, u.cursor.idx ?? null)],
       },
@@ -129,10 +149,17 @@ const PlayerHistoryChart = ({ data, loading, selectedRange }: PlayerHistoryChart
     return () => {
       ro.disconnect();
       tooltip.remove();
+      annotations.remove();
+      annotationsRef.current = null;
       uplotRef.current?.destroy();
       uplotRef.current = null;
     };
   }, [data, selectedRange]);
+
+  useEffect(() => {
+    eventsRef.current = events ?? [];
+    annotationsRef.current?.update(eventsRef.current);
+  }, [events]);
 
   return (
     <div className="w-full h-full relative">

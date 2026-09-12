@@ -6,11 +6,33 @@ interface TooltipRow {
     color: string;
 }
 
+/**
+ * A line of context rather than a datum - currently chart annotations (see
+ * chartAnnotations.ts). Rendered without a colour swatch and in muted text on
+ * purpose: colour on these charts means series identity, and a note is not a
+ * series.
+ */
+export interface TooltipNote {
+    label: string;
+    text: string;
+}
+
 interface TooltipConfig {
     title: string;
     rows: TooltipRow[];
+    notes?: TooltipNote[];
     isAgg?: boolean;
 }
+
+/**
+ * Row labels are server/gamemode names and note text comes out of the
+ * `server_events.detail` jsonb - both ultimately attacker-controlled strings
+ * that end up in innerHTML below.
+ */
+const escapeHtml = (value: string) =>
+    value.replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+    );
 
 export const createChartTooltip = (mountNode: HTMLDivElement) => {
     const tooltipEl = document.createElement("div");
@@ -36,7 +58,7 @@ export const createChartTooltip = (mountNode: HTMLDivElement) => {
             return;
         }
 
-        const { title, rows, isAgg } = config;
+        const { title, rows, notes, isAgg } = config;
         let total = 0;
 
         const rowsHtml = rows
@@ -46,7 +68,7 @@ export const createChartTooltip = (mountNode: HTMLDivElement) => {
                   <div style="display: flex; gap: 24px; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span style="display: flex; align-items: center; gap: 8px; color: #a3a3a3;">
                       <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background-color: ${r.color};"></span>
-                      ${r.label}
+                      ${escapeHtml(r.label)}
                     </span>
                     <span style="font-weight: 600; color: #f5f5f5;">${r.value.toLocaleString()}</span>
                   </div>
@@ -64,12 +86,27 @@ export const createChartTooltip = (mountNode: HTMLDivElement) => {
               `
             : "";
 
+        const notesHtml = (notes && notes.length > 0)
+            ? `
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #262626;
+                            max-width: 260px; white-space: normal;">
+                  ${notes.map((n) => `
+                    <div style="margin-bottom: 4px;">
+                      ${n.label ? `<div style="color: #a3a3a3; font-weight: 600;">${escapeHtml(n.label)}</div>` : ""}
+                      <div style="color: #737373;">${escapeHtml(n.text)}</div>
+                    </div>
+                  `).join("")}
+                </div>
+              `
+            : "";
+
         tooltipEl.innerHTML = `
-          <div style="color: #f97316; font-weight: 700; margin-bottom: 8px; border-bottom: 1px solid #262626; padding-bottom: 6px;">${title}</div>
+          <div style="color: #f97316; font-weight: 700; margin-bottom: 8px; border-bottom: 1px solid #262626; padding-bottom: 6px;">${escapeHtml(title)}</div>
           <div style="max-height: 200px; overflow-y: auto; padding-right: 4px;">
             ${rowsHtml}
           </div>
           ${footerHtml}
+          ${notesHtml}
         `;
 
         const cursorLeft = u.cursor.left ?? 0;

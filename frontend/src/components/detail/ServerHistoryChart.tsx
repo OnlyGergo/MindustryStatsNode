@@ -5,6 +5,7 @@ import {
 } from "../../../../common/models/serverData.ts";
 import { DATE_RANGE_OPTIONS } from "../../util/dateRangeConsts.ts";
 import { HistoryType, useHistory } from "../../hooks/useHistory.ts";
+import { useServerEvents } from "../../hooks/api/useServerEvents.ts";
 import { ChartSuspense } from "../ChartSuspense.tsx";
 
 // uPlot touches the DOM at render time and isn't SSR-safe without extra
@@ -25,6 +26,10 @@ const ServerHistoryChart = ({ id }: ServerElement) => {
     customEndDate,
     setCustomEndDate,
   } = useHistory<ServerHistory>(id, HistoryType.Server);
+
+  // Same window the history above asked for - annotations that are fetched over
+  // a different range land on the wrong buckets.
+  const { events } = useServerEvents(id, selectedRange, customStartDate, customEndDate);
 
   // Helper for date pickers
   const today = new Date().toISOString().split("T")[0];
@@ -100,6 +105,7 @@ const ServerHistoryChart = ({ id }: ServerElement) => {
             data={chartData}
             loading={loading}
             selectedRange={selectedRange}
+            events={events}
           />
         </ChartSuspense>
       </div>

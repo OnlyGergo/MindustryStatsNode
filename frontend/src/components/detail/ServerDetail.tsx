@@ -49,6 +49,19 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
               {/* Action buttons */}
               <div className="flex flex-wrap gap-2 mt-3">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                  {/*
+                    The id in the URL is a canonical identity id, which is dense in
+                    observation streams and sparse in servers - not a number worth
+                    showing anyone. display_ref is the one numbered in first-seen
+                    order, so it's the reference a person can actually quote, and it
+                    survives the server changing address. Nothing routes on it.
+                  */}
+                  <span
+                    className="text-xs sm:text-sm text-tertiary"
+                    title="Server reference - stable across address changes"
+                  >
+                    #{serverDataElement.displayRef}
+                  </span>
                   <span
                     className={`${statusClass} text-xs sm:text-sm px-2 sm:px-3 py-1 rounded border backdrop-blur-sm`}
                   >

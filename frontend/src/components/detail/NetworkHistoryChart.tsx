@@ -5,6 +5,7 @@ import {
 } from "../../../../common/models/serverData.ts";
 import { DATE_RANGE_OPTIONS } from "../../util/dateRangeConsts.ts";
 import { HistoryType, useHistory } from "../../hooks/useHistory.ts";
+import { useGlobalEvents } from "../../hooks/api/useServerEvents.ts";
 import { ChartSuspense } from "../ChartSuspense.tsx";
 
 // uPlot touches the DOM at render time and isn't SSR-safe without extra
@@ -25,6 +26,12 @@ const NetworkHistoryChart = ({ network }: { network: NetworkDetails }) => {
     customEndDate,
     setCustomEndDate,
   } = useHistory<ServerHistory>(network.id, HistoryType.Network);
+
+  // Global events only. `server_events` hangs off a canonical *server* identity,
+  // and this chart is a sum over a whole network, so a single member's address
+  // change says nothing about the line drawn here - but a tracker-wide outage or
+  // data-quality era distorts the aggregate exactly as much as any single server.
+  const { events } = useGlobalEvents(selectedRange, customStartDate, customEndDate);
 
   // Get today's date for max attribute on date inputs
   const today = new Date().toISOString().split("T")[0];
@@ -100,6 +107,7 @@ const NetworkHistoryChart = ({ network }: { network: NetworkDetails }) => {
             data={chartData}
             loading={loading}
             selectedRange={selectedRange}
+            events={events}
           />
         </ChartSuspense>
       </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { GamemodeHistoryEntry } from "../../../../common/models/GlobalStatsTypes.js";
+import { ServerEvent } from "../../../../common/models/serverData.ts";
 import {
     buildGamemodeIndex,
     buildUPlotData,
@@ -11,6 +12,7 @@ import {
     ViewMode,
 } from "../../util/chartHelpers.ts";
 import { createChartTooltip } from "../../util/chartTooltip.ts";
+import { ChartAnnotations, createChartAnnotations } from "../../util/chartAnnotations.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
 
 interface GamemodeChartProps {
@@ -20,6 +22,8 @@ interface GamemodeChartProps {
     selectedRange: DateRangeOption;
     viewMode: ViewMode;
     visibleModes: Set<string>;
+    /** Global annotation stream for the same window `data` covers. */
+    events?: ServerEvent[];
 }
 
 // uPlot rendering half of GlobalStatsChart's gamemode graph - kept in its own
@@ -31,11 +35,17 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({
                                                                 selectedRange,
                                                                 viewMode,
                                                                 visibleModes,
+                                                                events,
                                                             }) => {
     const outerRef = useRef<HTMLDivElement>(null);
     const mountRef = useRef<HTMLDivElement>(null);
     const uplotRef = useRef<uPlot | null>(null);
     const lastSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+
+    // Kept out of the chart effect's deps: annotations usually arrive after the
+    // history and are pushed into the live plugin instead of forcing a rebuild.
+    const annotationsRef = useRef<ChartAnnotations | null>(null);
+    const eventsRef = useRef<ServerEvent[]>(events ?? []);
 
     useEffect(() => {
         if (!outerRef.current || !mountRef.current || !data || data.length === 0) return;
@@ -67,6 +77,8 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({
         ];
 
         const tooltip = createChartTooltip(mountRef.current);
+        const annotations = createChartAnnotations(eventsRef.current);
+        annotationsRef.current = annotations;
 
         function renderTooltip(u: uPlot, idx: number | null) {
             tooltip.update(u, idx, () => {
@@ -90,7 +102,11 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({
                 });
 
                 rows.sort((a, b) => b.value - a.value);
-                return { title, rows, isAgg };
+
+                // This chart already shows a tooltip across a gap (rows just come
+                // back empty), so annotations only ever add to it - which is the
+                // useful case: the gap is what the annotation is explaining.
+                return { title, rows, notes: annotations.notesAt(u), isAgg };
             });
         }
 
@@ -125,6 +141,7 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({
                 drag: { x: false, y: false },
                 sync: { key: "gamemode-chart" },
             },
+            plugins: [annotations.plugin],
             hooks: {
                 setCursor: [(u) => renderTooltip(u, u.cursor.idx ?? null)],
             },
@@ -151,10 +168,17 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({
         return () => {
             ro.disconnect();
             tooltip.remove();
+            annotations.remove();
+            annotationsRef.current = null;
             uplotRef.current?.destroy();
             uplotRef.current = null;
         };
     }, [data, selectedRange, viewMode, visibleModes]);
+
+    useEffect(() => {
+        eventsRef.current = events ?? [];
+        annotationsRef.current?.update(eventsRef.current);
+    }, [events]);
 
     return (
         <div className="w-full h-full relative">

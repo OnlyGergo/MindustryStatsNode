@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, lazy } from "react";
 import { DateRangeOption, ViewMode } from "../../util/chartHelpers.ts";
 import { useGamemodeHistory } from "../../hooks/api/useGamemodeHistory.ts";
 import { useServerShare } from "../../hooks/api/useServerShare.ts";
+import { useGlobalEvents } from "../../hooks/api/useServerEvents.ts";
 import { ChartControls } from "../ChartControls.tsx";
 import { ChartSidebarLegend } from "./ChartSidebarLegend.tsx";
 import { ChartSuspense } from "../ChartSuspense.tsx";
@@ -27,6 +28,12 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
   const { data: gamemodeData, loading, error, peakPlayers } = useGamemodeHistory(selectedRange);
   const { data: serverShareData, loading: serverShareLoading, error: serverShareError } =
       useServerShare(selectedGamemode?.modeId, selectedRange);
+
+  // Fetched once for the page rather than per chart: both charts below are driven
+  // by the same range control, so they would otherwise issue the identical request
+  // twice. Only the gamemode chart actually draws them - see the note on the
+  // ServerShareChart below.
+  const { events: globalEvents } = useGlobalEvents(selectedRange);
 
   const computedPeaks = useMemo(() => {
     const peaks: Record<string, number> = {};
@@ -154,6 +161,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
                       selectedRange={selectedRange}
                       viewMode={viewMode}
                       visibleModes={visibleModes}
+                      events={globalEvents}
                   />
                 </ChartSuspense>
               </div>
@@ -186,6 +194,15 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
                       {selectedGamemode.cleanModeName}
                     </span>
                   </h2>
+                  {/*
+                    Deliberately not annotated. Global events are the same marks at
+                    the same x positions as on the gamemode chart directly above,
+                    driven by the same range control - repeating them here doubles
+                    the ink for no new information, and this is already the busiest
+                    chart on the page (up to eight coloured series in a smaller box,
+                    where the whole point is comparing series against each other).
+                    If that call turns out wrong it is one `events` prop to undo.
+                  */}
                   <div className="relative w-full h-64 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
                     <ChartSuspense>
                       <ServerShareChart
