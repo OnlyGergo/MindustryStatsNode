@@ -1,8 +1,6 @@
 import { Sequelize } from "sequelize";
 import { env } from "./env.js";
 import { createLogger } from "../logger.js";
-import { readdir, readFile } from "fs/promises";
-import { join } from "path";
 
 const logger = createLogger("Database");
 

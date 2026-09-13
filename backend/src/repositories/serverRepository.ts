@@ -20,7 +20,6 @@ import {
 import { QueryTypes } from 'sequelize';
 import {
     type NetworkDetails,
-    type ServerRecord,
 } from '../../../common/models/RepositoryTypes.js';
 import {CURRENT_DATA_FRESH_THRESHOLD, MAX_REALISTIC_PLAYERCOUNT} from "../const.js";
 
