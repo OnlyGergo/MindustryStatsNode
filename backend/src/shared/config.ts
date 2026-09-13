@@ -11,34 +11,11 @@ export interface BaseServiceConfig {
   DB_PASSWORD: string;
 }
 
-// Service-specific configurations
-export interface ServerDiscoveryConfig extends BaseServiceConfig {
-  SERVER_LIST_INTERVAL_MS: number;
-}
-
-export interface ServerCollectorConfig extends BaseServiceConfig {
-  COLLECTION_CONCURRENCY: number;
-  MINDUSTRY_TIMEOUT_MS: number;
-  DATA_COLLECTION_INTERVAL_MS: number;
-  SERVER_COLLECTION_INTERVAL_MS: number;
-}
-
-export interface ServerProcessorConfig extends BaseServiceConfig {
-  MAX_HISTORY_HOURS: number;
-  MAX_HISTORY_POINTS: number;
-  QUEUE_POLL_TIMEOUT_MS: number;
-}
-
 export interface ApiServiceConfig extends BaseServiceConfig {
   PORT: number;
   CORS_ORIGIN: string;
   GRAPH_MAX_POINTS: number;
   DATA_COLLECTION_INTERVAL_MS: number;
-}
-
-export interface WebSocketServiceConfig extends BaseServiceConfig {
-  WS_PATH: string;
-  CORS_ORIGIN: string;
 }
 
 // Environment variable loading helper

@@ -2,27 +2,21 @@
 
 This is a mindustry tracker for tracking Mindustry servers.
 It uses Bun as runtime, does not make use of native executables (due to pg not including properly), and uses TimescaleDB for database.
+It uses Go for efficient querying of servers, and writes to database.
 
 `common` is for types and utilities shared between the backend and frontend.
-`backend` is for the backend server that handles the tracking and data storage.
+`backend` Bun Elysia server that exposes the SSR frontend and API this handles all reads..
 `frontend` is for the frontend web application that displays the tracked data.
+`collector` is for the collector service that collects server data - this handles all writes (including DB migrations).
 
 ## Notable Files / Folders
-All connections to database: `backend/src/repositories/*`
-
-
+All connections to read database: `backend/src/repositories/*`
+All connections to write database: `collector/internal/repository/*`
 
 ## Libraries
 ### Backend
 For database, use Sequelize with PostgreSQL.
 Bun is used, so Elysia is being used as webserver.
-
-Services are inside `backend/src/services`, they simulate microservices, but are not separate processes.
-Inside is:
-- ServerCollectorService.ts - Parses public server lists, and inserts them to database
-- ServerDiscoveryService.ts - Queries the database for servers, and sends a ping to them
-- ServerProcessorService.ts - Processes server data, and inserts it to database
-- mindustryService.ts - Sends Mindustry Packets and waits for response
 
 The HTTP layer lives in `backend/src/api` instead, and is not a service:
 - `WebServer.ts` - transport: rate limit tiers, CORS, static assets, the API, and the TanStack SSR catch-all. `startWebServer()` / `stopWebServer()`.
@@ -44,10 +38,10 @@ uPlot is used for graphs, Chart.js too, but moving away from it. For tooltips us
 
 The app is a monorepo, for simplicity.
 The app does not use any dedicated caching layer, so it happens within the app itself.
-The goal is efficiency, but not when it takes crazy amount of work.
+The goal is efficiency, but not when it takes crazy amount of work. Also somewhat skills development for me, hence the effectively pointless migration from Java to Python to NodeJS, a rewrite (start of this repo), then to Bun then now Go.
 
 The backend often passes data through ApiPacker, which takes arrays of objects and packs them into a 2D array representing it. Nested objects are not flattened. Source is at `common/Packer.ts` which includes both packer and unpacker.
 
 # FYI
 
-Do not attempt to read `backend/migrations` or especially `backend/migrations_legacy` (legacy means run manually, DB is out of sync with these). Latest schema is included in `schema.sql` at the root of the project. If you want to make changes, do it in `backend/migrations`. You can add "--no-tran" on first line for migrations if they need manual running (like certain CALL statements relating to TimescaleDB).
+Do not attempt to read `collector/migrations` or especially `backend/migrations_legacy` (legacy means run manually, DB is out of sync with these). Latest schema is included in `schema.sql` at the root of the project. If you want to make changes, do it in `collector/migrations`. You can add "--no-tran" on first line for migrations if they need manual running (like certain CALL statements relating to TimescaleDB).

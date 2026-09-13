@@ -4,16 +4,14 @@ import * as serverRepository from '../../repositories/serverRepository.js';
 import { getMapHistory, getMotdHistory } from '../../repositories/serverRepository.js';
 import { getAggregatedHistory } from '../../repositories/StatsRepository.js';
 import { ApiPacker } from '../../../../common/Packer.js';
-import { serversList } from '../../state/serversList.js';
 import { IdParam, StrictHistoryQuery, StrictNoQuery, StrictPaginationQuery } from '../lib/schemas.js';
 import { parseTimestamp, resolveRange } from '../lib/timeRange.js';
 import { withCache } from '../middleware/cache.js';
-
 const logger = createLogger('Api');
 
 export const serverRoutes = new Elysia({ prefix: '/api' })
-  .get('/servers', () => {
-    const servers = Array.from(serversList.values());
+  .get('/servers', async () => {
+    const servers = await serverRepository.getAllServerElements();
     logger.debug(`Served ${servers.length} servers from cache`);
     return ApiPacker.pack(servers);
   }, {
