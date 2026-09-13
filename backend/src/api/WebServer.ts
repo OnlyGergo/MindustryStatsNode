@@ -6,6 +6,7 @@ import { createLogger } from '../logger.js';
 import { api } from './app.js';
 import { apiConfig } from './context.js';
 import { rateLimit, type RateLimitTier } from './middleware/rateLimit.js';
+import { initCache, stopCache } from './middleware/cache.js';
 
 const logger = createLogger('WebServer');
 
@@ -41,6 +42,7 @@ async function loadSsrHandler(): Promise<(request: Request) => Promise<Response>
  */
 export async function createWebServer() {
   const handleSsrRequest = await loadSsrHandler();
+  initCache({ sweepIntervalMs: 60_000 })
 
   return new Elysia()
     // Ahead of everything, including the route cache — a crawler must not get
@@ -76,6 +78,7 @@ export async function startWebServer(): Promise<void> {
 
 export async function stopWebServer(): Promise<void> {
   await server?.stop();
+  stopCache();
   server = undefined;
   logger.info('Web server stopped');
 }
