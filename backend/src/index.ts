@@ -38,8 +38,6 @@ export class MindustryStatsApp {
 
       logger.info('=== All services started successfully ===');
       logger.info(`API & WebSocket Server: http://localhost:${apiConfig.PORT}`);
-      logger.info(`Collection Concurrency: ${collectorConfig.COLLECTION_CONCURRENCY}`);
-      logger.info(`Server Count: ${serversList.size}`);
       logger.info(`Startup time: ${Date.now() - timesStart}ms ⚡`) // had to, every cli devtool has the ⚡ for speed
 
     } catch (error) {
