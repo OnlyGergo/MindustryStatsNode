@@ -79,144 +79,142 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
   }, [sortedServerGroups]);
 
   return (
-      <div className="h-full overflow-auto p-6 space-y-5 text-primary custom-scrollbar bg-surface-primary">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-subtle pb-4">
-          <div>
-            <h1 className="text-xl font-black tracking-tight text-accent">
-              Global Stats
-            </h1>
-            <p className="text-[11px] text-tertiary font-medium">
-              Automated cluster network telemetry logging maps
-            </p>
-          </div>
-
-          <ChartControls
-              selectedRange={selectedRange}
-              onRangeChange={setSelectedRange}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              selectedGamemode={selectedGamemode}
-              onGamemodeChange={setSelectedGamemode}
-              gamemodeList={gamemodeList}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="card-base p-4 flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-tertiary">
-                Period Peak High
+      <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
+            <div className="min-w-0 mb-4">
+              <h1 className="text-xl sm:text-2xl font-bold text-primary wrap-break-word">
+                Global Stats
+              </h1>
+              <p className="text-sm sm:text-base text-secondary wrap-break-word">
+                Automated cluster network telemetry logging maps
               </p>
-              <h3 className="text-xl font-black text-accent mt-0.5 tracking-tight">
-                {loading ? "..." : (peakPlayers?.toLocaleString() ?? "0")}
-              </h3>
             </div>
-            <div className="p-2 bg-accent-muted text-accent rounded border border-accent">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </div>
+
+            <ChartControls
+                selectedRange={selectedRange}
+                onRangeChange={setSelectedRange}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                selectedGamemode={selectedGamemode}
+                onGamemodeChange={setSelectedGamemode}
+                gamemodeList={gamemodeList}
+            />
           </div>
 
-          <div className="card-base p-4 flex items-center justify-between shadow-sm">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-tertiary">
-                Tracked Gamemodes
-              </p>
-              <h3 className="text-xl font-black text-primary mt-0.5 tracking-tight">
-                {gamemodeList?.length ?? 0}{" "}
-                <span className="text-xs text-tertiary font-normal">modes</span>
-              </h3>
-            </div>
-            <div className="p-2 bg-surface-tertiary text-secondary rounded border border-default">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-5 items-stretch w-full min-h-115 h-[60vh]">
-          <div className="flex-1 card-base p-4 flex flex-col min-h-85 lg:min-h-0">
-            <div className="mb-3">
-              <h4 className="text-secondary font-medium">
-                {viewMode === "lines" ? "Playercounts by Gamemode" : "Aggregated Global Playercounts"}
-              </h4>
-            </div>
-            <div className="relative flex-1 w-full min-h-0">
-              <ChartSuspense>
-                <GamemodeChart
-                    data={gamemodeData}
-                    loading={loading}
-                    error={error}
-                    selectedRange={selectedRange}
-                    viewMode={viewMode}
-                    visibleModes={visibleModes}
-                />
-              </ChartSuspense>
-            </div>
-          </div>
-
-          {viewMode === "lines" && (
-              <div className="w-full lg:w-76 shrink-0 card-base p-4 flex flex-col overflow-hidden">
-                <div className="mb-3">
-                  <h4 className="font-bold text-accent">
-                    Gamemodes
-                  </h4>
+          {/* Summary tiles */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+            <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex items-center justify-between gap-3 sm:gap-4">
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm text-tertiary">
+                  Period Peak High
                 </div>
-                <div className="flex-1 min-h-0">
-                  <ChartSidebarLegend
-                      gamemodes={sortedGamemodes}
-                      peaks={computedPeaks}
+                <div className="text-xl sm:text-2xl font-bold text-accent wrap-break-word">
+                  {loading ? "..." : (peakPlayers?.toLocaleString() ?? "0")}
+                </div>
+              </div>
+              <div className="shrink-0 bg-accent-muted text-accent border border-accent rounded p-2 sm:p-3">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex items-center justify-between gap-3 sm:gap-4">
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm text-tertiary">
+                  Tracked Gamemodes
+                </div>
+                <div className="text-xl sm:text-2xl font-bold text-accent wrap-break-word">
+                  {gamemodeList?.length ?? 0}{" "}
+                  <span className="text-xs sm:text-sm font-normal text-tertiary">modes</span>
+                </div>
+              </div>
+              <div className="shrink-0 bg-surface-tertiary text-secondary border border-subtle rounded p-2 sm:p-3">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Gamemode chart + legend */}
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:items-stretch lg:min-h-115 lg:h-[60vh] mb-4 sm:mb-6">
+            <div className="flex-1 min-w-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col">
+              <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4 wrap-break-word">
+                {viewMode === "lines" ? "Playercounts by Gamemode" : "Aggregated Global Playercounts"}
+              </h2>
+              <div className="relative w-full h-64 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
+                <ChartSuspense>
+                  <GamemodeChart
+                      data={gamemodeData}
+                      loading={loading}
+                      error={error}
+                      selectedRange={selectedRange}
+                      viewMode={viewMode}
                       visibleModes={visibleModes}
-                      onChange={setVisibleModes}
                   />
+                </ChartSuspense>
+              </div>
+            </div>
+
+            {viewMode === "lines" && (
+                <div className="w-full lg:w-76 shrink-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col overflow-hidden">
+                  <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+                    Gamemodes
+                  </h2>
+                  <div className="flex-1 min-h-0">
+                    <ChartSidebarLegend
+                        gamemodes={sortedGamemodes}
+                        peaks={computedPeaks}
+                        visibleModes={visibleModes}
+                        onChange={setVisibleModes}
+                    />
+                  </div>
+                </div>
+            )}
+          </div>
+
+          {/* Group share chart + legend */}
+          {selectedGamemode && (
+              <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:items-stretch lg:min-h-115 lg:h-[60vh] mb-4 sm:mb-6">
+                <div className="flex-1 min-w-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col">
+                  <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4 flex flex-wrap items-center gap-2 min-w-0">
+                    <span>Group Share for</span>
+                    <span className="min-w-0 bg-accent-muted text-accent border border-accent rounded px-2 py-0.5 text-xs sm:text-sm font-medium wrap-break-word">
+                      {selectedGamemode.cleanModeName}
+                    </span>
+                  </h2>
+                  <div className="relative w-full h-64 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
+                    <ChartSuspense>
+                      <ServerShareChart
+                          data={serverShareData}
+                          loading={serverShareLoading}
+                          error={serverShareError}
+                          selectedRange={selectedRange}
+                          visibleGroups={visibleServerGroups}
+                      />
+                    </ChartSuspense>
+                  </div>
+                </div>
+
+                <div className="w-full lg:w-76 shrink-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col overflow-hidden">
+                  <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+                    Server Groups
+                  </h2>
+                  <div className="flex-1 min-h-0">
+                    <ChartSidebarLegend
+                        gamemodes={sortedServerGroups}
+                        peaks={computedServerGroupPeaks}
+                        visibleModes={visibleServerGroups}
+                        onChange={setVisibleServerGroups}
+                    />
+                  </div>
                 </div>
               </div>
           )}
         </div>
-
-        {selectedGamemode && (
-            <div className="flex flex-col lg:flex-row gap-5 items-stretch w-full min-h-115 h-[60vh]">
-              <div className="flex-1 card-base p-4 flex flex-col min-h-85 lg:min-h-0">
-                <div className="mb-3">
-                  <h4 className="text-[10px] font-black text-tertiary uppercase tracking-widest flex items-center gap-2">
-                    Group Share for {" "}
-                    <span className="button-accent px-1.5 py-0.5 text-xs">
-                    {selectedGamemode.cleanModeName}
-                  </span>
-                  </h4>
-                </div>
-                <div className="relative flex-1 w-full min-h-0">
-                  <ChartSuspense>
-                    <ServerShareChart
-                        data={serverShareData}
-                        loading={serverShareLoading}
-                        error={serverShareError}
-                        selectedRange={selectedRange}
-                        visibleGroups={visibleServerGroups}
-                    />
-                  </ChartSuspense>
-                </div>
-              </div>
-
-              <div className="w-full lg:w-76 shrink-0 card-base p-4 flex flex-col overflow-hidden">
-                <div className="mb-3">
-                  <h4 className="font-bold text-accent">
-                    Server Groups
-                  </h4>
-                </div>
-                <div className="flex-1 min-h-0">
-                  <ChartSidebarLegend
-                      gamemodes={sortedServerGroups}
-                      peaks={computedServerGroupPeaks}
-                      visibleModes={visibleServerGroups}
-                      onChange={setVisibleServerGroups}
-                  />
-                </div>
-              </div>
-            </div>
-        )}
       </div>
   );
 };

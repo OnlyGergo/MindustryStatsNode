@@ -47,7 +47,6 @@ bunx tsc # We don't need the files, but we do need the checks
 cp -r ./src/* ../build/backend/src/
 cp ./package.json ../build/
 cp ./bun.lock ../build/
-cp -r ./migrations ../build/
 cd ..
 cp -r ./common ./build/
 

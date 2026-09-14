@@ -106,30 +106,9 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
       return;
     }
 
-    const groups = buildServerGroups(servers);
-
-    Object.keys(groups).forEach((groupName) => {
-      groups[groupName].sort((a, b) => {
-        if (a.online !== b.online) return a.online ? -1 : 1;
-        return (b.currentData?.players || 0) - (a.currentData?.players || 0);
-      });
-    });
-
-    const sortedGroups = new Map(
-      Object.entries(groups).sort((a, b) => {
-        const aPlayers = a[1].reduce(
-          (sum, s) => sum + (isHub(s) ? 0 : s.currentData?.players || 0),
-          0,
-        );
-        const bPlayers = b[1].reduce(
-          (sum, s) => sum + (isHub(s) ? 0 : s.currentData?.players || 0),
-          0,
-        );
-        return bPlayers - aPlayers;
-      }),
-    );
-
-    setServerGroups(Object.fromEntries(sortedGroups));
+    // Ordering isn't decided here: the sidebar's own sort/filter state lives in
+    // `useServerList`, which re-sorts these groups for display.
+    setServerGroups(buildServerGroups(servers));
     setTotalServers(servers.length);
     setOnlineServers(servers.filter((s) => s.online).length);
     setTotalPlayers(computeTotalPlayers(servers));

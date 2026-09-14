@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {ServerElement} from '../../../common/models/serverData';
-import {isHub} from '../util/mindustry';
+import {isHub, removeColors} from '../util/mindustry';
 
 // NOTE: This hook is purely client-side derived state (search/sort/group UI
 // preferences) over data that's already fetched by `useApi`/the route loader.
@@ -8,32 +8,140 @@ import {isHub} from '../util/mindustry';
 // needed here for the TanStack Start migration -- it keeps working as-is
 // against whatever `rawServers` (SSR-hydrated or polled) is passed in.
 
-export type SortCriteria = 'ping' | 'playerCount' | 'name';
+export type SortCriteria = 'playerCount' | 'ping' | 'name';
 export type SortDirection = 'asc' | 'desc';
+
+/** One network's servers, in display order. An array keeps the order explicit --
+ * a Record would silently reorder integer-like group names. */
+export interface ServerGroupEntry {
+  name: string;
+  servers: ServerElement[];
+}
 
 export interface SortOption {
   key: SortCriteria;
+  /** Short label for the trigger button + menu row, e.g. 'Players' */
   label: string;
-  getValue: (server: ServerElement) => number | string;
+  /** Direction applied when the user switches TO this criteria */
+  defaultDirection: SortDirection;
+  /** Human wording for each direction, e.g. { asc: 'Fewest first', desc: 'Most first' } */
+  directionLabels: Record<SortDirection, string>;
+  /** One-line explanation of the value used when the list is ungrouped */
+  serverHint: string;
+  /** One-line explanation of how the value is aggregated when grouped */
+  groupHint: string;
+  /** Value for a single server row. `null` means "unknown", which always sorts last. */
+  getValue: (server: ServerElement) => number | string | null;
+  /** Aggregated value for a whole group (network). `null` means "unknown", which always sorts last. */
+  getGroupValue: (servers: ServerElement[], groupName: string) => number | string | null;
 }
 
-const SORT_OPTIONS: SortOption[] = [
+const getServerDisplayName = (server: ServerElement): string => {
+  const cleaned = removeColors(server.currentData?.serverName ?? null)?.trim();
+  return cleaned ? cleaned : server.name;
+};
+
+export const SORT_OPTIONS: SortOption[] = [
+  {
+    key: 'playerCount',
+    label: 'Players',
+    defaultDirection: 'desc',
+    directionLabels: { desc: 'Most players first', asc: 'Fewest players first' },
+    serverHint: 'Players on each server',
+    groupHint: 'Total players per network (hubs excluded)',
+    getValue: (server) => server.online ? (server.currentData?.players ?? 0) : 0,
+    getGroupValue: (servers) => servers.reduce(
+      (sum, server) => sum + (server.online && !isHub(server) ? (server.currentData?.players ?? 0) : 0),
+      0
+    )
+  },
   {
     key: 'ping',
     label: 'Ping',
-    getValue: (server) => server.currentData?.ping || 9999
-  },
-  {
-    key: 'playerCount',
-    label: 'Player Count',
-    getValue: (server) => isHub(server) ? -1 : (server.currentData?.players || 0)
+    defaultDirection: 'asc',
+    directionLabels: { asc: 'Lowest ping first', desc: 'Highest ping first' },
+    serverHint: 'Ping of each server',
+    groupHint: 'Average ping of a network’s online servers',
+    getValue: (server) => server.online && typeof server.currentData?.ping === 'number'
+      ? server.currentData.ping
+      : null,
+    getGroupValue: (servers) => {
+      let total = 0;
+      let counted = 0;
+      servers.forEach(server => {
+        const ping = server.currentData?.ping;
+        if (server.online && typeof ping === 'number') {
+          total += ping;
+          counted += 1;
+        }
+      });
+      return counted === 0 ? null : total / counted;
+    }
   },
   {
     key: 'name',
-    label: 'Server Name',
-    getValue: (server) => server.name || ''
+    label: 'Name',
+    defaultDirection: 'asc',
+    directionLabels: { asc: 'A to Z', desc: 'Z to A' },
+    serverHint: 'Server name',
+    groupHint: 'Network name',
+    getValue: (server) => getServerDisplayName(server),
+    getGroupValue: (_servers, groupName) => groupName
   }
 ];
+
+const compareNumbers = (a: number, b: number): number => (a === b ? 0 : a < b ? -1 : 1);
+const compareStrings = (a: string, b: string): number =>
+  a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+const compareValues = (a: number | string, b: number | string): number => {
+  if (typeof a === 'number' && typeof b === 'number') return compareNumbers(a, b);
+  if (typeof a === 'string' && typeof b === 'string') return compareStrings(a, b);
+  return compareStrings(String(a), String(b));
+};
+
+// Direction only ever flips entries we actually have a value for, so a server
+// with an unknown ping sinks to the bottom of "lowest ping first" and of
+// "highest ping first" alike, instead of counting as the largest ping.
+const compareSortValues = (
+  a: number | string | null,
+  b: number | string | null,
+  direction: SortDirection
+): number => {
+  if (a === null || b === null) {
+    if (a === b) return 0;
+    return a === null ? 1 : -1;
+  }
+
+  const comparison = compareValues(a, b);
+  return direction === 'desc' ? -comparison : comparison;
+};
+
+const makeServerComparator = (sortOption: SortOption, direction: SortDirection) =>
+  (a: ServerElement, b: ServerElement): number => {
+    if (a.online !== b.online) return a.online ? -1 : 1;
+
+    const comparison = compareSortValues(sortOption.getValue(a), sortOption.getValue(b), direction);
+    if (comparison !== 0) return comparison;
+
+    return compareNumbers(a.id, b.id);
+  };
+
+const makeGroupComparator = (sortOption: SortOption, direction: SortDirection) =>
+  (a: [string, ServerElement[]], b: [string, ServerElement[]]): number => {
+    const aHasOnline = a[1].some(server => server.online);
+    const bHasOnline = b[1].some(server => server.online);
+    if (aHasOnline !== bHasOnline) return aHasOnline ? -1 : 1;
+
+    const comparison = compareSortValues(
+      sortOption.getGroupValue(a[1], a[0]),
+      sortOption.getGroupValue(b[1], b[0]),
+      direction
+    );
+    if (comparison !== 0) return comparison;
+
+    return compareStrings(a[0], b[0]);
+  };
 
 export const useServerList = (rawServers: ServerElement[]) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -44,7 +152,7 @@ export const useServerList = (rawServers: ServerElement[]) => {
 
   const processedData = useMemo(() => {
     if (!rawServers || !Array.isArray(rawServers)) {
-      return { serverGroups: {}, flatServers: [] };
+      return { serverGroups: [] as ServerGroupEntry[], flatServers: [] as ServerElement[] };
     }
 
     // Step 1: Apply search filter
@@ -70,57 +178,29 @@ export const useServerList = (rawServers: ServerElement[]) => {
       });
     }
 
-    // Step 3: Apply sorting
-    const sortOption = SORT_OPTIONS.find(option => option.key === sortCriteria);
-    if (sortOption) {
-      filteredServers.sort((a, b) => {
-        const aValue = sortOption.getValue(a);
-        const bValue = sortOption.getValue(b);
-
-        // Always prioritize online servers
-        if (a.online !== b.online) {
-          return a.online ? -1 : 1;
-        }
-
-        let comparison: number;
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          comparison = aValue.localeCompare(bValue);
-        } else {
-          comparison = (aValue as number) - (bValue as number);
-        }
-
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
-    }
-
-    // Step 4: Add isHidden property and group if needed
-    const serversWithHidden = filteredServers.map(server => ({
-      ...server,
-      isHidden: false
-    }));
+    // Step 3: Sort (and group) using the selected criteria/direction
+    const sortOption = SORT_OPTIONS.find(option => option.key === sortCriteria) ?? SORT_OPTIONS[0];
+    const serverComparator = makeServerComparator(sortOption, sortDirection);
 
     if (isGrouped) {
-      // Group servers by name
       const groups: Record<string, ServerElement[]> = {};
-      serversWithHidden.forEach(server => {
+      filteredServers.forEach(server => {
         if (!groups[server.name]) {
           groups[server.name] = [];
         }
         groups[server.name].push(server);
       });
 
-      // Sort groups by total player count (descending)
-      const sortedGroups: Record<string, ServerElement[]> = Object.fromEntries(
-        Object.entries(groups).sort((a, b) => {
-          const aPlayers = a[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
-          const bPlayers = b[1].reduce((sum, server) => sum + (isHub(server) ? 0 : (server.currentData?.players || 0)), 0);
-          return bPlayers - aPlayers;
-        })
-      );
+      Object.values(groups).forEach(members => members.sort(serverComparator));
 
-      return { serverGroups: sortedGroups, flatServers: [] };
+      const groupComparator = makeGroupComparator(sortOption, sortDirection);
+      const sortedGroups: ServerGroupEntry[] = Object.entries(groups)
+        .sort(groupComparator)
+        .map(([name, servers]) => ({ name, servers }));
+
+      return { serverGroups: sortedGroups, flatServers: [] as ServerElement[] };
     } else {
-      return { serverGroups: {}, flatServers: serversWithHidden };
+      return { serverGroups: [] as ServerGroupEntry[], flatServers: [...filteredServers].sort(serverComparator) };
     }
   }, [rawServers, searchTerm, isGrouped, hideInactiveEnabled, sortCriteria, sortDirection]);
 
@@ -136,7 +216,8 @@ export const useServerList = (rawServers: ServerElement[]) => {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       // Default direction for new criteria
-      setSortDirection(criteria === 'ping' ? 'asc' : 'desc');
+      const newOption = SORT_OPTIONS.find(option => option.key === criteria);
+      setSortDirection(newOption ? newOption.defaultDirection : 'desc');
     }
   };
 
