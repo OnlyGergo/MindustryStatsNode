@@ -82,7 +82,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             stats.max_players AS "playerLimit",
             stats.wave, stats.version, stats.version_type AS "versionType", stats.ping,
             motds."serverName", motds.description,
-            maps."modeName", maps."mapName", maps.mode
+            maps."modeName", maps."mapName", maps.mode, s.aggregate_exclude AS "aggregateExclude"
         FROM servers s
         LEFT JOIN latest_stats stats ON s.id = stats.server_id
         LEFT JOIN latest_motds motds ON s.id = motds.server_id
@@ -102,6 +102,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             lastSeen:    row.last_seen,
             lastUpdated: row.lastUpdated ? new Date(row.lastUpdated).getTime() : Date.now(),
             countryCode: row.country_code ?? null,
+            aggregateExclude: row.aggregate_exclude ?? false,
         };
 
         // currentData is current - only populate if "fresh" aka 5 minutes
@@ -182,6 +183,7 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
         allMotds,
         currentMotd,
         currentMap,
+        aggregateExclude: result.detail_aggregate_exclude,
     };
 
     if (result.detail_timestamp != null &&
