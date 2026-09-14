@@ -3,6 +3,7 @@ import { QueryTypes } from 'sequelize';
 import { type GamemodeHistoryEntry, type GamemodeInfo, type ServerShareEntry } from '../../../common/models/GlobalStatsTypes.js';
 import {
     PLAYER_FILTER_REPLACEMENTS,
+    aggregateExcludeSql,
     pickAggregateSource,
     playerFilterSql,
 } from './aggregateTiers.js';
@@ -86,6 +87,7 @@ function buildGamemodeHistoryQuery(
     const conditions = [
         `src.${time} >= ${rangeStart}`,
         `src.${time} < ${rangeEnd}`,
+        aggregateExcludeSql('src'),
         playerFilterSql(source, 'src'),
     ].filter((c): c is string => c != null);
 

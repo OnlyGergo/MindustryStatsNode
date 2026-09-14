@@ -93,3 +93,8 @@ export function playerFilterSql(source: AggregateSource, alias?: string): string
 export const PLAYER_FILTER_REPLACEMENTS = {
     maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT,
 };
+
+export function aggregateExcludeSql(alias?: string): string {
+    const prefix = alias ? `${alias}.` : '';
+    return `${prefix}server_id IN (SELECT id FROM servers WHERE NOT aggregate_exclude)`;
+}

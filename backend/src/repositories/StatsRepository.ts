@@ -11,6 +11,7 @@ import { type ServerHistory } from '../../../common/models/serverData.js';
 import { QueryTypes } from 'sequelize';
 import {
     PLAYER_FILTER_REPLACEMENTS,
+    aggregateExcludeSql,
     pickAggregateSource,
     playerFilterSql,
 } from './aggregateTiers.js';
@@ -37,7 +38,7 @@ interface RawHistoryRow {
 function scopeFilter(scope: Scope): { sql: string | null; params: Record<string, unknown> } {
     switch (scope.kind) {
         case 'global':
-            return { sql: null, params: {} };
+            return { sql: aggregateExcludeSql(), params: {} };
         case 'server':
             return {
                 sql: 'server_id = :serverId',
@@ -45,7 +46,7 @@ function scopeFilter(scope: Scope): { sql: string | null; params: Record<string,
             };
         case 'network':
             return {
-                sql: 'server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId)',
+                sql: 'server_id IN (SELECT id FROM servers WHERE server_group_id = :groupId AND NOT aggregate_exclude)',
                 params: { groupId: scope.groupId }
             };
     }

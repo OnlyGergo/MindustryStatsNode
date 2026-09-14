@@ -273,7 +273,7 @@ export async function getMotdHistory(
 export async function getNetworkDetails(groupId: number): Promise<NetworkDetails | undefined> {
     const [row]: any = await sequelize.query(`
         WITH group_servers AS (
-            SELECT id FROM servers WHERE server_group_id = :groupId
+            SELECT id FROM servers WHERE server_group_id = :groupId AND NOT aggregate_exclude
         ),
         latest_stats AS (
             -- server_current holds exactly one row per server; the hour bound
@@ -299,7 +299,7 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             FROM servers s
             JOIN server_groups sg2 ON s.server_group_id = sg2.id
             LEFT JOIN latest_stats ls ON s.id = ls.server_id
-            WHERE s.server_group_id = :groupId
+            WHERE s.server_group_id = :groupId AND NOT s.aggregate_exclude
             ORDER BY ls.players DESC NULLS LAST
             LIMIT 1
         )
