@@ -10,7 +10,6 @@ import {
 } from "../../../common/models/serverData";
 import useApi from "../hooks/useApi.ts";
 import { useResponsive } from "../hooks/useResponsive";
-import { isHub } from "../util/mindustry.ts";
 
 interface SidebarContextValue {
   isMasterPanelCollapsed: boolean;
@@ -97,7 +96,7 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
   };
 
   const computeTotalPlayers = (servers: ServerElement[]): number => {
-    return servers.reduce((sum, s) => sum + (isHub(s) ? 0 : s.currentData?.players || 0), 0);
+    return servers.reduce((sum, s) => sum + (s.aggregateExclude ? 0 : s.currentData?.players || 0), 0);
   };
 
   const processServerData = (servers: ServerElement[] | null) => {

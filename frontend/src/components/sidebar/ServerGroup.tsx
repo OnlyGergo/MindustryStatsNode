@@ -1,6 +1,5 @@
 import React from "react";
 import ServerItem from "./ServerItem";
-import { isHub } from "../../util/mindustry.ts";
 import { ServerElement } from "../../../../common/models/serverData.ts";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -26,7 +25,7 @@ const ServerGroup: React.FC<{
   const onlineServersCount = servers.filter((s) => s.online).length;
   const totalPlayers = servers.reduce(
     (sum, server) =>
-      sum + (isHub(server) ? 0 : server.currentData?.players || 0),
+      sum + (server.aggregateExclude ? 0 : server.currentData?.players || 0),
     0,
   );
 

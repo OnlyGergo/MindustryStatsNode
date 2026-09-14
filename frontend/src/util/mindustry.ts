@@ -1,4 +1,3 @@
-import {ServerElement} from "../../../common/models/serverData.ts";
 import {removeColorsFromMindustry} from "../../../common/Mindustry.ts";
 
 export function removeColors(text: string | null): string | null {
@@ -20,15 +19,3 @@ export function formatUnsafeText(text: string): string {
     if (cleanedText === null) return "";
     return String(cleanedText.replace(/\n/g, '<br/>').trim().substring(0, 500));
 }
-
-export function isHub(server: ServerElement) {
-        const nameLower = server.name?.toLowerCase() || '';
-        const motdLower = server.currentData?.description?.toLowerCase() || '';
-        const modeLower = server.currentData?.modeName?.toLowerCase() || '';
-        const mapLower = server.currentData?.mapName?.toLowerCase() || '';
-
-        return nameLower.includes('hub') || nameLower.includes('lobby') ||
-               motdLower.includes('hub') || motdLower.includes('lobby') ||
-               modeLower.includes('hub') || modeLower.includes('lobby') ||
-               mapLower.includes('hub') || mapLower.includes('lobby');
-    }

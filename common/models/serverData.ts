@@ -41,6 +41,7 @@ export interface ServerElement {
   online: boolean;
   consecutiveFailures?: number;
   countryCode?: string | null;
+  aggregateExclude: boolean;
 }
 
 export interface ServerMotdData {

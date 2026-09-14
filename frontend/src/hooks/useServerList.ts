@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {ServerElement} from '../../../common/models/serverData';
-import {isHub, removeColors} from '../util/mindustry';
+import {removeColors} from '../util/mindustry';
 
 // NOTE: This hook is purely client-side derived state (search/sort/group UI
 // preferences) over data that's already fetched by `useApi`/the route loader.
@@ -51,7 +51,7 @@ export const SORT_OPTIONS: SortOption[] = [
     groupHint: 'Total players per network (hubs excluded)',
     getValue: (server) => server.online ? (server.currentData?.players ?? 0) : 0,
     getGroupValue: (servers) => servers.reduce(
-      (sum, server) => sum + (server.online && !isHub(server) ? (server.currentData?.players ?? 0) : 0),
+      (sum, server) => sum + (server.online && !server.aggregateExclude ? (server.currentData?.players ?? 0) : 0),
       0
     )
   },
