@@ -230,7 +230,7 @@ alter table public.servers
                 map.game_mode,
                 map.mode_name,
                 s.server_group_id,
-                s.aggregate_exclude,
+                s.aggregate_exclude
             FROM current_server s
                      LEFT JOIN latest_stats st ON true
                      LEFT JOIN latest_motd motd ON true

@@ -13,3 +13,7 @@ SELECT timescaledb_post_restore();
 
 \c mindustry_stats_experiment
 SELECT timescaledb_post_restore();
+
+
+-- get sessions
+SELECT * FROM pg_stat_activity;
