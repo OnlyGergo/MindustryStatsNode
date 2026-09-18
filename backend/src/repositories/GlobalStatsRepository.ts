@@ -6,6 +6,7 @@ import {
     aggregateExcludeSql,
     pickAggregateSource,
     playerFilterSql,
+    type AggregateSource,
 } from './aggregateTiers.js';
 
 interface RawGamemodeHistoryRow {
@@ -49,6 +50,27 @@ function rangeBounds(startDate?: number, endDate?: number): { rangeStart: string
 }
 
 /**
+ * Expression for the "instant" a cross-server total is summed over.
+ *
+ * Summing player counts only means anything if the rows being summed describe
+ * the same moment.  The continuous aggregates already come pre-bucketed, so
+ * their own bucket column is the finest honest instant available.  The raw
+ * hypertable does not: every server is polled on its own schedule, so summing
+ * by raw timestamp would put roughly one server in each "instant".  On that
+ * path the rows get bucketed to the requested width first -- which on the raw
+ * path is also the coarse width, so the peak-instant step below collapses to an
+ * identity and full resolution is preserved.
+ */
+function fineBucketExpr(source: AggregateSource, alias: string): string {
+    return source.needsPlayerFilter
+        ? `time_bucket(:bucketSeconds * INTERVAL '1 second', ${alias}.${source.timeColumn})`
+        : `${alias}.${source.timeColumn}`;
+}
+
+/** The coarse bucket a fine instant belongs to. */
+const COARSE_OF = (col: string) => `time_bucket(:bucketSeconds * INTERVAL '1 second', ${col})`;
+
+/**
  * Builds the SQL for bucketed gamemode history query.
  * Returns player counts grouped by gamemode per time bucket.
  *
@@ -57,17 +79,24 @@ function rangeBounds(startDate?: number, endDate?: number): { rangeStart: string
  * map's classification takes effect immediately instead of needing years of
  * materialised data rebuilt.
  *
- * time_bucket_gapfill fills each mode's series independently, which is what the
- * old all_buckets × all_modes cross join was emulating — empty buckets still
- * keep their gamemode instead of coming back as null rows.
+ * ── Why the shape is peak-instant rather than max-then-sum ──────────────────
+ * The previous shape took MAX(players) per server across the whole coarse
+ * bucket and then summed across servers.  Servers do not peak simultaneously,
+ * so that summed a set of maxima that never coexisted: the wider the bucket,
+ * the more the reported "peak" exceeded any concurrency that actually occurred,
+ * until it plateaued once every server had hit its daily max inside one bucket.
+ * A 24h bucket could report roughly double the real figure.
  *
- * Grouping happens on gamemode_registry.id -- one smallint -- all the way
- * through bucketing and gapfill, where the row counts are large; the registry
- * is joined in once at the end, over the handful of surviving rows, and the
- * final merge happens on the cleaned display name.  The old shape grouped on
- * the raw (game_mode, mode_name) pair throughout, which both widened every hash
- * key with a text column and split one gamemode into several series whenever a
- * server dressed its mode name in different colour codes.
+ * It also keyed the per-server peak on gamemode_id, so a server that changed
+ * mode inside the bucket contributed its peak once per mode.
+ *
+ * The order is now inverted.  Servers are deduplicated at the source's own
+ * resolution (before gamemode is chosen, which kills the double count), summed
+ * across servers per instant, and only then is the single busiest instant in
+ * each coarse bucket selected.  What the chart plots is therefore a real
+ * moment: the stacked total at each point is a concurrency figure that genuinely
+ * happened, and every mode's slice is that same moment's breakdown, so the
+ * series stay mutually consistent.
  */
 function buildGamemodeHistoryQuery(
     hoursBack: number,
@@ -77,6 +106,8 @@ function buildGamemodeHistoryQuery(
 ): { query: string; replacements: Record<string, unknown> } {
     const source = pickAggregateSource(bucketMinutes);
     const time = source.timeColumn;
+    const players = source.playersColumn;
+    const fine = fineBucketExpr(source, 'src');
     const { rangeStart, rangeEnd } = rangeBounds(startDate, endDate);
 
     const timeParams =
@@ -92,6 +123,45 @@ function buildGamemodeHistoryQuery(
     ].filter((c): c is string => c != null);
 
     const query = `
+        WITH per_server AS (
+            -- One row per (instant, server).  Grouping stops here -- gamemode is
+            -- NOT part of the key -- so a server that ran two maps, or two
+            -- modes, inside one source bucket still contributes exactly one
+            -- player count.  The mode it was running at its own peak is carried
+            -- along so the row can still be attributed.
+            --
+            -- Most groups hold a single row (a server rarely changes map within
+            -- one source bucket), so the ordered array_agg is close to free and
+            -- avoids the full sort a DISTINCT ON would force.
+            SELECT ${fine} AS fine_bucket,
+                   src.server_id,
+                   (array_agg(smr.gamemode_id ORDER BY src.${players} DESC))[1] AS gamemode_id,
+                   MAX(src.${players}) AS players
+            FROM ${source.mapTable} src
+                     JOIN server_maps_registry smr ON src.map_registry_id = smr.id
+            WHERE ${conditions.join('\n              AND ')}
+            GROUP BY 1, 2
+        ),
+        per_instant AS (
+            -- Cross-server total per mode, per instant.  Every row summed here
+            -- describes the same moment, which is what makes the sum meaningful.
+            SELECT fine_bucket, gamemode_id, SUM(players) AS players
+            FROM per_server
+            GROUP BY 1, 2
+        ),
+        peak_instant AS (
+            -- The busiest instant inside each coarse bucket, decided on the
+            -- global total across all modes.  One instant wins per bucket, so
+            -- the per-mode slices reported below are a coherent snapshot rather
+            -- than each mode's independent high-water mark.
+            SELECT DISTINCT ON (${COARSE_OF('t.fine_bucket')}) t.fine_bucket
+            FROM (
+                SELECT fine_bucket, SUM(players) AS total
+                FROM per_instant
+                GROUP BY 1
+            ) t
+            ORDER BY ${COARSE_OF('t.fine_bucket')}, t.total DESC, t.fine_bucket
+        )
         SELECT extract(epoch FROM g.gf_bucket) * 1000 AS timestamp,
                gr.clean_name,
                -- Gaps are NULL and SUM skips them, so a bucket only comes back
@@ -101,29 +171,18 @@ function buildGamemodeHistoryQuery(
         FROM (
             SELECT time_bucket_gapfill(
                            :bucketSeconds * INTERVAL '1 second',
-                           ps.bucket,
+                           pin.fine_bucket,
                            ${rangeStart},
                            ${rangeEnd}
                    ) AS gf_bucket,
-                   ps.gamemode_id,
-                   SUM(ps.players) AS players
-            FROM (
-                -- Peak per server first, so summing across servers cannot
-                -- double count a server that changed map mid-bucket.
-                SELECT time_bucket(:bucketSeconds * INTERVAL '1 second', src.${time}) AS bucket,
-                       src.server_id,
-                       smr.gamemode_id,
-                       MAX(src.${source.playersColumn}) AS players
-                FROM ${source.mapTable} src
-                         JOIN server_maps_registry smr ON src.map_registry_id = smr.id
-                WHERE ${conditions.join('\n                  AND ')}
-                GROUP BY 1, 2, 3
-            ) ps
-            WHERE ps.bucket >= ${rangeStart}
-              AND ps.bucket < ${rangeEnd}
-            -- Aliased away from the subquery's own bucket column: an
-            -- unqualified GROUP BY name binds to the input column.
-            GROUP BY gf_bucket, ps.gamemode_id
+                   pin.gamemode_id,
+                   -- Exactly one instant survives per coarse bucket, so this
+                   -- SUM passes the value through; it is here to satisfy the
+                   -- gapfill grouping, not to combine anything.
+                   SUM(pin.players) AS players
+            FROM per_instant pin
+                     JOIN peak_instant pk ON pk.fine_bucket = pin.fine_bucket
+            GROUP BY gf_bucket, pin.gamemode_id
         ) g
         -- Name resolution last: one hash join against a table small enough to
         -- stay permanently resident, over the already-reduced result.  Merging
@@ -146,14 +205,14 @@ function buildGamemodeHistoryQuery(
  * Builds the SQL for bucketed server share query for a specific gamemode.
  * Returns player counts per server with group info.
  *
- * Same aggregate-backed shape as above; time_bucket_gapfill fills each server's
- * series, so empty buckets retain server identity instead of coming back as
- * null rows.
+ * Same peak-instant shape as the history query, and deliberately so: this chart
+ * is a breakdown of one of that chart's series, so both have to pick the same
+ * moment inside a bucket or the share chart's total will not reconcile with the
+ * mode's line.  Each server's value is what it had at the busiest instant for
+ * this mode inside the bucket, not its independent high-water mark.
  *
  * modeId identifies a display name (a clean_name), not a single registry row --
- * see the gamemode filter below.  Peaking per (bucket, server) after that widened
- * filter also means a server that flipped between two variants of the same mode
- * inside one bucket counts once, exactly as it does in the history chart.
+ * see the gamemode filter below.
  */
 function buildServerShareQuery(
     modeId: number,
@@ -164,6 +223,8 @@ function buildServerShareQuery(
 ): { query: string; replacements: Record<string, unknown> } {
     const source = pickAggregateSource(bucketMinutes);
     const time = source.timeColumn;
+    const players = source.playersColumn;
+    const fine = fineBucketExpr(source, 'src');
     const { rangeStart, rangeEnd } = rangeBounds(startDate, endDate);
 
     const timeParams =
@@ -187,27 +248,49 @@ function buildServerShareQuery(
          )`,
         `src.${time} >= ${rangeStart}`,
         `src.${time} < ${rangeEnd}`,
+        // Matches the history chart's scope.  Without this an excluded server
+        // would appear in the breakdown of a mode whose line does not count it.
+        aggregateExcludeSql('src'),
         playerFilterSql(source, 'src'),
     ].filter((c): c is string => c != null);
 
     const query = `
-        WITH bucketed_stats AS (
-            SELECT time_bucket_gapfill(
-                           :bucketSeconds * INTERVAL '1 second',
-                           src.${time},
-                           ${rangeStart},
-                           ${rangeEnd}
-                   ) AS gf_bucket,
+        WITH per_server AS (
+            -- Peak per (instant, server): a server that flipped between two
+            -- variants of this mode inside one source bucket counts once.
+            SELECT ${fine} AS fine_bucket,
                    src.server_id,
-                   MAX(src.${source.playersColumn}) AS players -- gaps stay NULL
+                   MAX(src.${players}) AS players
             FROM ${source.mapTable} src
                      JOIN server_maps_registry smr ON src.map_registry_id = smr.id
             WHERE ${conditions.join('\n              AND ')}
-            -- Aliased away from the source's own bucket column: an
-            -- unqualified GROUP BY name binds to the input column, which would
-            -- silently group at the source's resolution instead of the
-            -- requested one.
-            GROUP BY gf_bucket, src.server_id
+            GROUP BY 1, 2
+        ),
+        peak_instant AS (
+            -- Busiest instant for this mode inside each coarse bucket.
+            SELECT DISTINCT ON (${COARSE_OF('t.fine_bucket')}) t.fine_bucket
+            FROM (
+                SELECT fine_bucket, SUM(players) AS total
+                FROM per_server
+                GROUP BY 1
+            ) t
+            ORDER BY ${COARSE_OF('t.fine_bucket')}, t.total DESC, t.fine_bucket
+        ),
+        bucketed_stats AS (
+            SELECT time_bucket_gapfill(
+                           :bucketSeconds * INTERVAL '1 second',
+                           ps.fine_bucket,
+                           ${rangeStart},
+                           ${rangeEnd}
+                   ) AS gf_bucket,
+                   ps.server_id,
+                   -- One surviving instant per bucket; gaps stay NULL, and a
+                   -- server absent at the winning instant is a gap for that
+                   -- bucket, which is the honest answer.
+                   MAX(ps.players) AS players
+            FROM per_server ps
+                     JOIN peak_instant pk ON pk.fine_bucket = ps.fine_bucket
+            GROUP BY gf_bucket, ps.server_id
         )
         SELECT
             extract(epoch FROM bs.gf_bucket) * 1000 AS timestamp,
