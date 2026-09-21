@@ -54,10 +54,17 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             ${LIVE_MEMBER_SQL}
         ),
         family_meta AS (
-            -- last_seen/updated_at collapse across the whole family with MAX,
-            -- same reasoning as the player-count rule: a retired alias's
-            -- stale timestamp must never shadow the live member's.
-            SELECT sc.canonical_id, MAX(s.last_seen) AS last_seen, MAX(s.updated_at) AS updated_at
+            -- last_seen collapses across the whole family with MAX, same
+            -- reasoning as the player-count rule: a retired alias's stale
+            -- timestamp must never shadow the live member's.
+            --
+            -- updated_at deliberately does NOT collapse this way -- it comes
+            -- from the live member below.  It is Sequelize-managed and bumps
+            -- on any column change, so retiring an old alias by hand would
+            -- otherwise show the server as freshly updated when the address
+            -- a visitor sees has not reported in for days.  This is also what
+            -- get_server_details returns, so the list and detail views agree.
+            SELECT sc.canonical_id, MAX(s.last_seen) AS last_seen
             FROM server_canonical sc
             JOIN servers s ON s.id = sc.server_id
             GROUP BY sc.canonical_id
@@ -108,7 +115,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
         SELECT
             lm.canonical_id AS id, sg.name, root.server_group_id AS "groupId",
             lm.host, lm.port, lm.country_code,
-            fam.updated_at AS "lastUpdated", fam.last_seen,
+            lm.updated_at AS "lastUpdated", fam.last_seen,
             stats.online, stats.timestamp, stats.players,
             stats.max_players AS "playerLimit",
             stats.wave, stats.version, stats.version_type AS "versionType", stats.ping,
@@ -359,14 +366,34 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             FROM server_stats_1h
             WHERE server_id IN (SELECT server_id FROM group_servers)
         ),
+        group_live AS (
+            -- The live address of each family in this group.  Spelled out
+            -- rather than reusing LIVE_MEMBER_SQL: that helper is
+            -- deliberately unscoped, and DISTINCT ON blocks subquery
+            -- flattening, so joining it would sort every family in the
+            -- database on each network page view instead of the handful in
+            -- this group.  Same ordering, driven from group_families.
+            SELECT DISTINCT ON (gf.canonical_id)
+                   gf.canonical_id AS canonical_id, s.host, s.port
+            FROM group_families gf
+            JOIN server_canonical sc ON sc.canonical_id = gf.canonical_id
+            JOIN servers s           ON s.id = sc.server_id
+            ORDER BY gf.canonical_id,
+                     (s.retired_at IS NULL) DESC,
+                     s.last_seen DESC NULLS LAST,
+                     s.id DESC
+        ),
         top_server AS (
             -- Canonical id + the family's LIVE address (what a visitor would
             -- actually connect to), player count MAX'd across the family.
-            SELECT lm.canonical_id AS id, lm.host, lm.port, ls.players, sg2.name AS server_name
-            FROM group_families gf
-            JOIN (${LIVE_MEMBER_SQL}) lm ON lm.canonical_id = gf.canonical_id
-            JOIN server_groups sg2       ON sg2.id = :groupId
-            LEFT JOIN latest_stats ls    ON ls.canonical_id = gf.canonical_id
+            -- Ordering by players has to happen here, after the per-family
+            -- pick above: a DISTINCT ON in this select would force
+            -- canonical_id to sort first and hand back the lowest id rather
+            -- than the busiest server.
+            SELECT gl.canonical_id AS id, gl.host, gl.port, ls.players, sg2.name AS server_name
+            FROM group_live gl
+            JOIN server_groups sg2    ON sg2.id = :groupId
+            LEFT JOIN latest_stats ls ON ls.canonical_id = gl.canonical_id
             ORDER BY ls.players DESC NULLS LAST
             LIMIT 1
         )

@@ -71,7 +71,8 @@ export const LIVE_MEMBER_SQL = `
            s.id   AS live_server_id,
            s.host,
            s.port,
-           s.country_code
+           s.country_code,
+           s.updated_at
     FROM server_canonical sc
     JOIN servers s ON s.id = sc.server_id
     -- The root is the oldest observation, which makes it a stable identity but
