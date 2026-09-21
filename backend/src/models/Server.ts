@@ -15,9 +15,7 @@ class Server extends Model {
   // Non-NULL = this row is retired history (address changed / re-registered)
   // and is never polled again. See collector/migrations/30_server_identity.sql.
   declare retired_at: Date | null;
-  // Public-facing sequential id, independent of the internal serial `id`.
-  // See collector/migrations/30_server_identity.sql.
-  declare display_ref: number;
+
 }
 
 Server.init({
@@ -66,10 +64,6 @@ Server.init({
   retired_at: {
     type: DataTypes.DATE,
     allowNull: true
-  },
-  display_ref: {
-    type: DataTypes.INTEGER,
-    allowNull: false
   }
 }, {
   sequelize,

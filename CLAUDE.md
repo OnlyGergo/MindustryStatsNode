@@ -51,8 +51,6 @@ Rules every read has to follow:
 
 Chart queries are all the same three-step shape: peak per (instant, canonical server) → sum across servers per instant → pick the busiest instant in each coarse bucket, then gapfill. Summing per-server bucket maxima instead would add up peaks that never coexisted.
 
-`servers.display_ref` is a public-facing sequential ID from `server_ref_seq`, backfilled in first-seen order and decoupled from the internal serial. Nothing reads it yet.
-
 `server_events` is the annotation stream that drives chart overlays — spans (`ends_at` set: a data-quality era, a global outage) and point events (`ends_at` NULL: version bump, IP change), `server_id` NULL meaning global. Rows are inserted manually; there is no reader or uPlot rendering yet.
 
 ## Notable Design Decisions
