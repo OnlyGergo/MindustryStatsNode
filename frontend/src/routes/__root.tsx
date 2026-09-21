@@ -30,8 +30,10 @@ export const Route = createRootRoute({
       { title: "Mindustry Stats" },
       { name: "description", content: "Mindustry Stats is a web application that provides real-time statistics and analytics for Mindustry servers." },
     ],
-    favicon: [{ rel: "icon", href: "/favicon.ico" }],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+    ],
   }),
   // SSR-fetched on first load; the client hook (useApi) takes over polling afterward.
   loader: async () => {

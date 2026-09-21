@@ -5,18 +5,10 @@ import { useSidebar } from "../../context/SidebarContext.tsx";
 import { VERSION } from "../../../../common/version.ts";
 import { Route as InactiveRoute } from "../../routes/inactive.tsx";
 import { Route as GlobalRoute } from "../../routes/global.tsx";
+import Icon from "../../../public/favicon.svg";
 
 const BrandMark: React.FC = () => (
-  <div className="w-8 h-8 bg-linear-to-br from-accent to-[#ff5a1f] rounded flex items-center justify-center shrink-0">
-    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-      />
-    </svg>
-  </div>
+  <Icon/>
 );
 
 const CollapseToggle: React.FC<{ collapsed: boolean; onClick: () => void }> = ({ collapsed, onClick }) => (

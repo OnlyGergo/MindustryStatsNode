@@ -21,6 +21,7 @@
     "uplot": "^1.6.32"
   },
   "devDependencies": {
+    "vite-plugin-svgr": "^5.2.0",
     "@eslint/js": "^10.0.1",
     "@tanstack/react-start-plugin": "^1.131.50",
     "@types/react": "^19.2.18",
