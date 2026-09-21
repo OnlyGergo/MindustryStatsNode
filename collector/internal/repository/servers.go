@@ -45,10 +45,14 @@ type StatRow struct {
 // serverRepository.ts read both tables and joined them in JS; one LEFT JOIN is
 // the same result set with one round trip.
 func (r *Repository) GetServers(ctx context.Context) ([]ServerRecord, error) {
+	// A retired row is closed history for an address that may since have been
+	// reassigned to a new row -- polling it would hit whatever now answers on
+	// that host/port and misattribute the response to the old row's stats.
 	rows, err := r.pool.Query(ctx, `
 		SELECT s.id, s.host, s.port, COALESCE(g.name, 'Unknown') AS name
 		FROM servers s
 		LEFT JOIN server_groups g ON g.id = s.server_group_id
+		WHERE s.retired_at IS NULL
 		ORDER BY s.id
 	`)
 	if err != nil {
@@ -137,7 +141,11 @@ func (r *Repository) BatchUpsertServers(ctx context.Context, servers []ServerInp
 			SELECT sd.host, sd.port, g.id
 			FROM server_data sd
 			LEFT JOIN server_groups g ON g.name = sd.name
-			ON CONFLICT (host, port) DO UPDATE
+			-- (host, port) is only unique among live rows now (uq_server_address_active);
+			-- the predicate has to match that partial index exactly for Postgres to
+			-- infer it as the conflict target, and a retired row must never be updated
+			-- by rediscovering its old address.
+			ON CONFLICT (host, port) WHERE retired_at IS NULL DO UPDATE
 				SET server_group_id = EXCLUDED.server_group_id,
 					updated_at      = NOW()
 		`, serversJSON)

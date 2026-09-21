@@ -2,12 +2,14 @@ import sequelize from '../config/database.js';
 import { QueryTypes } from 'sequelize';
 import { type GamemodeHistoryEntry, type GamemodeInfo, type ServerShareEntry } from '../../../common/models/GlobalStatsTypes.js';
 import {
+    COARSE_OF,
     PLAYER_FILTER_REPLACEMENTS,
-    aggregateExcludeSql,
+    fineBucketExpr,
     pickAggregateSource,
     playerFilterSql,
-    type AggregateSource,
+    rangeBounds,
 } from './aggregateTiers.js';
+import { aggregateExcludeSql, canonicalJoin } from './canonicalIdentity.js';
 
 interface RawGamemodeHistoryRow {
     timestamp: number;
@@ -23,52 +25,14 @@ interface RawGamemodeListRow {
 
 interface RawServerShareRow {
     timestamp: number;
+    // Canonical id, not the raw server_id the stats were collected under --
+    // see the canonical collapse in buildServerShareQuery.
     server_id: number;
     server_group_id: number;
     server_name: string;
     group_name: string;
     players: number | null;
 }
-
-/**
- * Range bounds shared by both builders.
- *
- * The end bound is exclusive but pushed out by one bucket so the bucket that is
- * currently filling up is still returned.
- */
-function rangeBounds(startDate?: number, endDate?: number): { rangeStart: string; rangeEnd: string } {
-    const fixedWindow = startDate != null && endDate != null;
-
-    return {
-        rangeStart: fixedWindow
-            ? "time_bucket(:bucketSeconds * INTERVAL '1 second', to_timestamp(:startDate / 1000.0))"
-            : "time_bucket(:bucketSeconds * INTERVAL '1 second', NOW() - interval '1 hour' * :hoursBack)",
-        rangeEnd: fixedWindow
-            ? "(time_bucket(:bucketSeconds * INTERVAL '1 second', to_timestamp(:endDate / 1000.0)) + :bucketSeconds * INTERVAL '1 second')"
-            : "(time_bucket(:bucketSeconds * INTERVAL '1 second', NOW()) + :bucketSeconds * INTERVAL '1 second')",
-    };
-}
-
-/**
- * Expression for the "instant" a cross-server total is summed over.
- *
- * Summing player counts only means anything if the rows being summed describe
- * the same moment.  The continuous aggregates already come pre-bucketed, so
- * their own bucket column is the finest honest instant available.  The raw
- * hypertable does not: every server is polled on its own schedule, so summing
- * by raw timestamp would put roughly one server in each "instant".  On that
- * path the rows get bucketed to the requested width first -- which on the raw
- * path is also the coarse width, so the peak-instant step below collapses to an
- * identity and full resolution is preserved.
- */
-function fineBucketExpr(source: AggregateSource, alias: string): string {
-    return source.needsPlayerFilter
-        ? `time_bucket(:bucketSeconds * INTERVAL '1 second', ${alias}.${source.timeColumn})`
-        : `${alias}.${source.timeColumn}`;
-}
-
-/** The coarse bucket a fine instant belongs to. */
-const COARSE_OF = (col: string) => `time_bucket(:bucketSeconds * INTERVAL '1 second', ${col})`;
 
 /**
  * Builds the SQL for bucketed gamemode history query.
@@ -97,6 +61,20 @@ const COARSE_OF = (col: string) => `time_bucket(:bucketSeconds * INTERVAL '1 sec
  * moment: the stacked total at each point is a concurrency figure that genuinely
  * happened, and every mode's slice is that same moment's breakdown, so the
  * series stay mutually consistent.
+ *
+ * ── Canonical collapse ──────────────────────────────────────────────────────
+ * `per_server` dedupes on the RAW server_id first -- that step has to happen
+ * before aliases are folded together, otherwise a server that changed map
+ * inside one source bucket would still be double-counted, just now blamed on
+ * the merged identity instead of the raw one.  Only once that is settled does
+ * `per_canonical` fold aliases of the same real server together with MAX, not
+ * SUM: while a server-identity merge is in flight, both the old and new
+ * address can answer for the same server inside one fine instant, and a SUM
+ * would count one real server as two.  The gamemode attribution rides along
+ * unchanged -- `per_server` already picked, per alias, the mode that alias's
+ * own peak was running, so re-applying the same "highest players wins" array_agg
+ * across aliases in `per_canonical` picks the mode the winning ALIAS was
+ * running, which is what the reported player count is actually describing.
  */
 function buildGamemodeHistoryQuery(
     hoursBack: number,
@@ -142,11 +120,24 @@ function buildGamemodeHistoryQuery(
             WHERE ${conditions.join('\n              AND ')}
             GROUP BY 1, 2
         ),
+        per_canonical AS (
+            -- Collapse aliases of the same real server onto its canonical id.
+            -- MAX, not SUM: a server-identity merge leaves both the old and new
+            -- address answering for a while, and summing them would double-count
+            -- one server as two for as long as the migration is in flight.
+            SELECT ps.fine_bucket,
+                   sc.canonical_id,
+                   (array_agg(ps.gamemode_id ORDER BY ps.players DESC))[1] AS gamemode_id,
+                   MAX(ps.players) AS players
+            FROM per_server ps
+                     ${canonicalJoin('sc', 'ps')}
+            GROUP BY 1, 2
+        ),
         per_instant AS (
             -- Cross-server total per mode, per instant.  Every row summed here
             -- describes the same moment, which is what makes the sum meaningful.
             SELECT fine_bucket, gamemode_id, SUM(players) AS players
-            FROM per_server
+            FROM per_canonical
             GROUP BY 1, 2
         ),
         peak_instant AS (
@@ -266,12 +257,25 @@ function buildServerShareQuery(
             WHERE ${conditions.join('\n              AND ')}
             GROUP BY 1, 2
         ),
+        per_canonical AS (
+            -- Collapse aliases of the same real server onto its canonical id.
+            -- MAX, not SUM: while a server-identity merge is in flight, both the
+            -- old and new address can answer for the same server inside one
+            -- fine instant, and summing them would double-count one server as
+            -- two.
+            SELECT ps.fine_bucket,
+                   sc.canonical_id,
+                   MAX(ps.players) AS players
+            FROM per_server ps
+                     ${canonicalJoin('sc', 'ps')}
+            GROUP BY 1, 2
+        ),
         peak_instant AS (
             -- Busiest instant for this mode inside each coarse bucket.
             SELECT DISTINCT ON (${COARSE_OF('t.fine_bucket')}) t.fine_bucket
             FROM (
                 SELECT fine_bucket, SUM(players) AS total
-                FROM per_server
+                FROM per_canonical
                 GROUP BY 1
             ) t
             ORDER BY ${COARSE_OF('t.fine_bucket')}, t.total DESC, t.fine_bucket
@@ -279,31 +283,36 @@ function buildServerShareQuery(
         bucketed_stats AS (
             SELECT time_bucket_gapfill(
                            :bucketSeconds * INTERVAL '1 second',
-                           ps.fine_bucket,
+                           pc.fine_bucket,
                            ${rangeStart},
                            ${rangeEnd}
                    ) AS gf_bucket,
-                   ps.server_id,
+                   pc.canonical_id,
                    -- One surviving instant per bucket; gaps stay NULL, and a
                    -- server absent at the winning instant is a gap for that
                    -- bucket, which is the honest answer.
-                   MAX(ps.players) AS players
-            FROM per_server ps
-                     JOIN peak_instant pk ON pk.fine_bucket = ps.fine_bucket
-            GROUP BY gf_bucket, ps.server_id
+                   MAX(pc.players) AS players
+            FROM per_canonical pc
+                     JOIN peak_instant pk ON pk.fine_bucket = pc.fine_bucket
+            GROUP BY gf_bucket, pc.canonical_id
         )
         SELECT
             extract(epoch FROM bs.gf_bucket) * 1000 AS timestamp,
-            bs.server_id,
+            -- The canonical id IS a servers.id (it is the family's root row),
+            -- so this still joins straight onto servers/server_groups; the API
+            -- deliberately returns canonical ids from here on, so this column
+            -- carries the canonical id, not the raw server_id the stats were
+            -- collected under.
+            bs.canonical_id AS server_id,
             s.server_group_id,
             '' AS server_name,
             sg.name AS group_name,
             bs.players
         FROM bucketed_stats bs
                  -- Join the metadata AFTER the heavy lifting is done
-                 JOIN servers s ON bs.server_id = s.id
+                 JOIN servers s ON bs.canonical_id = s.id
                  JOIN server_groups sg ON s.server_group_id = sg.id
-        ORDER BY bs.gf_bucket, bs.server_id;
+        ORDER BY bs.gf_bucket, bs.canonical_id;
     `;
 
     const replacements = {
@@ -362,13 +371,17 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
     // (only the winning variant's) and handed the client an ID that stood for a
     // single registry row rather than the mode as a whole.  MIN(id) is a stable
     // representative of the family; getServerShareByGamemode expands it again.
+    //
+    // Counting distinct on canonical_id, not the raw server_id, is what keeps a
+    // merged server (two raw ids, one real server) as one entry in the count.
     const query = `
       SELECT MIN(gr.id) AS id,
         gr.clean_name,
-        COUNT(DISTINCT smh.server_id) AS server_count
+        COUNT(DISTINCT sc.canonical_id) AS server_count
       FROM gamemode_registry gr
         JOIN server_maps_registry smr ON smr.gamemode_id = gr.id
         JOIN server_maps_history smh ON smh.map_id = smr.id
+        ${canonicalJoin('sc', 'smh')}
       GROUP BY gr.clean_name
       ORDER BY gr.clean_name;
     `;

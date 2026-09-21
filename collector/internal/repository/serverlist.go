@@ -129,7 +129,11 @@ func (r *Repository) RefreshServerSourceList(ctx context.Context, servers []Sour
 func (r *Repository) serverIDsByAddress(ctx context.Context, q querier) (map[string]int, error) {
 	const op = "refreshServerSourceList: read servers"
 
-	rows, err := q.Query(ctx, `SELECT id, host, port FROM servers`)
+	// retired_at IS NULL: once retired rows exist, a host|port can name two rows,
+	// and an unfiltered map would non-deterministically resolve discovered
+	// addresses onto whichever one the query happened to return last -- possibly
+	// the dead one.
+	rows, err := q.Query(ctx, `SELECT id, host, port FROM servers WHERE retired_at IS NULL`)
 	if err != nil {
 		return nil, &OperationError{Operation: op, Err: err}
 	}
