@@ -1,6 +1,7 @@
 import React from "react";
 import {Link, useRouterState} from "@tanstack/react-router";
 import ServerStatsSummary from "./ServerStatsSummary.tsx";
+import AccountMenu from "./AccountMenu.tsx";
 import { useSidebar } from "../../context/SidebarContext.tsx";
 import { VERSION } from "../../../../common/version.ts";
 import { Route as InactiveRoute } from "../../routes/inactive.tsx";
@@ -115,6 +116,8 @@ const NavBar: React.FC = () => {
       {!isMobile && (
         <CollapseToggle collapsed={isMasterPanelCollapsed} onClick={handleToggleCollapse} />
       )}
+
+      <AccountMenu />
     </div>
   );
 

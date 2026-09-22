@@ -4,6 +4,7 @@ import MasterPanel from "../components/sidebar/MasterPanel";
 import NavBar from "../components/navbar/NavBar.tsx";
 import { fetchServers } from "../hooks/useApi.ts";
 import { SidebarProvider, useSidebar } from "../context/SidebarContext.tsx";
+import { AuthProvider } from "../context/AuthContext.tsx";
 import appCss from "../index.css?url";
 import { ApiPacker } from "../../../common/Packer.ts";
 import { ServerElement } from "../../../common/models/serverData.ts";
@@ -71,9 +72,11 @@ function RootComponent() {
         <HeadContent />
       </head>
       <body>
-        <SidebarProvider initialData={initialData}>
-          <RootLayout />
-        </SidebarProvider>
+        <AuthProvider>
+          <SidebarProvider initialData={initialData}>
+            <RootLayout />
+          </SidebarProvider>
+        </AuthProvider>
         <Scripts />
       </body>
     </html>
