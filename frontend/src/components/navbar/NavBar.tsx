@@ -6,10 +6,12 @@ import { useSidebar } from "../../context/SidebarContext.tsx";
 import { VERSION } from "../../../../common/version.ts";
 import { Route as InactiveRoute } from "../../routes/inactive.tsx";
 import { Route as GlobalRoute } from "../../routes/global.tsx";
-import Icon from "../../../public/favicon.svg";
+import Icon from "../../../public/favicon.svg?react";
 
 const BrandMark: React.FC = () => (
-  <Icon/>
+  <span className="flex items-center">
+    <Icon className="w-4 h-4 shrink-0"/>
+  </span>
 );
 
 const CollapseToggle: React.FC<{ collapsed: boolean; onClick: () => void }> = ({ collapsed, onClick }) => (
