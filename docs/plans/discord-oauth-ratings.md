@@ -46,6 +46,8 @@ Decisions already made: 1–5 stars. Owners own a network (all its servers) or a
 ---
 
 ## F0: Foundations (core)
+> **Done.** Deviation: guards are opt-in macros (`optionalUser`/`requireUser`/`requireAdmin`/`requireOrigin`) instead of a global `.derive`, so static/SSR requests never pay for a session lookup. `requireOrigin` runs in `transform`, which Elysia runs before every macro `resolve`, so a cross-origin mutation is refused before the session is touched. The sliding expiry re-issues the cookie too.
+
 - **Migration `32_users_sessions.sql`:**
   - `users(id bigserial, discord_id varchar(32) unique, username, global_name, avatar_hash, created_at, updated_at)`
   - `user_sessions(token_hash char(64) pk, user_id fk cascade, expires_at, last_seen_at)` with indexes on user_id and expires_at
@@ -63,6 +65,8 @@ Decisions already made: 1–5 stars. Owners own a network (all its servers) or a
   - Insert a session row by hand and hit a stub route: 401 with no cookie, 403 with a bad Origin.
 
 ## F1: Discord OAuth (core)
+> **Done.** The `oauth` state cookie (state + PKCE verifier + sanitised `next`, path `/api/auth`) is signed with Elysia's `signCookie`/`unsignCookie` by hand: the automatic `sign` option throws before the handler, which would skip clearing the cookie on a tampered value. Logging in over an existing session deletes the old one. `/me` answers an empty body when logged out (Elysia's `null`), which Eden hands back as falsy `data`.
+
 - **Dependency:** `arctic` (pure JS; does the Discord PKCE/state/token exchange). Scope `identify` only.
 - **`backend/src/api/routes/auth.ts`** (prefix `/api/auth`), with `.use(authRoutes)` added in `app.ts`:
   - `GET /discord`: sets the signed state/verifier cookie (5 min), then redirects (302) to Discord. Takes an optional `?next=`, which is only allowed as a same-origin path.

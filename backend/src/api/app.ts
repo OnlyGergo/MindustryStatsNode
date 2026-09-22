@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia';
 import { createLogger } from '../logger.js';
 import { authPlugin } from './auth/plugin.js';
+import { authRoutes } from './routes/auth.js';
 import { metaRoutes } from './routes/meta.js';
 import { serverRoutes } from './routes/servers.js';
 import { networkRoutes } from './routes/networks.js';
@@ -21,12 +22,14 @@ const PASS_THROUGH = new Set<string | number>(['VALIDATION', 'NOT_FOUND', 'PARSE
  */
 export const api = new Elysia({ name: 'api' })
   .onError({ as: 'global' }, ({ code, error, set }) => {
-    if (PASS_THROUGH.has(code)) return;
+    // A numeric code is a deliberately thrown `status(...)` (e.g. requireOrigin's 403).
+    if (PASS_THROUGH.has(code) || typeof code === 'number') return;
     logger.error(`Unhandled API error [${code}]:`, error);
     set.status = 500;
     return { error: 'Internal server error' };
   })
   .use(authPlugin)
+  .use(authRoutes)
   .use(metaRoutes)
   .use(serverRoutes)
   .use(networkRoutes)

@@ -9,16 +9,10 @@
 // resolver for routes that put the macro's key in their hook options, so the
 // cost is opt-in the same way `withCache`/`requireOrigin` are.
 //
-// Ordering note: `requireOrigin: true` runs its check via `beforeHandle`
-// inside the same macro object as `optionalUser`/`requireUser`/`requireAdmin`.
-// Elysia does not guarantee beforeHandle-vs-resolve ordering *across* macros
-// registered independently, but resolvers and beforeHandle from properties of
-// the *same* macro call apply in the order Elysia composes them for that
-// route; in practice (and by intent here) the origin check should run before
-// the session lookup so a cross-origin POST never touches the DB. If ordering
-// ever turns out not to hold under a future Elysia version, the worst case is
-// an extra session lookup before the 403, not a security hole -- the 403 is
-// keyed only on the Origin header and does not depend on `user` being set.
+// `requireOrigin` checks in `transform`, which Elysia runs before every macro
+// `resolve` regardless of key order, so a cross-origin mutation is refused
+// before the session lookup (and its sliding-expiry write) ever runs. As a
+// `beforeHandle` it ran *after* the resolvers.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Elysia } from 'elysia';
@@ -106,9 +100,10 @@ export const authPlugin = new Elysia({ name: 'auth' })
       },
     },
     requireOrigin: {
-      beforeHandle({ request, status }) {
+      // Thrown, not returned: transform is typed as a void hook.
+      transform({ request, status }) {
         if (isSameOrigin(request, env.SITE_ORIGIN)) return;
-        return status(403, { error: 'Bad origin' });
+        throw status(403, { error: 'Bad origin' });
       },
     },
   });
