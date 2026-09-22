@@ -10,7 +10,8 @@
     "dev": "bun src/index.ts",
     "compile:arm64": "bun build --compile --minify --sourcemap --target=bun-linux-arm64 src/index.ts --outfile=dist/mindustrystats-arm64",
     "compile:x64": "bun build --compile --minify --sourcemap --bytecode --target=bun-linux-x64 src/index.ts --outfile=dist/mindustrystats-x64",
-    "debug": "npx tsx src/index.ts"
+    "debug": "npx tsx src/index.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "@elysia/cors": "^1.4.2",

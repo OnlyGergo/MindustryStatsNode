@@ -23,6 +23,11 @@ const STATIC_ASSET = /^\/assets\/|\.[a-z0-9]+$/i;
  * Loopback is exempt inside the limiter, which covers our own SSR fetches.
  */
 const rateLimitTiers: RateLimitTier[] = [
+  // Mutations first, so a write never falls through to the looser read tiers
+  // just because its path also matches ENTITY_PATH or /api. The OAuth
+  // redirect/callback are GETs, so they land in 'auth'.
+  { name: 'write', limit: 30, windowMs: MINUTE, match: (p, m) => p.startsWith('/api/') && m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS' },
+  { name: 'auth', limit: 20, windowMs: MINUTE, match: (p) => p.startsWith('/api/auth/') },
   { name: 'entity', limit: 40, windowMs: MINUTE, match: (p) => ENTITY_PATH.test(p) },
   { name: 'api', limit: 120, windowMs: MINUTE, match: (p) => p.startsWith('/api') || p === '/config' || p === '/sitemap.xml' },
   // SSR pages embed the same data the API serves (/server/:id renders its details

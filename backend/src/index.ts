@@ -2,6 +2,7 @@
 
 import {createLogger} from './logger.js';
 import {initDatabase} from './config/database.js';
+import {initUserDatabase} from './config/userDatabase.js';
 import {startWebServer, stopWebServer} from './api/WebServer.js';
 import {apiConfig} from './api/context.js';
 import {BUILD_DATE, COMMIT, VERSION} from '../../common/version.js';
@@ -29,6 +30,7 @@ export class MindustryStatsApp {
 
       // Initialize database
       await initDatabase();
+      await initUserDatabase();
 
       // Serve the API + SSR frontend
       await startWebServer();

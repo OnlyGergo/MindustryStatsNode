@@ -10,8 +10,13 @@ export interface RateLimitTier {
   /** Max requests per window per IP. */
   limit: number
   windowMs: number
-  /** First tier whose matcher accepts the URL pathname wins. */
-  match: (pathname: string) => boolean
+  /**
+   * First tier whose matcher accepts the request wins. `method` is passed
+   * uppercased alongside `pathname` since the limiter only ever sees the URL
+   * otherwise; existing single-argument matchers stay valid (the extra
+   * parameter is simply unused).
+   */
+  match: (pathname: string, method: string) => boolean
 }
 
 interface Bucket {
@@ -43,7 +48,7 @@ function sweep(now: number) {
 export const rateLimit = (tiers: RateLimitTier[]) =>
   new Elysia({ name: 'rate-limit' }).onRequest(({ request, server, set }) => {
     const pathname = new URL(request.url).pathname
-    const tier = tiers.find((t) => t.match(pathname))
+    const tier = tiers.find((t) => t.match(pathname, request.method.toUpperCase()))
     if (!tier) return
 
     if (isLoopback(peerAddress(request, server))) return // this process's own SSR fetches

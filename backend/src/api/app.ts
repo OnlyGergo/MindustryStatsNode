@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { createLogger } from '../logger.js';
+import { authPlugin } from './auth/plugin.js';
 import { metaRoutes } from './routes/meta.js';
 import { serverRoutes } from './routes/servers.js';
 import { networkRoutes } from './routes/networks.js';
@@ -25,6 +26,7 @@ export const api = new Elysia({ name: 'api' })
     set.status = 500;
     return { error: 'Internal server error' };
   })
+  .use(authPlugin)
   .use(metaRoutes)
   .use(serverRoutes)
   .use(networkRoutes)
