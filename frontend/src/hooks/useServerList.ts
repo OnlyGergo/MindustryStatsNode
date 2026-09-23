@@ -8,7 +8,7 @@ import {removeColors} from '../util/mindustry';
 // needed here for the TanStack Start migration -- it keeps working as-is
 // against whatever `rawServers` (SSR-hydrated or polled) is passed in.
 
-export type SortCriteria = 'playerCount' | 'ping' | 'name';
+export type SortCriteria = 'playerCount' | 'ping' | 'name' | 'rating';
 export type SortDirection = 'asc' | 'desc';
 
 /** One network's servers, in display order. An array keeps the order explicit --
@@ -87,6 +87,24 @@ export const SORT_OPTIONS: SortOption[] = [
     groupHint: 'Network name',
     getValue: (server) => getServerDisplayName(server),
     getGroupValue: (_servers, groupName) => groupName
+  },
+  {
+    key: 'rating',
+    label: 'Rating',
+    defaultDirection: 'desc',
+    directionLabels: { desc: 'Top rated first', asc: 'Lowest rated first' },
+    serverHint: 'Review score (weighted by number of reviews)',
+    groupHint: 'Best-rated server in each network',
+    // Bayesian score, not the raw average: sorting on a raw 5.0 average from
+    // one review would rank it above an established server with hundreds of
+    // consistently-4-star reviews. Unrated servers are null, which the
+    // shared compareSortValues logic below always sinks to the bottom.
+    getValue: (server) => server.ratingScore ?? null,
+    getGroupValue: (servers) => servers.reduce(
+      (best: number | null, server) =>
+        server.ratingScore != null && (best === null || server.ratingScore > best) ? server.ratingScore : best,
+      null
+    )
   }
 ];
 

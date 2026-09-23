@@ -2,10 +2,14 @@ import React from "react";
 import ServerHistoryChart from "./ServerHistoryChart.tsx";
 import MapHistoryTable from "./table/MapHistoryTable.tsx";
 import MotdHistoryTable from "./table/MotdHistoryTable.tsx";
+import ReviewSummary from "./ReviewSummary.tsx";
+import ReviewForm from "./ReviewForm.tsx";
+import ReviewList from "./ReviewList.tsx";
 import { removeColors } from "../../util/mindustry.ts";
 import { formatDate } from "../../util/general.ts";
 import CopyButton from "../CopyButton.tsx";
 import ShareButton from "../ShareButton.tsx";
+import { useServerReviews } from "../../hooks/api/useServerReviews.ts";
 import {
   ServerDetails,
   ServerElement,
@@ -27,6 +31,8 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
   const formatUptime = (percentage: number) => {
     return `${percentage.toFixed(1)}%`;
   };
+
+  const reviews = useServerReviews(serverDataElement.id);
 
   return (
     <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
@@ -181,6 +187,34 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
           <div className="h-64 sm:h-96">
             <ServerHistoryChart {...serverDataElement} />
           </div>
+        </div>
+
+        {/* Reviews */}
+        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+            Reviews
+          </h2>
+          <div className="mb-4 sm:mb-6">
+            <ReviewSummary summary={reviews.summary} loading={reviews.summaryLoading} />
+          </div>
+          <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-subtle">
+            <ReviewForm
+              serverId={serverDataElement.id}
+              mine={reviews.mine}
+              mineLoading={reviews.mineLoading}
+              onChanged={reviews.reload}
+            />
+          </div>
+          <ReviewList
+            reviews={reviews.reviews}
+            total={reviews.total}
+            page={reviews.page}
+            perPage={reviews.perPage}
+            sort={reviews.sort}
+            loading={reviews.listLoading}
+            onSortChange={reviews.setSort}
+            onPageChange={reviews.setPage}
+          />
         </div>
 
         {/* Map History Table */}
