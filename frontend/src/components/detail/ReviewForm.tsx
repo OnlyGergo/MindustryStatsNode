@@ -4,6 +4,11 @@ import { StarRatingInput } from "./StarRating.tsx";
 import { api } from "../../util/api.ts";
 import { REVIEW_BODY_MAX } from "../../../../common/models/reviews.ts";
 import type { MyReview } from "../../../../common/models/reviews.ts";
+import { REVIEW_ASPECTS, type AspectRatings } from "../../../../common/models/ratings.ts";
+
+// null = not rated -- distinct from "not yet touched" only in that both render the same
+// empty StarRatingInput, so no third state is needed here.
+const EMPTY_ASPECTS: AspectRatings = Object.fromEntries(REVIEW_ASPECTS.map((a) => [a.key, null])) as AspectRatings;
 
 interface ReviewFormProps {
   serverId: number;
@@ -34,6 +39,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
   const [rating, setRating] = useState(0);
   const [body, setBody] = useState("");
   const [anonymous, setAnonymous] = useState(false);
+  const [aspects, setAspects] = useState<AspectRatings>(EMPTY_ASPECTS);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +50,10 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
     setRating(mine?.rating ?? 0);
     setBody(mine?.body ?? "");
     setAnonymous(mine?.anonymous ?? false);
+    setAspects(mine?.aspects ?? EMPTY_ASPECTS);
   }, [mine]);
+
+  const hasAnyAspect = REVIEW_ASPECTS.some((a) => aspects[a.key] != null);
 
   const handleDelete = async () => {
     if (!confirm("Delete your review?")) return;
@@ -111,6 +120,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
         rating,
         body: body.trim() ? body : null,
         anonymous,
+        aspects,
       });
       if (apiError) {
         setError(errorMessageFor(httpStatus, apiError.value));
@@ -140,6 +150,38 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
         />
         <div className="text-xs text-tertiary text-right mt-0.5">{body.length}/{REVIEW_BODY_MAX}</div>
       </div>
+
+      <details className="border border-subtle rounded" open={hasAnyAspect}>
+        <summary className="cursor-pointer select-none text-xs sm:text-sm text-secondary px-2 py-1.5">
+          Rate specifics (optional)
+        </summary>
+        <div className="flex flex-col gap-2 px-2 pb-2 pt-1">
+          {REVIEW_ASPECTS.map((a) => (
+            <div key={a.key} className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-col min-w-28">
+                <span className="text-xs sm:text-sm text-secondary">{a.label}</span>
+                <span className="text-xs text-tertiary">{a.hint}</span>
+              </div>
+              <StarRatingInput
+                value={aspects[a.key] ?? 0}
+                onChange={(value) => setAspects((prev) => ({ ...prev, [a.key]: value }))}
+                size={18}
+                disabled={submitting}
+              />
+              {aspects[a.key] != null && (
+                <button
+                  type="button"
+                  className="text-xs text-tertiary hover:text-secondary underline"
+                  disabled={submitting}
+                  onClick={() => setAspects((prev) => ({ ...prev, [a.key]: null }))}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </details>
 
       <label className="flex flex-wrap items-center gap-2 text-sm text-secondary">
         <input
