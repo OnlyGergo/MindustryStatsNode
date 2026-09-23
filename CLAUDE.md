@@ -15,10 +15,12 @@ All connections to write database: `collector/internal/repository/*`
 All connections to write user-content DB: `backend/src/repositories/user/*`
 Canonical-identity SQL fragments (used by every read that touches a server): `backend/src/repositories/canonicalIdentity.ts`
 Bucket-width/tier maths shared by the chart queries: `backend/src/repositories/aggregateTiers.ts`
+Reviews: write path `backend/src/repositories/user/reviewRepository.ts`, public reads `backend/src/repositories/reviewReadRepository.ts`, routes `backend/src/api/routes/reviews.ts`, shared contracts `common/models/reviews.ts` + aspect list `common/models/ratings.ts`
 
 ## Libraries
 ### Backend
 For database, use Sequelize with PostgreSQL.
+Raw SQL uses named `replacements`. Two gotchas: an array replacement expands to a bare comma list, so write `IN (:ids)`, not `= ANY(:ids)`; and cast with `CAST(:x AS bigint)`, not `:x::bigint`.
 Bun is used, so Elysia is being used as webserver.
 
 The HTTP layer lives in `backend/src/api` instead, and is not a service:
@@ -61,6 +63,17 @@ Sessions are an opaque 32-byte token, base64url-encoded, held only by the browse
 Route guards are Elysia 1.4 macros — `optionalUser`, `requireUser`, `requireAdmin`, `requireOrigin` in `api/auth/plugin.ts` — opted into per route via hook options (`{ requireUser: true, ... }`), **never** via `use: [...]`. A global `.derive` was deliberately avoided: it would run a session DB lookup on every static asset and SSR request carrying the cookie, where a macro only pays that cost for routes that ask for it.
 
 Anything a user does that is tied to a server (reviews, ownership, customisation, …) stores the **raw `servers.id` the user saw**, exactly like the stats tables — never the canonical/root id, since a merge would leave a stored root stale. Reads resolve it through `server_canonical` at query time, using the same helpers in `canonicalIdentity.ts`.
+
+## Ratings + reviews
+
+One review per user per server **family**, stored in `server_reviews` against the raw `server_id` the user was looking at. A merge can legitimately leave a user with a row on each alias, so there is no uniqueness constraint; instead "the user's review" is always their **newest** row in the family, on every path:
+- **Reads** (`reviewReadRepository.ts`, and the rating CTEs in `getAllServerElements`) use `DISTINCT ON (user_id) … ORDER BY user_id, updated_at DESC, id DESC` over the family, **then** drop `removed_at IS NOT NULL`. That order matters: filtering first would let an older alias review resurface one a moderator removed.
+- **Writes** (`upsertReview`) take `pg_advisory_xact_lock(user_id)` (`FOR UPDATE` can't lock a row that doesn't exist yet), refuse with 403 if the newest row is removed, otherwise update it (repointing `server_id` to the current id) and delete the user's other non-removed rows in the family. PUT is a full replace.
+- **Anonymity is enforced in SQL**: public queries `CASE … THEN NULL` every identifying column of an anonymous review and never select `user_id`. Only admin endpoints (F7) may return the author.
+- Public list/summary use `withCache({ name: 'reviews' })`; every review write, and account deletion (its FK cascade removes reviews), calls `clearCaches('reviews')`. `/mine` is per-user and never cached.
+- Ranking: the server list carries `rating` (raw mean, for display), `ratingCount`, and `ratingScore` (Bayesian `(C·m + Σ)/(C + n)`, C = 5, m = site-wide mean, sort only) — see `reviewScoring.ts`.
+- Aspect ratings (F9) are fixed nullable columns (`rating_maps`, …). Their SQL, validation and UI are all derived from `REVIEW_ASPECTS` in `common/models/ratings.ts`, so a new aspect is a migration plus one line there — never hand-list the aspect columns.
+- Review bodies are plain text (≤ 2000 chars, normalised by `reviewBody.ts`), rendered with React escaping and `whitespace-pre-line`; never `dangerouslySetInnerHTML`. `common/profanity.ts` is a stub until F7.
 
 ## Notable Design Decisions
 

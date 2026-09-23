@@ -81,6 +81,8 @@ Decisions already made: 1–5 stars. Owners own a network (all its servers) or a
 - **Verify:** do a full round trip in the browser. `document.cookie` must not show `sid`. `/me` returns null → user → null across logout. A tampered state gets a 400.
 
 ## F2: Ratings + reviews (core)
+> **Done.** Migration `33_reviews.sql`. Deviations: a re-submit also deletes the user's other *non-removed* rows in the family (merge leftovers) rather than leaving them for the read-side dedupe; removed rows stay as the moderation record. "The user's review" is always their **newest** row in the family, on both paths: reads dedupe first and drop removed second (so an older alias review can't resurface a moderated one), and a PUT whose newest row is removed answers 403. PUT is a full replace (omitted `body` → null, `anonymous` → false). `DELETE /me` also clears the `reviews` cache. The profanity check is `common/profanity.ts`, a stub that F7 fills in. The server list's `ratingScore` is the Bayesian score; `rating` is the raw mean shown to people. Grouped "Rating" sort ranks a network by its best-rated server until F8 adds real network aggregates.
+
 The review text is the comment; one review per user per server family.
 - **Migration `33_reviews.sql`:** `server_reviews(id, user_id fk cascade, server_id int fk servers, rating smallint check 1–5, body text null, anonymous bool, created_at, updated_at, removed_at null, removed_reason null)`, indexed on server_id and user_id.
 - **Write path, `repositories/user/reviewRepository.ts`:**
@@ -108,7 +110,7 @@ The review text is the comment; one review per user per server family.
 
 ## F3: Admin panel shell + ownership
 Needed before F4–F6.
-- **Migration `34_owners.sql`:** `owners(id, user_id fk cascade, server_group_id null fk, server_id null fk, created_at, created_by)`.
+- **Migration `35_owners.sql`:** `owners(id, user_id fk cascade, server_group_id null fk, server_id null fk, created_at, created_by)`.
   - `CHECK` that exactly one target is set.
   - Partial unique indexes on `(user_id, server_group_id)` and `(user_id, server_id)`. This allows several co-owners.
 - **Read, `repositories/ownershipRepository.ts`:** `canManageServer(userId, rawServerId)` = admin, OR owns the family root's `server_group_id`, OR owns any member of the family. Also `getOwnedTargets(userId)`, which feeds `/me`.
@@ -121,7 +123,7 @@ Needed before F4–F6.
 
 ## F4: Per-server customisation (core for you)
 Covers the theme accent and background image.
-- **Migration `35_customisation.sql`:**
+- **Migration `36_customisation.sql`:**
   - `customisations(id, server_group_id null, server_id null, accent_color char(7) null, background_image_id null, updated_by, updated_at)`, with CHECK exactly-one-target and a unique index per target
   - `uploaded_images(id uuid, uploader_id, kind, mime, bytes, status pending|approved|rejected, reviewed_by, reviewed_at, reject_reason, created_at)`
   - A server's settings override its network's defaults.
@@ -140,12 +142,12 @@ Covers the theme accent and background image.
 - **Verify:** a renamed `.exe` gets rejected. A pending image returns 404 publicly. Once approved, the background shows on every server in the network, and a per-server override wins.
 
 ## F5: Owner replies (Google Maps style)
-- **Migration `36_review_replies.sql`:** `review_replies(review_id pk/fk cascade, author_user_id, body, created_at, updated_at, removed_at)`. That is one reply per review.
+- **Migration `37_review_replies.sql`:** `review_replies(review_id pk/fk cascade, author_user_id, body, created_at, updated_at, removed_at)`. That is one reply per review.
 - **Routes:** `PUT` / `DELETE /api/servers/:id/reviews/:reviewId/reply`. Checks: `canManageServer`, and the review must belong to that family. Writes call `clearCaches('reviews')`.
 - **UI:** the reply renders under its review as "Response from the owner", with the owner's name shown. Managers get an inline reply box.
 
 ## F6: Announcements
-- **Migration `37_announcements.sql`:** `announcements(id, server_group_id null, server_id null, author_user_id, title, body, status pending|approved|rejected, starts_at, ends_at null, reviewed_by, created_at)`, with CHECK exactly-one-target.
+- **Migration `38_announcements.sql`:** `announcements(id, server_group_id null, server_id null, author_user_id, title, body, status pending|approved|rejected, starts_at, ends_at null, reviewed_by, created_at)`, with CHECK exactly-one-target.
 - **Display:** a network announcement shows on **every server page in that network**, but never on the network page itself.
 - **Routes:** the owner can use `POST/DELETE /api/owner/announcements`. Admins get a queue with approve/reject. `GET /api/servers/:id/announcements` returns approved, currently active announcements (cached).
 - **UI:** `components/detail/AnnouncementBanner.tsx`, mounted in `ServerDetail.tsx` only. The body is plain text, with line breaks kept and no markdown or HTML, which avoids XSS.
@@ -155,7 +157,7 @@ Covers the theme accent and background image.
   - Matching lowercases the text, folds leetspeak (0→o, 1→i, 3→e, @→a, $→s), and checks **whole words** plus multi-word phrases. That avoids the Scunthorpe problem.
 - **Policy:** a match **rejects the write with 422** and a friendly message. This applies to review bodies, replies and announcements.
   - A "negative sentiment" filter is left out on purpose. A negative review is valid feedback, and reports cover the abusive ones.
-- **Migration `38_reports.sql`:** `review_reports(id, review_id fk cascade, reporter_id, reason enum spam|abuse|offtopic|other, note, status open|dismissed|actioned, handled_by, created_at)`, with unique `(review_id, reporter_id)`.
+- **Migration `39_reports.sql`:** `review_reports(id, review_id fk cascade, reporter_id, reason enum spam|abuse|offtopic|other, note, status open|dismissed|actioned, handled_by, created_at)`, with unique `(review_id, reporter_id)`.
 - **Routes:**
   - `POST /api/servers/:id/reviews/:reviewId/report` (requireUser)
   - Admin: `GET /api/admin/reports`, `POST /api/admin/reports/:id/dismiss`
@@ -168,6 +170,8 @@ Covers the theme accent and background image.
 - In `components/detail/NetworkDetail.tsx`: a summary plus a read-only list, with no form. Each item links to its server page.
 
 ## F9: Aspect ratings
+> **Done**, shipped on the same branch as F2, so it took migration `34_review_aspects.sql` and F3 onwards moved up one number.
+
 - **Migration:** add nullable `rating_maps`, `rating_moderation` and `rating_lag` columns (smallint, check 1–5) to `server_reviews`. That's three fixed columns rather than an EAV table. Keep the aspect list in `common/models/ratings.ts` so a fourth aspect only means a migration plus one line.
 - **Summary:** `AVG(x) FILTER (WHERE x IS NOT NULL)` and a count per aspect.
 - **UI:** an optional collapsible "Rate specifics" section in `ReviewForm`, and breakdown bars in `ReviewSummary`.
