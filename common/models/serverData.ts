@@ -42,6 +42,12 @@ export interface ServerElement {
   consecutiveFailures?: number;
   countryCode?: string | null;
   aggregateExclude: boolean;
+  /** Raw mean rating across the server's family (F2), for display. `null`/absent when unrated. */
+  rating?: number | null;
+  /** How many reviews fed `rating`/`ratingScore`. 0 when unrated. */
+  ratingCount?: number;
+  /** Bayesian-shrunk rating, sort-only -- pulls a low-review-count server toward the sitewide mean so one 5-star review can't outrank an established server. `null` when unrated. */
+  ratingScore?: number | null;
 }
 
 export interface ServerMotdData {

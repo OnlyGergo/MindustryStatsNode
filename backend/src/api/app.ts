@@ -4,6 +4,7 @@ import { authPlugin } from './auth/plugin.js';
 import { authRoutes } from './routes/auth.js';
 import { metaRoutes } from './routes/meta.js';
 import { serverRoutes } from './routes/servers.js';
+import { reviewRoutes } from './routes/reviews.js';
 import { networkRoutes } from './routes/networks.js';
 import { globalRoutes } from './routes/global.js';
 import { gamemodeRoutes } from './routes/gamemodes.js';
@@ -32,6 +33,7 @@ export const api = new Elysia({ name: 'api' })
   .use(authRoutes)
   .use(metaRoutes)
   .use(serverRoutes)
+  .use(reviewRoutes)
   .use(networkRoutes)
   .use(globalRoutes)
   .use(gamemodeRoutes)

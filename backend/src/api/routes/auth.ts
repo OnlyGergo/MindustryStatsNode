@@ -27,6 +27,7 @@ import { safeNextPath } from '../auth/nextPath.js';
 import { discordAvatarUrl } from '../auth/discordAvatar.js';
 import { upsertFromDiscord, deleteUser } from '../../repositories/user/userRepository.js';
 import { createSession, deleteSession } from '../../repositories/user/sessionRepository.js';
+import { clearCaches } from '../middleware/cache.js';
 import type { AuthMe } from '../../../../common/models/auth.js';
 
 const logger = createLogger('Api');
@@ -273,6 +274,9 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
     '/me',
     async ({ user, cookie, set }) => {
       await deleteUser(user.id);
+      // The FK cascade just removed this user's reviews; the cached list/
+      // summary responses would otherwise keep serving them until TTL.
+      clearCaches('reviews');
       clearSidCookie(cookie[SESSION_COOKIE] as CookieJarEntry);
       set.status = 204;
       return;

@@ -18,6 +18,12 @@ export const StrictHistoryQuery = t.Object({
   endDate: t.Optional(t.String())
 }, { additionalProperties: false });
 
+export const ReviewsQuery = t.Object({
+  page: t.Optional(t.String()),
+  perPage: t.Optional(t.String()),
+  sort: t.Optional(t.Union([t.Literal('newest'), t.Literal('highest'), t.Literal('lowest')])),
+}, { additionalProperties: false });
+
 // Shared path param schemas — t.Numeric() coerces and rejects non-numeric ids with a 422
 export const IdParam = t.Object({ id: t.Numeric() });
 export const ModeIdParam = t.Object({ modeId: t.Numeric() });

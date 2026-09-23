@@ -22,6 +22,7 @@ import {
 } from '../../../common/models/RepositoryTypes.js';
 import {CURRENT_DATA_FRESH_THRESHOLD, MAX_REALISTIC_PLAYERCOUNT} from "../const.js";
 import { LIVE_MEMBER_SQL, canonicalJoin, serverFamilySql } from './canonicalIdentity.js';
+import { bayesianScore } from './reviewScoring.js';
 
 // ─── Servers ─────────────────────────────────────────────────────────────────
 
@@ -111,6 +112,27 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             WHERE cur.timestamp > NOW() - interval '1 hour' * :hoursBack
               AND cur.players >= 0 AND cur.players < :maxRealisticPlayerCount
             ORDER BY sc.canonical_id, cur.timestamp DESC
+        ),
+        newest_reviews AS (
+            -- Same dedupe rule as the read path's family_reviews CTE, but
+            -- across every family at once: one row per (family, reviewer),
+            -- their newest, so a merge can't double-count a reviewer who now
+            -- has a row on each alias.
+            SELECT DISTINCT ON (sc.canonical_id, r.user_id) sc.canonical_id, r.rating, r.removed_at
+            FROM server_reviews r
+            ${canonicalJoin('sc', 'r')}
+            ORDER BY sc.canonical_id, r.user_id, r.updated_at DESC, r.id DESC
+        ),
+        family_ratings AS (
+            SELECT canonical_id, count(*)::int AS rating_count, sum(rating)::int AS rating_sum, avg(rating)::float8 AS rating_avg
+            FROM newest_reviews WHERE removed_at IS NULL GROUP BY canonical_id
+        ),
+        global_rating AS (
+            -- The Bayesian prior's mean: every live review site-wide, not
+            -- just this family's, so a brand-new server with one 5-star
+            -- review is pulled toward the sitewide average rather than
+            -- ranking above an established server on a single data point.
+            SELECT avg(rating)::float8 AS mean FROM newest_reviews WHERE removed_at IS NULL
         )
         SELECT
             lm.canonical_id AS id, sg.name, root.server_group_id AS "groupId",
@@ -120,7 +142,9 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             stats.max_players AS "playerLimit",
             stats.wave, stats.version, stats.version_type AS "versionType", stats.ping,
             motds."serverName", motds.description,
-            maps."modeName", maps."mapName", maps.mode, root.aggregate_exclude AS "aggregateExclude"
+            maps."modeName", maps."mapName", maps.mode, root.aggregate_exclude AS "aggregateExclude",
+            fr.rating_count AS "ratingCount", fr.rating_sum AS "ratingSum", fr.rating_avg AS "ratingAvg",
+            gr.mean AS "globalRatingMean"
         FROM live_members lm
         -- Family-level properties (group, exclusion) come from the ROOT row,
         -- so a merge can never leave half a family in a different group or
@@ -131,6 +155,8 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
         LEFT JOIN latest_stats stats  ON stats.canonical_id = lm.canonical_id
         LEFT JOIN latest_motds motds  ON motds.canonical_id = lm.canonical_id
         LEFT JOIN latest_maps  maps   ON maps.canonical_id  = lm.canonical_id
+        LEFT JOIN family_ratings fr   ON fr.canonical_id    = lm.canonical_id
+        CROSS JOIN global_rating gr
         ORDER BY sg.name, lm.host, lm.port
     `, { replacements: { hoursBack, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT }, type: QueryTypes.SELECT });
 
@@ -149,6 +175,9 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             // produces (it's aliased "aggregateExclude") -- so this was
             // always undefined and fell through to the `?? false` default.
             aggregateExclude: row.aggregateExclude ?? false,
+            rating: row.ratingAvg ?? null,
+            ratingCount: row.ratingCount ?? 0,
+            ratingScore: bayesianScore(row.ratingSum ?? 0, row.ratingCount ?? 0, row.globalRatingMean ?? null),
         };
 
         // currentData is current - only populate if "fresh" aka 5 minutes
