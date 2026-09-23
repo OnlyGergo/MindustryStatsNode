@@ -13,12 +13,16 @@
 import { QueryTypes } from 'sequelize';
 import userSequelize from '../../config/userDatabase.js';
 import { serverFamilySql } from '../canonicalIdentity.js';
+import { aspectAssignmentsSql, aspectColumnsSql, aspectPlaceholdersSql, aspectReplacements, rowToAspects, type AspectColumnRow } from '../reviewAspects.js';
 import type { MyReview } from '../../../../common/models/reviews.js';
+import type { AspectRatings } from '../../../../common/models/ratings.js';
 
 export interface ReviewInput {
   rating: number;
   body: string | null;
   anonymous: boolean;
+  // PUT is a full replace: an aspect missing from this object is written as NULL, same as `{ key: null }`.
+  aspects: Partial<AspectRatings>;
 }
 
 export type UpsertReviewResult =
@@ -26,10 +30,10 @@ export type UpsertReviewResult =
   | { kind: 'removed' }
   | { kind: 'ok'; review: MyReview };
 
-const REVIEW_COLUMNS = `id, rating, body, anonymous,
+const REVIEW_COLUMNS = `id, rating, body, anonymous, ${aspectColumnsSql()},
        created_at AS "createdAt", updated_at AS "updatedAt", removed_at AS "removedAt"`;
 
-interface ReviewRow {
+interface ReviewRow extends AspectColumnRow {
   id: number | string;
   rating: number;
   body: string | null;
@@ -48,6 +52,7 @@ function toMyReview(row: ReviewRow): MyReview {
     createdAt: new Date(row.createdAt).getTime(),
     updatedAt: new Date(row.updatedAt).getTime(),
     removed: row.removedAt != null,
+    aspects: rowToAspects(row),
   };
 }
 
@@ -101,11 +106,14 @@ export async function upsertReview(
     if (newest) {
       const [updated] = await userSequelize.query<ReviewRow>(
         `UPDATE server_reviews
-         SET server_id = :serverId, rating = :rating, body = :body, anonymous = :anonymous, updated_at = now()
+         SET server_id = :serverId, rating = :rating, body = :body, anonymous = :anonymous, ${aspectAssignmentsSql()}, updated_at = now()
          WHERE id = :id
          RETURNING ${REVIEW_COLUMNS}`,
         {
-          replacements: { serverId, rating: input.rating, body: input.body, anonymous: input.anonymous, id: newest.id },
+          replacements: {
+            serverId, rating: input.rating, body: input.body, anonymous: input.anonymous, id: newest.id,
+            ...aspectReplacements(input.aspects),
+          },
           type: QueryTypes.SELECT,
           transaction,
         },
@@ -130,11 +138,14 @@ export async function upsertReview(
     }
 
     const [inserted] = await userSequelize.query<ReviewRow>(
-      `INSERT INTO server_reviews (user_id, server_id, rating, body, anonymous)
-       VALUES (:userId, :serverId, :rating, :body, :anonymous)
+      `INSERT INTO server_reviews (user_id, server_id, rating, body, anonymous, ${aspectColumnsSql()})
+       VALUES (:userId, :serverId, :rating, :body, :anonymous, ${aspectPlaceholdersSql()})
        RETURNING ${REVIEW_COLUMNS}`,
       {
-        replacements: { userId, serverId, rating: input.rating, body: input.body, anonymous: input.anonymous },
+        replacements: {
+          userId, serverId, rating: input.rating, body: input.body, anonymous: input.anonymous,
+          ...aspectReplacements(input.aspects),
+        },
         type: QueryTypes.SELECT,
         transaction,
       },

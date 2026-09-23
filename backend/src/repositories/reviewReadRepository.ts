@@ -10,6 +10,7 @@ import sequelize from '../config/database.js';
 import { serverFamilySql } from './canonicalIdentity.js';
 import { discordAvatarUrl } from '../api/auth/discordAvatar.js';
 import { discordProfileUrl } from '../../../common/models/auth.js';
+import { aspectSummaryColumnsSql, rowToAspectSummaries, type AspectSummaryColumnRow } from './reviewAspects.js';
 import type { PublicReview, ReviewPage, ReviewSort, ReviewSummary } from '../../../common/models/reviews.js';
 
 /**
@@ -38,7 +39,7 @@ export async function getReviewSummary(serverId: number): Promise<ReviewSummary>
     count: number;
     average: number | null;
     r1: number; r2: number; r3: number; r4: number; r5: number;
-  }>(
+  } & AspectSummaryColumnRow>(
     `WITH ${familyReviewsCte(':serverId')}
      SELECT
        count(*)::int          AS count,
@@ -47,7 +48,8 @@ export async function getReviewSummary(serverId: number): Promise<ReviewSummary>
        count(*) FILTER (WHERE rating = 2)::int AS r2,
        count(*) FILTER (WHERE rating = 3)::int AS r3,
        count(*) FILTER (WHERE rating = 4)::int AS r4,
-       count(*) FILTER (WHERE rating = 5)::int AS r5
+       count(*) FILTER (WHERE rating = 5)::int AS r5,
+       ${aspectSummaryColumnsSql()}
      FROM family_reviews`,
     { replacements: { serverId }, type: QueryTypes.SELECT },
   );
@@ -56,6 +58,9 @@ export async function getReviewSummary(serverId: number): Promise<ReviewSummary>
     count: row?.count ?? 0,
     average: row?.average ?? null,
     histogram: [row?.r1 ?? 0, row?.r2 ?? 0, row?.r3 ?? 0, row?.r4 ?? 0, row?.r5 ?? 0],
+    // Same aggregate query, so a missing row only happens if the query itself
+    // errored -- rowToAspectSummaries' own ?? fallbacks cover that case too.
+    aspects: rowToAspectSummaries(row ?? ({} as AspectSummaryColumnRow)),
   };
 }
 

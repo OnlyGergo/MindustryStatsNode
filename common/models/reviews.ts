@@ -1,3 +1,5 @@
+import type { AspectRatings, AspectSummaries } from './ratings.js';
+
 export type ReviewSort = 'newest' | 'highest' | 'lowest';
 export const REVIEW_BODY_MAX = 2000;
 
@@ -22,6 +24,7 @@ export interface ReviewSummary {
   count: number;
   average: number | null;   // raw mean, null when count = 0
   histogram: [number, number, number, number, number]; // index 0 = 1 star
+  aspects: AspectSummaries; // F9: per-aspect breakdown, same dedupe as the overall count
 }
 
 /** The caller's own review (GET /mine, PUT response). */
@@ -33,4 +36,5 @@ export interface MyReview {
   createdAt: number;
   updatedAt: number;
   removed: boolean;          // true = hidden by a moderator; editing is refused
+  aspects: AspectRatings;    // F9: null entries mean "not rated", not "rated worst"
 }

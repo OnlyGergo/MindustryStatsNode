@@ -8,7 +8,7 @@
 
 import { Elysia, status, t } from 'elysia';
 import { authPlugin } from '../auth/plugin.js';
-import { IdParam, ReviewsQuery, StrictNoQuery } from '../lib/schemas.js';
+import { AspectsBody, IdParam, ReviewsQuery, StrictNoQuery } from '../lib/schemas.js';
 import { withCache, clearCaches } from '../middleware/cache.js';
 import { getReviewPage, getReviewSummary } from '../../repositories/reviewReadRepository.js';
 import { deleteMyReview, getMyReview, upsertReview } from '../../repositories/user/reviewRepository.js';
@@ -69,6 +69,7 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
       rating: body.rating,
       body: normalizedBody,
       anonymous: body.anonymous ?? false,
+      aspects: body.aspects ?? {},
     });
 
     if (result.kind === 'not_found') return status(404, { error: 'Server not found' });
@@ -86,6 +87,7 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
       rating: t.Integer({ minimum: 1, maximum: 5 }),
       body: t.Optional(t.Nullable(t.String({ maxLength: REVIEW_BODY_MAX }))),
       anonymous: t.Optional(t.Boolean()),
+      aspects: AspectsBody,
     }, { additionalProperties: false }),
   })
 
