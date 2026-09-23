@@ -53,7 +53,9 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
     setAspects(mine?.aspects ?? EMPTY_ASPECTS);
   }, [mine]);
 
-  const hasAnyAspect = REVIEW_ASPECTS.some((a) => aspects[a.key] != null);
+  // Keyed off the saved review, not the live edits: tied to `aspects`, clearing
+  // the last one would snap the section shut under the user's cursor.
+  const savedAnyAspect = REVIEW_ASPECTS.some((a) => mine?.aspects[a.key] != null);
 
   const handleDelete = async () => {
     if (!confirm("Delete your review?")) return;
@@ -151,7 +153,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
         <div className="text-xs text-tertiary text-right mt-0.5">{body.length}/{REVIEW_BODY_MAX}</div>
       </div>
 
-      <details className="border border-subtle rounded" open={hasAnyAspect}>
+      <details className="border border-subtle rounded" open={savedAnyAspect}>
         <summary className="cursor-pointer select-none text-xs sm:text-sm text-secondary px-2 py-1.5">
           Rate specifics (optional)
         </summary>
