@@ -74,9 +74,8 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
     if (result.kind === 'not_found') return status(404, { error: 'Server not found' });
     if (result.kind === 'removed') return status(403, { error: 'This review was removed by a moderator' });
 
-    // Invalidates both the summary/page caches (this review's rating changed)
-    // and /mine's no-store header doesn't need it, but the shared store is
-    // named per-route-group, not per-endpoint, so one clear covers all three.
+    // The list and summary share the 'reviews' store name, so one clear drops
+    // both. /mine is never cached, so it needs nothing.
     clearCaches('reviews');
     return result.review;
   }, {

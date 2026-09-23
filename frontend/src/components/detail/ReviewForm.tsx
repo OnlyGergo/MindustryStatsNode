@@ -13,20 +13,23 @@ interface ReviewFormProps {
   onChanged: () => void;
 }
 
-/** Maps the API's HTTP status codes onto the messages the spec asks the form to show inline. */
-const errorMessageFor = (httpStatus: number): string => {
-  switch (httpStatus) {
-    case 401: return "You need to be logged in to do that.";
-    case 403: return "That request was refused.";
-    case 404: return "Server not found.";
-    case 422: return "Please remove inappropriate language from your review.";
-    case 429: return "Too many requests — please wait a moment and try again.";
-    default: return "Something went wrong. Please try again.";
-  }
+/**
+ * 401/429 get fixed wording (the limiter's own message is terse). Otherwise our
+ * routes' refusals (403 removed, 404, 422 profanity) carry a human `error`
+ * string worth showing as-is; Elysia's own validation 422s don't, so those
+ * fall through to the generic text.
+ */
+const errorMessageFor = (httpStatus: number, value: unknown): string => {
+  if (httpStatus === 401) return "You need to be logged in to do that.";
+  if (httpStatus === 429) return "Too many requests — please wait a moment and try again.";
+  const message = (value as { error?: unknown } | null)?.error;
+  if (typeof message === "string") return message;
+  if (httpStatus === 422) return "Please check your review and try again.";
+  return "Something went wrong. Please try again.";
 };
 
 const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, onChanged }) => {
-  const { me, loginHref } = useAuth();
+  const { me, loading: authLoading, loginHref } = useAuth();
 
   const [rating, setRating] = useState(0);
   const [body, setBody] = useState("");
@@ -51,7 +54,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
     try {
       const { error: apiError, status: httpStatus } = await api.api.servers({ id: serverId }).reviews.delete();
       if (apiError) {
-        setError(errorMessageFor(httpStatus));
+        setError(errorMessageFor(httpStatus, apiError.value));
         return;
       }
       onChanged();
@@ -61,6 +64,9 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
       setDeleting(false);
     }
   };
+
+  // Until /me answers, a logged-in visitor would otherwise see the login link flash.
+  if (authLoading) return null;
 
   if (!me) {
     return (
@@ -107,7 +113,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
         anonymous,
       });
       if (apiError) {
-        setError(errorMessageFor(httpStatus));
+        setError(errorMessageFor(httpStatus, apiError.value));
         return;
       }
       onChanged();

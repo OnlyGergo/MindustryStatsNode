@@ -109,7 +109,16 @@ export async function getReviewPage(
     { replacements: { serverId, perPage, offset }, type: QueryTypes.SELECT },
   );
 
-  const total = rows.length > 0 ? parseInt(String(rows[0]!.total), 10) : 0;
+  // count(*) OVER () rides on the page's own rows, so a page past the end has
+  // none to carry it; only then is the total worth a second query.
+  let total = rows.length > 0 ? parseInt(String(rows[0]!.total), 10) : 0;
+  if (rows.length === 0 && page > 1) {
+    const [countRow] = await sequelize.query<{ total: number }>(
+      `WITH ${familyReviewsCte(':serverId')} SELECT count(*)::int AS total FROM family_reviews`,
+      { replacements: { serverId }, type: QueryTypes.SELECT },
+    );
+    total = countRow?.total ?? 0;
+  }
 
   const reviews: PublicReview[] = rows.map((row) => ({
     id: String(row.id),

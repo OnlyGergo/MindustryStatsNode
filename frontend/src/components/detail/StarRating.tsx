@@ -64,13 +64,15 @@ export const StarRatingInput: React.FC<StarRatingInputProps> = ({ value, onChang
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return;
-    if (e.key === "ArrowRight" || e.key === "ArrowUp") {
-      e.preventDefault();
-      onChange(Math.min(5, (value || 0) + 1));
-    } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
-      e.preventDefault();
-      onChange(Math.max(1, (value || 1) - 1));
-    }
+    let next: number;
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") next = Math.min(5, (value || 0) + 1);
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") next = Math.max(1, (value || 1) - 1);
+    else return;
+
+    e.preventDefault();
+    onChange(next);
+    // Focus follows the selection, as in a native radio group.
+    e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next - 1]?.focus();
   };
 
   return (

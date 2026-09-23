@@ -37,7 +37,7 @@ export function useServerReviews(serverId: number): UseServerReviewsResult {
   const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<ReviewSort>('newest');
+  const [sort, setSortState] = useState<ReviewSort>('newest');
   const [listLoading, setListLoading] = useState(true);
 
   const [mine, setMine] = useState<MyReview | null>(null);
@@ -46,11 +46,17 @@ export function useServerReviews(serverId: number): UseServerReviewsResult {
   const [reloadTick, setReloadTick] = useState(0);
   const reload = useCallback(() => setReloadTick((t) => t + 1), []);
 
-  // A stale page number from a different server/sort would otherwise request
-  // an out-of-range page, so reset to 1 whenever either changes.
+  // A new sort starts from page 1. Reset in the same update rather than in an
+  // effect, which would first fetch the old page under the new sort.
+  const setSort = useCallback((next: ReviewSort) => {
+    setSortState(next);
+    setPage(1);
+  }, []);
+
+  // A page number from the previous server could be out of range for this one.
   useEffect(() => {
     setPage(1);
-  }, [serverId, sort]);
+  }, [serverId]);
 
   useEffect(() => {
     let cancelled = false;
