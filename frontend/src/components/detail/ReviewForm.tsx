@@ -55,7 +55,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
 
   // Keyed off the saved review, not the live edits: tied to `aspects`, clearing
   // the last one would snap the section shut under the user's cursor.
-  const savedAnyAspect = REVIEW_ASPECTS.some((a) => mine?.aspects[a.key] != null);
+  const savedAnyAspect = REVIEW_ASPECTS.some((a) => mine?.aspects?.[a.key] != null);
 
   const handleDelete = async () => {
     if (!confirm("Delete your review?")) return;
@@ -193,9 +193,6 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
           disabled={submitting}
         />
         Post anonymously
-        <span className="text-xs text-tertiary">
-          (Your name and avatar are hidden from everyone except site admins)
-        </span>
       </label>
 
       {error && <div className="text-sm text-status-offline">{error}</div>}
