@@ -11,6 +11,7 @@ const StarIcon: React.FC<{ filled: boolean; size: number }> = ({ filled, size })
     fill="currentColor"
     aria-hidden="true"
     className={filled ? "text-accent" : "text-tertiary"}
+    style={{ width: size, height: size }}
   >
     <path d={STAR_PATH} />
   </svg>
@@ -39,11 +40,13 @@ export const StarRatingDisplay: React.FC<StarRatingDisplayProps> = ({ value, siz
         {[0, 1, 2, 3, 4].map((i) => <StarIcon key={i} filled={false} size={size} />)}
       </span>
       <span
-        className="absolute inset-0 flex overflow-hidden"
+        className="absolute inset-0 overflow-hidden"
         style={{ width: `${percent}%` }}
         aria-hidden="true"
       >
-        {[0, 1, 2, 3, 4].map((i) => <StarIcon key={i} filled size={size} />)}
+        <span className="flex" style={{ width: size * 5 }}>
+          {[0, 1, 2, 3, 4].map((i) => <StarIcon key={i} filled size={size} />)}
+        </span>
       </span>
     </span>
   );
