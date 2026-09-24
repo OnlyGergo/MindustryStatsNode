@@ -31,6 +31,14 @@ bun run build    # production frontend build into frontend/dist, served by the b
 bun run start    # run the backend against that build
 ```
 
+Branches:
+- `main`: stable production branch
+- `staging`: latest changes, potentially unstable
+- `experiment`: development branch, contains latest changes
+
+I'm a fan of fail-fast development for personal projects, `experiment` allows this
+It should be ironed out before merging into `staging`, but definitely by `main`.
+
 # AI Disclaimer
 AI Has been used during development. Mostly during design phases and especially to optimize, but also to accelerate development. I am always in control, and review + test every line of code.
 
