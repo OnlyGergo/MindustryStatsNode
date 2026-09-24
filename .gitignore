@@ -8,7 +8,7 @@
 /backend/logs/
 .kilo
 /plans
-public
+/backend/public/
 TODO.md
 common/version_build.ts
 # Go collector build output

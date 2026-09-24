@@ -17,6 +17,14 @@ Update #1: As of 30th June 2026, there is 50.335M rows of server_stats, with map
 Update #2: as of 25th of August there are now 61M server_stats tracking 680 servers (193 active)
 All with 5 minute granularity since over a year. This is uneccesary, but uses around 1GB of storage due to delta-delta compression, performance is kept via aggregate views and caching.
 
+# Development
+```sh
+bun install      # once, from the repo root (single shared node_modules)
+bun run dev      # backend on :3000 + Vite on :4000 - open http://localhost:3000
+bun run build    # production frontend build into frontend/dist, served by the backend
+bun run start    # run the backend against that build
+```
+
 # AI Disclaimer
 AI Has been used during development. Mostly during design phases and especially to optimize, but also to accelerate development. I am always in control, and review + test every line of code.
 

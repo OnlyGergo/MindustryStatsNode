@@ -10,7 +10,6 @@ rm -rf ./frontend/dist
 rm -rf ./backend/dist
 
 # Create build folders
-mkdir -p ./build/public/
 mkdir -p ./build/backend/src/
 
 # 1. Get the current commit hash (short version)
@@ -32,22 +31,25 @@ export const BUILD_COMMIT = '$GIT_COMMIT';
 export const BUILD_BUILD_DATE = '$(date)';
 EOF
 
-# Build frontend
+# Workspace manifests + the single root lockfile, so `bun install --production
+# --frozen-lockfile` in the release folder resolves exactly what was tested here.
+# The frontend manifest is needed too: the SSR bundle imports react/tanstack at runtime.
+echo "Installing dependencies..."
+bun install --frozen-lockfile
+cp ./package.json ./bun.lock ./bunfig.toml ./build/
+mkdir -p ./build/frontend
+cp ./frontend/package.json ./build/frontend/
+cp ./backend/package.json ./build/backend/
+
+# Build frontend (the backend serves it from frontend/dist)
 echo "Building frontend..."
-cd ./frontend
-bun install  # Optional: ensures dependencies are there
 bun run build
-cp -r ./dist/* ../build/public/
-cd ..
+cp -r ./frontend/dist ./build/frontend/
 
 # Sort backend
 echo "Building backend..."
-cd ./backend
-bunx tsc # We don't need the files, but we do need the checks
-cp -r ./src/* ../build/backend/src/
-cp ./package.json ../build/
-cp ./bun.lock ../build/
-cd ..
+(cd ./backend && bunx tsc) # We don't need the files, but we do need the checks
+cp -r ./backend/src/* ./build/backend/src/
 cp -r ./common ./build/
 
 # Zip the build folder

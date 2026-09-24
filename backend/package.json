@@ -7,7 +7,7 @@
   "main": "src/main.ts",
   "scripts": {
     "start": "bun src/index.ts",
-    "dev": "bun src/index.ts",
+    "dev": "FRONTEND_DEV_URL=http://localhost:4000 bun --watch src/index.ts",
     "compile:arm64": "bun build --compile --minify --sourcemap --target=bun-linux-arm64 src/index.ts --outfile=dist/mindustrystats-arm64",
     "compile:x64": "bun build --compile --minify --sourcemap --bytecode --target=bun-linux-x64 src/index.ts --outfile=dist/mindustrystats-x64",
     "debug": "npx tsx src/index.ts",

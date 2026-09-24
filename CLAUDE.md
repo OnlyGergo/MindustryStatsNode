@@ -9,6 +9,13 @@ It uses Go for efficient querying of servers, and writes to database.
 `frontend` is for the frontend web application that displays the tracked data.
 `collector` is for the collector service that collects server data - this handles all writes (including DB migrations).
 
+## Workspace + running it
+`backend`, `frontend` and `common` are Bun workspaces under the root `package.json`, with one `bun.lock` and one hoisted `node_modules` at the root (`bunfig.toml` sets `linker = "hoisted"`, so the backend and frontend share one copy of elysia/tanstack/react). Install from the root only: `bun install`.
+- `bun run dev` (root) - Vite dev server on :4000 plus the backend on :3000 with `bun --watch`. Open **:3000**: the backend proxies every non-API request to Vite (`FRONTEND_DEV_URL`, see `viteDevProxy` in `WebServer.ts`), so pages are SSR'd from source with unminified modules and source maps, while cookies/`SITE_ORIGIN`/OAuth stay on the same origin as production. HMR's websocket connects to :4000 directly.
+- `bun run build` (root) - builds the frontend into `frontend/dist`; the backend serves that directly (override with `FRONTEND_DIST`). There is no copying into `backend/public` any more.
+- `bun run start` / `bun run test` / `bun run typecheck` (root).
+- `build.sh` - release zip with the same layout (root manifest + lockfile, `backend/`, `common/`, `frontend/package.json` + `frontend/dist`); deploy with `bun install --production --frozen-lockfile` then `bun run start`.
+
 ## Notable Files / Folders
 All connections to read database: `backend/src/repositories/*`
 All connections to write database: `collector/internal/repository/*`

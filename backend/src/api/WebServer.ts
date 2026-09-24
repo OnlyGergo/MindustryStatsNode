@@ -35,10 +35,57 @@ const rateLimitTiers: RateLimitTier[] = [
   { name: 'page', limit: 40, windowMs: MINUTE, match: (p) => !STATIC_ASSET.test(p) },
 ];
 
-async function loadSsrHandler(): Promise<(request: Request) => Promise<Response>> {
-  const serverBuildPath = path.join(process.cwd(), 'public/server/server.js');
+type SsrHandler = (request: Request) => Promise<Response>;
+
+/**
+ * Where the production frontend build lives: FRONTEND_DIST if set, else
+ * `frontend/dist` next to this package - true both in the repo and in the
+ * build.sh release layout, so a `bun run build` needs no copying.
+ */
+function resolveFrontendDist(): string {
+  if (process.env.FRONTEND_DIST) return path.resolve(process.env.FRONTEND_DIST);
+  return path.resolve(import.meta.dir, '../../../frontend/dist');
+}
+
+async function loadSsrHandler(distDir: string): Promise<SsrHandler> {
+  const serverBuildPath = path.join(distDir, 'server/server.js');
   const { default: { fetch } } = await import(serverBuildPath);
   return fetch;
+}
+
+/**
+ * Dev mode: forward every page/asset request to the Vite dev server, which SSRs
+ * from source and serves unminified modules with source maps. The browser still
+ * talks to this port, so cookies, SITE_ORIGIN and the OAuth callback behave the
+ * same as production. HMR's websocket goes straight to Vite (see vite.config.ts).
+ */
+function viteDevProxy(devUrl: string): SsrHandler {
+  const target = new URL(devUrl);
+  return async (request) => {
+    const url = new URL(request.url);
+    url.protocol = target.protocol;
+    url.host = target.host;
+
+    let upstream: Response;
+    try {
+      upstream = await fetch(url, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+        redirect: 'manual',
+      });
+    } catch {
+      return new Response(`Vite dev server is not reachable at ${target.origin} - run \`bun run dev\` from the repo root.`, {
+        status: 502,
+      });
+    }
+
+    // fetch has already decoded the body, so the upstream encoding/length no longer apply.
+    const headers = new Headers(upstream.headers);
+    headers.delete('content-encoding');
+    headers.delete('content-length');
+    return new Response(upstream.body, { status: upstream.status, statusText: upstream.statusText, headers });
+  };
 }
 
 /**
@@ -46,15 +93,24 @@ async function loadSsrHandler(): Promise<(request: Request) => Promise<Response>
  * TanStack SSR handler as the catch-all.
  */
 export async function createWebServer() {
-  const handleSsrRequest = await loadSsrHandler();
+  const devUrl = process.env.FRONTEND_DEV_URL;
+  const distDir = resolveFrontendDist();
+  const handleSsrRequest = devUrl ? viteDevProxy(devUrl) : await loadSsrHandler(distDir);
+  logger.info(devUrl ? `Frontend: proxying to Vite dev server at ${devUrl}` : `Frontend: serving build from ${distDir}`);
   initCache({ sweepIntervalMs: 60_000 })
 
-  return new Elysia()
+  const app = new Elysia()
     // Ahead of everything, including the route cache — a crawler must not get
     // unmetered hits just because its target happens to be cached.
     .use(rateLimit(rateLimitTiers))
-    .use(cors({ origin: apiConfig.CORS_ORIGIN, credentials: true }))
-    .use(staticPlugin({ assets: path.join(process.cwd(), 'public/client'), prefix: '/' }))
+    .use(cors({ origin: apiConfig.CORS_ORIGIN, credentials: true }));
+
+  // In dev Vite serves the client assets itself, via the catch-all below.
+  // alwaysStatic: otherwise, outside NODE_ENV=production, the plugin mounts a
+  // `/*` wildcard that answers 404 for every page before SSR gets a look.
+  if (!devUrl) app.use(staticPlugin({ assets: path.join(distDir, 'client'), prefix: '/', alwaysStatic: true }));
+
+  return app
     .use(api)
     .all('*', async ({ request, status }) => {
       if (new URL(request.url).pathname.startsWith('/api')) {

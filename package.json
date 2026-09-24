@@ -1,0 +1,20 @@
+{
+  "name": "mindustry-stats-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "common"
+  ],
+  "scripts": {
+    "dev": "bun run --filter 'mindustry-stats' --filter 'mindustry-stats-react' dev",
+    "dev:backend": "bun run --filter 'mindustry-stats' dev",
+    "dev:frontend": "bun run --filter 'mindustry-stats-react' dev",
+    "build": "bun run --filter 'mindustry-stats-react' build",
+    "start": "bun backend/src/index.ts",
+    "test": "bun run --filter 'mindustry-stats' test",
+    "lint": "bun run --filter 'mindustry-stats-react' lint",
+    "typecheck": "cd backend && bunx tsc --noEmit"
+  }
+}
