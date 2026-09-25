@@ -1,9 +1,11 @@
 import React from "react";
 import CopyButton from "../CopyButton.tsx";
 import { useInactiveServersData } from "../../hooks/useInactiveServersData.ts";
+import { useNavigate } from "@tanstack/react-router";
 
 const InactiveServersDetail: React.FC = () => {
   const { inactiveServers, stats, loading, error } = useInactiveServersData();
+  const navigator = useNavigate();
 
   const formatDate = (timestamp: number | null) => {
     if (!timestamp) return "Never";
@@ -88,7 +90,7 @@ const InactiveServersDetail: React.FC = () => {
                       Server Lists
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
-                      Copy IP
+                      Details
                     </th>
                   </tr>
                 </thead>
@@ -123,10 +125,16 @@ const InactiveServersDetail: React.FC = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap inline-flex items-center">
                         <div className="text-sm font-medium text-primary">
-                          <CopyButton text={`${server.host}:${server.port}`} />
+                          <CopyButton text={`${server.host}:${server.port}`} className="bg-accent-muted hover:bg-accent-hover text-accent px-3 py-1 rounded transition-colors border border-accent shrink-0 text-sm" />
                         </div>
+                        <button
+                          onClick={() => navigator({ to: `/server/${server.id}` })}
+                          className="bg-accent-muted hover:bg-accent-hover text-accent px-3 py-1 rounded transition-colors border border-accent shrink-0 text-sm ml-2"
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
                   ))}
