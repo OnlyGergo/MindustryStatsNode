@@ -4,7 +4,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ServerElement
 } from "../../../common/models/serverData";
@@ -63,6 +63,7 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
 
   const { data } = useApi(initialData);
   const { isMobile } = useResponsive();
+  const navigate = useNavigate();
 
   // Mark as hydrated to ensure SSR/client match
   useEffect(() => {
@@ -125,6 +126,8 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
 
   const handleToggleCollapse = () => {
     if (isMobile) {
+      // navigate to index so they can click any link
+      navigate({ to: "/" });
       setShowMasterPanel(!showMasterPanel);
     } else {
       setIsMasterPanelCollapsed(!isMasterPanelCollapsed);
