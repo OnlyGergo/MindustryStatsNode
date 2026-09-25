@@ -93,3 +93,5 @@ The backend often passes data through ApiPacker, which takes arrays of objects a
 # FYI
 
 `schema.sql` is currently empty, so `collector/migrations` is the only description of the schema until it is regenerated. Otherwise, do not attempt to read `collector/migrations` or especially `backend/migrations_legacy` (legacy means run manually, DB is out of sync with these). Latest schema is included in `schema.sql` at the root of the project. If you want to make changes, do it in `collector/migrations`. You can add "--no-tran" on first line for migrations if they need manual running (like certain CALL statements relating to TimescaleDB).
+
+Use EU Commit message format, like `feat: add ` or `fix: ` or `refactor: `
