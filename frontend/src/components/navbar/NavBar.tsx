@@ -131,8 +131,12 @@ const NavBar: React.FC = () => {
     />
   );
 
+  // `relative z-40` lifts the bar (and the AccountMenu dropdown overflowing it)
+  // above the content row: backdrop-blur makes this bar its own stacking
+  // context, which would otherwise paint beneath the later, positioned
+  // MasterPanel / DetailShell siblings.
   return (
-    <div className="bg-linear-to-r from-surface-primary/60 to-surface-primary/40 backdrop-blur-md border-b border-default shrink-0 flex flex-col">
+    <div className="relative z-40 bg-linear-to-r from-surface-primary/60 to-surface-primary/40 backdrop-blur-md border-b border-default shrink-0 flex flex-col">
       <div className="h-14 px-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <BrandMark />
