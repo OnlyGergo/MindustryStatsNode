@@ -1,7 +1,7 @@
 /node_modules/
-/backend/dist/
 /.idea/
 .env
+dist
 /build/
 /backend/node_modules/
 /frontend/node_modules/
@@ -11,6 +11,3 @@
 /backend/public/
 TODO.md
 common/version_build.ts
-# Go collector build output
-/collector/collector
-/collector/bin/
