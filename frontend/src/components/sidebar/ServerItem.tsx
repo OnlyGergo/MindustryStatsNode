@@ -3,6 +3,7 @@ import { formatUnsafeText, removeColors } from "../../util/mindustry.ts";
 import { countryCodeToFlag } from "../../util/general.ts";
 import { ServerElement } from "../../../../common/models/serverData.ts";
 import { useNavigate } from "@tanstack/react-router";
+import { CompactStarRatingDisplay } from "../detail/StarRating.tsx";
 
 const ServerItem: React.FC<{
   server: ServerElement;
@@ -61,6 +62,7 @@ const ServerItem: React.FC<{
         </span>
         {server.online && serverData && (
           <div className="text-right">
+            <CompactStarRatingDisplay value={server.ratingScore ?? -1} />
             <div className="text-lg font-bold text-accent">
               {String(serverData.players)}
               <span className="text-tertiary ml-1">
