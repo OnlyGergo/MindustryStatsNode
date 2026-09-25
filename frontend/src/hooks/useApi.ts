@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createServerFn } from '@tanstack/react-start';
 import { ServerElement } from '../../../common/models/serverData.ts';
+import { DEFAULT_REFRESH_INTERVAL_MS } from '../../../common/models/ClientConfig.ts';
 import { ApiPacker, ApiResponsePacket } from '../../../common/Packer.ts';
 import { getBaseUrl } from '../util/getApi.ts';
 import { useClientConfig } from './useClientConfig.ts';
@@ -23,7 +24,7 @@ export const fetchServers = createServerFn({ method: 'GET' }).handler(async (): 
 });
 
 /**
- * Client-side hook that keeps polling `/api/servers` every 10s to stay in
+ * Client-side hook that keeps polling `/api/servers` every `refreshInterval` (from `/config`) to stay in
  * sync with the cached backend. `initialData` (typically sourced from the
  * route loader via `fetchServers`) can be passed in to avoid a loading
  * flash on first paint after SSR hydration.
@@ -32,24 +33,31 @@ const useApi = (initialData: ServerElement[] | null = null) => {
     const [data, setData] = useState<ServerElement[] | null>(initialData);
     const [error, setError] = useState<Error | null>(null);
     const { config: clientConfig, loading: isConfigLoading, error: configError } = useClientConfig();
-  
+
+    // Only the *first* run may skip the immediate fetch. Kept in a ref rather than
+    // the deps: callers re-create `initialData` every render (ApiPacker.unpack).
+    const skipInitialFetch = useRef(initialData !== null);
+
+    // Wait for config, but if it failed fall back to the default interval rather
+    // than never polling: a stale list is worse than a slightly off cadence.
+    const refreshInterval = isConfigLoading
+        ? null
+        : clientConfig?.refreshInterval ?? DEFAULT_REFRESH_INTERVAL_MS;
+
     useEffect(() => {
+        if (configError) {
+            console.warn('Client config unavailable, polling at default interval:', configError);
+        }
+    }, [configError]);
+
+    useEffect(() => {
+        if (refreshInterval === null) {
+            return;
+        }
+
         // This is a React safety flag. It prevents React from trying to update
         // the state if the user navigates away from the page before the fetch finishes.
         let isMounted = true;
-
-        if (isConfigLoading) {
-            return;
-        }
-        if (configError) {
-            setError(configError);
-            return;
-        }
-        if (!clientConfig) {
-            setError(new Error('No config'));
-            return;
-        }
-
 
         const fetchServerStats = async () => {
             try {
@@ -74,22 +82,23 @@ const useApi = (initialData: ServerElement[] | null = null) => {
             }
         };
 
-        // 1. Fetch immediately when the component loads (skip if we already
-        // have SSR-provided initialData, still poll afterwards regardless).
-        if (!initialData) {
+        // 1. Fetch immediately once config is known (skip if we already have
+        // SSR-provided initialData, still poll afterwards regardless).
+        if (skipInitialFetch.current) {
+            skipInitialFetch.current = false;
+        } else {
             fetchServerStats().then(() => {});
         }
 
         // 2. Poll at configured increments
-        const pollInterval = setInterval(fetchServerStats, clientConfig.refreshInterval);
+        const pollInterval = setInterval(fetchServerStats, refreshInterval);
 
-        // 3. Cleanup function: React runs this when the component unmounts/is destroyed
+        // 3. Cleanup function: React runs this when the component unmounts or the interval changes
         return () => {
             isMounted = false;
             clearInterval(pollInterval);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // The empty array ensures this setup only runs once when mounted
+    }, [refreshInterval]); // Re-runs only when the interval resolves/changes, not per render
 
     return { data, error };
 };
