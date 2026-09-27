@@ -19,7 +19,7 @@ interface GlobalStatsChartProps {
 
 const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
   const [selectedRange, setSelectedRange] = useState<DateRangeOption>("1d");
-  const [viewMode, setViewMode] = useState<ViewMode>("lines");
+  const [viewMode, setViewMode] = useState<ViewMode>("share");
   const [selectedGamemode, setSelectedGamemode] = useState<GamemodeInfo | null>(null);
   const [visibleModes, setVisibleModes] = useState<Set<string>>(new Set());
   const [visibleServerGroups, setVisibleServerGroups] = useState<Set<string>>(new Set());
@@ -143,7 +143,9 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:items-stretch lg:min-h-115 lg:h-[60vh] mb-4 sm:mb-6">
             <div className="flex-1 min-w-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col">
               <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4 wrap-break-word">
-                {viewMode === "lines" ? "Playercounts by Gamemode" : "Aggregated Global Playercounts"}
+                {viewMode === "share"
+                    ? "Player Share by Gamemode"
+                    : viewMode === "lines" ? "Playercounts by Gamemode" : "Aggregated Global Playercounts"}
               </h2>
               <div className="relative w-full h-64 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
                 <ChartSuspense>
@@ -159,7 +161,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
               </div>
             </div>
 
-            {viewMode === "lines" && (
+            {viewMode !== "aggregated" && (
                 <div className="w-full lg:w-76 shrink-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col overflow-hidden">
                   <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
                     Gamemodes

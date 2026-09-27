@@ -4,11 +4,15 @@ import "uplot/dist/uPlot.min.css";
 import { GamemodeHistoryEntry } from "../../../../common/models/GlobalStatsTypes.js";
 import {
     buildGamemodeIndex,
+    buildShareData,
+    buildShareSeries,
     buildUPlotData,
     formatTimestampLabel,
     getModeColor,
     DateRangeOption,
+    SHARE_Y_AXIS_VALUES,
     ViewMode,
+    shareTooltipRows,
 } from "../../util/chartHelpers.ts";
 import { createChartTooltip } from "../../util/chartTooltip.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
@@ -46,12 +50,14 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({
         const timestamps = [...new Set(data.map((d) => d.timestamp))].sort((a, b) => a - b);
         const gamemodes = [...new Set(data.map((d) => d.modeName))].sort();
         const index = buildGamemodeIndex(data);
-        const chartData = buildUPlotData(timestamps, gamemodes, index, viewMode);
 
+        const isShare = viewMode === "share";
         const isAgg = viewMode === "aggregated";
         const labels = isAgg ? ["Total Network Players"] : gamemodes;
+        const share = isShare ? buildShareData(timestamps, gamemodes, index, visibleModes) : null;
+        const chartData = share ? share.data : buildUPlotData(timestamps, gamemodes, index, viewMode);
 
-        const series: uPlot.Series[] = [
+        const series: uPlot.Series[] = share ? buildShareSeries(share) : [
             { label: "Time" },
             ...labels.map((label) => {
                 const color = isAgg ? "#f97316" : getModeColor(label);
@@ -73,6 +79,7 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({
                 if (idx == null) return null;
                 const ts = (u.data[0] as number[])[idx];
                 const title = new Date(ts * 1000).toLocaleString();
+                if (share) return { title, rows: shareTooltipRows(share, idx) };
                 const rows: { label: string; value: number; color: string }[] = [];
 
                 labels.forEach((label, si) => {
@@ -111,14 +118,16 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({
                     stroke: "#9ca3af",
                     grid: { stroke: "rgba(255,255,255,0.03)" },
                     ticks: { stroke: "rgba(255,255,255,0.03)" },
-                    values: (_u, splits) => splits.map((v) => Math.round(v).toLocaleString()),
+                    values: share
+                        ? SHARE_Y_AXIS_VALUES
+                        : (_u, splits) => splits.map((v) => Math.round(v).toLocaleString()),
                     size: 60,
                     font: "10px sans-serif",
                 },
             ],
             scales: {
                 x: { time: true },
-                y: { range: (_u, _min, max) => [0, max * 1.05] },
+                y: { range: share ? [0, 100] : (_u, _min, max) => [0, max * 1.05] },
             },
             legend: { show: false },
             cursor: {

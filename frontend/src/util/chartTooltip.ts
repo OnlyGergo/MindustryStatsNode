@@ -4,6 +4,8 @@ interface TooltipRow {
     label: string;
     value: number;
     color: string;
+    /** Shown instead of value.toLocaleString(); value still feeds the total. */
+    display?: string;
 }
 
 interface TooltipConfig {
@@ -48,7 +50,7 @@ export const createChartTooltip = (mountNode: HTMLDivElement) => {
                       <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background-color: ${r.color};"></span>
                       ${r.label}
                     </span>
-                    <span style="font-weight: 600; color: #f5f5f5;">${r.value.toLocaleString()}</span>
+                    <span style="font-weight: 600; color: #f5f5f5;">${r.display ?? r.value.toLocaleString()}</span>
                   </div>
                 `;
             })

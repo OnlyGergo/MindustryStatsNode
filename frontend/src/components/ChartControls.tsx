@@ -66,7 +66,7 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
           View
         </span>
         <div className="flex flex-wrap gap-1 p-1 rounded border border-default bg-surface-tertiary">
-          {(["lines", "aggregated"] as ViewMode[]).map((mode) => (
+          {(["share", "lines", "aggregated"] as ViewMode[]).map((mode) => (
             <button
               key={mode}
               onClick={() => onViewModeChange(mode)}

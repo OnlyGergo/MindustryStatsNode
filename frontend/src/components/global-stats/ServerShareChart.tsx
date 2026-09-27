@@ -4,10 +4,12 @@ import "uplot/dist/uPlot.min.css";
 import { ServerShareEntry } from "../../../../common/models/GlobalStatsTypes.js";
 import {
     buildServerShareIndex,
-    buildUPlotData,
+    buildShareData,
+    buildShareSeries,
     formatTimestampLabel,
-    getModeColor,
     DateRangeOption,
+    SHARE_Y_AXIS_VALUES,
+    shareTooltipRows,
 } from "../../util/chartHelpers.ts";
 import { createChartTooltip } from "../../util/chartTooltip.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
@@ -43,21 +45,8 @@ const ServerShareChart: React.FC<ServerShareChartProps> = ({
         const timestamps = [...new Set(data.map((d) => d.timestamp))].sort((a, b) => a - b);
         const serverGroups = [...new Set(data.map((d) => d.groupName))].sort();
         const index = buildServerShareIndex(data);
-        const chartData = buildUPlotData(timestamps, serverGroups, index, "lines");
-
-        const labels = serverGroups;
-
-        const series: uPlot.Series[] = [
-            { label: "Time" },
-            ...labels.map((label) => ({
-                label,
-                stroke: getModeColor(label),
-                width: 2,
-                show: visibleGroups.has(label),
-                spanGaps: false,
-                points: { show: timestamps.length <= 80, size: 5 },
-            })),
-        ];
+        const share = buildShareData(timestamps, serverGroups, index, visibleGroups);
+        const series = buildShareSeries(share);
 
         const tooltip = createChartTooltip(mountRef.current);
 
@@ -66,19 +55,7 @@ const ServerShareChart: React.FC<ServerShareChartProps> = ({
                 if (idx == null) return null;
                 const ts = (u.data[0] as number[])[idx];
                 const title = new Date(ts * 1000).toLocaleString();
-                const rows: { label: string; value: number; color: string }[] = [];
-
-                labels.forEach((label, si) => {
-                    if (u.series[si + 1].show) {
-                        const raw = (u.data[si + 1] as (number | null)[])[idx];
-                        if (raw != null && raw > 0) {
-                            rows.push({ label, value: raw, color: getModeColor(label) });
-                        }
-                    }
-                });
-
-                rows.sort((a, b) => b.value - a.value);
-                return { title, rows, isAgg: false };
+                return { title, rows: shareTooltipRows(share, idx) };
             });
         }
 
@@ -99,14 +76,14 @@ const ServerShareChart: React.FC<ServerShareChartProps> = ({
                     stroke: "#9ca3af",
                     grid: { stroke: "rgba(255,255,255,0.03)" },
                     ticks: { stroke: "rgba(255,255,255,0.03)" },
-                    values: (_u, splits) => splits.map((v) => Math.round(v).toLocaleString()),
+                    values: SHARE_Y_AXIS_VALUES,
                     size: 60,
                     font: "10px sans-serif",
                 },
             ],
             scales: {
                 x: { time: true },
-                y: { range: (_u, _min, max) => [0, max * 1.05] },
+                y: { range: [0, 100] },
             },
             legend: { show: false },
             cursor: {
@@ -118,7 +95,7 @@ const ServerShareChart: React.FC<ServerShareChartProps> = ({
             },
         };
 
-        uplotRef.current = new uPlot(opts, chartData as uPlot.AlignedData, mountRef.current);
+        uplotRef.current = new uPlot(opts, share.data as uPlot.AlignedData, mountRef.current);
         lastSizeRef.current = { width: opts.width, height: opts.height };
 
         const ro = new ResizeObserver((entries) => {
