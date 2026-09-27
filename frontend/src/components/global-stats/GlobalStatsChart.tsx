@@ -26,7 +26,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
 
   const { data: gamemodeData, loading, error, peakPlayers } = useGamemodeHistory(selectedRange);
   const { data: serverShareData, loading: serverShareLoading, error: serverShareError } =
-      useServerShare(selectedGamemode?.modeId, selectedRange);
+      useServerShare(selectedGamemode?.registryId, selectedRange);
 
   const computedPeaks = useMemo(() => {
     const peaks: Record<string, number> = {};

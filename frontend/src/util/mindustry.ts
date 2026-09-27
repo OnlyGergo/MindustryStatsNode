@@ -19,3 +19,8 @@ export function formatUnsafeText(text: string): string {
     if (cleanedText === null) return "";
     return String(cleanedText.replace(/\n/g, '<br/>').trim().substring(0, 500));
 }
+
+const modes = [' ', '', ' ', '', '']
+export function modeIdToIcon(modeId: number): string {
+    return modes[modeId] ?? '?';
+}

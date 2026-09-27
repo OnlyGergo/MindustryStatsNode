@@ -18,9 +18,10 @@ interface RawGamemodeHistoryRow {
 }
 
 interface RawGamemodeListRow {
-    id: number;
-    clean_name: string;
-    server_count: number;
+  id: number;
+  game_mode: number;
+  clean_name: string;
+  server_count: number;
 }
 
 interface RawServerShareRow {
@@ -377,13 +378,14 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
     const query = `
       SELECT MIN(gr.id) AS id,
         gr.clean_name,
+        gr.game_mode,
         COUNT(DISTINCT sc.canonical_id) AS server_count
       FROM gamemode_registry gr
         JOIN server_maps_registry smr ON smr.gamemode_id = gr.id
         JOIN server_maps_history smh ON smh.map_id = smr.id
         ${canonicalJoin('sc', 'smh')}
-      GROUP BY gr.clean_name
-      ORDER BY gr.clean_name;
+      GROUP BY gr.clean_name, gr.game_mode
+      ORDER BY server_count DESC;
     `;
 
     const rows = await sequelize.query(query, {
@@ -392,10 +394,11 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
 
     return rows.map(r => {
       return {
-            modeId: Number(r.id),
-            cleanModeName: r.clean_name,
-            serverCount: Number(r.server_count),
-        };
+        registryId: Number(r.id),
+        gamemodeId: Number(r.game_mode),
+        cleanModeName: r.clean_name,
+        serverCount: Number(r.server_count),
+      };
     });
 }
 
