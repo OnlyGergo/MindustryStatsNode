@@ -11,6 +11,23 @@ import { COMMIT, SOURCE } from "../../../../common/version.ts";
 import { useSidebar } from "../../context/SidebarContext.tsx";
 import {formatRelativeTime} from "../../util/general.ts";
 
+const CollapseToggle: React.FC<{ collapsed: boolean; onClick: () => void; className?: string }> = ({ collapsed, onClick, className }) => (
+  <button
+    onClick={onClick}
+    className={`bg-accent-muted hover:bg-accent-hover text-accent p-1 rounded transition-colors border border-accent shrink-0 ${className ?? ""}`}
+    title={collapsed ? "Expand server list" : "Collapse server list"}
+  >
+    <svg
+      className={`w-4 h-4 transform transition-transform ${collapsed ? "rotate-180" : ""}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+    </svg>
+  </button>
+);
+
 const MasterPanel: React.FC = () => {
   const {
     isMasterPanelCollapsed: isCollapsed,
@@ -47,8 +64,14 @@ const MasterPanel: React.FC = () => {
     sortOptions,
   } = useServerList(rawServers);
 
+  const { isMasterPanelCollapsed, handleToggleCollapse } = useSidebar();
+  
   if (isCollapsed) {
-    return null;
+    return (
+      <div className="m-2 align-top">
+        <CollapseToggle collapsed={isMasterPanelCollapsed} onClick={handleToggleCollapse} />
+      </div>
+    );
   }
 
   return (
@@ -59,8 +82,11 @@ const MasterPanel: React.FC = () => {
       >
         {/* Controls */}
         <div className="px-4 py-3 border-b border-subtle shrink-0">
-          <div className="mb-2.5">
+          <div className="mb-2.5 flex items-center gap-2">
             <SearchBar onSearchValueChange={setSearchTerm} value={searchTerm} />
+            {!isMobile && (
+              <CollapseToggle collapsed={isMasterPanelCollapsed} onClick={handleToggleCollapse} className="" />
+            )}
           </div>
 
           {/* Three controls fit one row down to a ~373px panel (the desktop

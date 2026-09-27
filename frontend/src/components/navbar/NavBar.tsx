@@ -14,23 +14,6 @@ const BrandMark: React.FC = () => (
   </span>
 );
 
-const CollapseToggle: React.FC<{ collapsed: boolean; onClick: () => void }> = ({ collapsed, onClick }) => (
-  <button
-    onClick={onClick}
-    className="bg-accent-muted hover:bg-accent-hover text-accent p-2 rounded transition-colors border border-accent shrink-0"
-    title={collapsed ? "Expand server list" : "Collapse server list"}
-  >
-    <svg
-      className={`w-4 h-4 transform transition-transform ${collapsed ? "rotate-180" : ""}`}
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-    </svg>
-  </button>
-);
-
 const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button onClick={onClick} className="button-secondary p-2 mr-3 shrink-0">
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,7 +49,6 @@ const NavLink: React.FC<{
  */
 const NavBar: React.FC = () => {
   const {
-    isMasterPanelCollapsed,
     handleToggleCollapse,
     totalServers,
     onlineServers,
@@ -114,11 +96,6 @@ const NavBar: React.FC = () => {
           >
               Global
           </NavLink>
-
-      {!isMobile && (
-        <CollapseToggle collapsed={isMasterPanelCollapsed} onClick={handleToggleCollapse} />
-      )}
-
       <AccountMenu />
     </div>
   );
