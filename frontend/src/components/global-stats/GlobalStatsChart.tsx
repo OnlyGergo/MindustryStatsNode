@@ -19,7 +19,7 @@ interface GlobalStatsChartProps {
 
 const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
   const [selectedRange, setSelectedRange] = useState<DateRangeOption>("1d");
-  const [viewMode, setViewMode] = useState<ViewMode>("share");
+  const [viewMode, setViewMode] = useState<ViewMode>("lines");
   const [selectedGamemode, setSelectedGamemode] = useState<GamemodeInfo | null>(null);
   const [visibleModes, setVisibleModes] = useState<Set<string>>(new Set());
   const [visibleServerGroups, setVisibleServerGroups] = useState<Set<string>>(new Set());
