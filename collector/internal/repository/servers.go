@@ -230,6 +230,41 @@ func dedupeStatsByPrimaryKey(batch []StatRow) []StatRow {
 	return rows
 }
 
+// maxVersionTypeLen is the width of version_type (varchar(50)) on server_stats
+// and server_current.  The wire format allows up to 255 bytes, and Postgres
+// rejects an over-long value instead of truncating it, which would abort the
+// whole batch -- one misbehaving server would drop every server's samples.
+const maxVersionTypeLen = 50
+
+// truncateRunes cuts s to at most n characters (varchar counts characters,
+// not bytes), never splitting a multi-byte rune.
+func truncateRunes(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	count := 0
+	for i := range s {
+		if count == n {
+			return s[:i]
+		}
+		count++
+	}
+	return s
+}
+
+// clampStatStrings bounds every length-limited column in place.  The pointers
+// are replaced rather than written through, since they may be shared with the
+// caller's batch.
+func clampStatStrings(rows []StatRow) {
+	for i := range rows {
+		if vt := rows[i].VersionType; vt != nil {
+			if cut := truncateRunes(*vt, maxVersionTypeLen); cut != *vt {
+				rows[i].VersionType = &cut
+			}
+		}
+	}
+}
+
 // BulkSaveServerStats writes the samples and keeps server_current in step.
 func (r *Repository) BulkSaveServerStats(ctx context.Context, batch []StatRow) error {
 	if len(batch) == 0 {
@@ -237,6 +272,7 @@ func (r *Repository) BulkSaveServerStats(ctx context.Context, batch []StatRow) e
 	}
 
 	rows := dedupeStatsByPrimaryKey(batch)
+	clampStatStrings(rows)
 	if len(rows) != len(batch) {
 		r.log.Warn(
 			"bulkSaveServerStats: dropped sample(s) colliding on (server_id, timestamp) -- the collector queued a server twice",

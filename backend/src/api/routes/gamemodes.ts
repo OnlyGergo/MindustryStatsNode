@@ -14,10 +14,8 @@ export const gamemodeRoutes = new Elysia({ prefix: '/api/gamemodes' })
   })
 
   .get('/:modeId/servers', async ({ params, query }) => {
-    // range alone drives hoursBack; startDate/endDate are extra repo filters (see global.ts)
-    const { hoursBack, bucketMinutes } = resolveRange(query.range);
-    const startDate = parseTimestamp(query.startDate);
-    const endDate = parseTimestamp(query.endDate);
+    const { hoursBack, bucketMinutes, startDate, endDate } = resolveRange(
+      query.range, parseTimestamp(query.startDate), parseTimestamp(query.endDate));
 
     const serverShare = await getServerShareByGamemode(params.modeId, hoursBack, bucketMinutes, startDate, endDate);
 

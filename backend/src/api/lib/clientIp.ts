@@ -25,48 +25,77 @@ export function isLoopback(ip: string | null): boolean {
   return addr === '::1' || addr === '0:0:0:0:0:0:0:1'
 }
 
-/** True for loopback plus RFC1918 / CGNAT / link-local / IPv6 unique-local ranges. */
-export function isPrivateAddress(ip: string | null): boolean {
-  if (!ip) return false
-  const addr = normalizeIp(ip)
-  if (isLoopback(addr)) return true
-
-  const v4 = ipv4Octets(addr)
-  if (v4) {
-    const [a, b] = v4
-    return a === 10 || a === 192 && b === 168 || a === 172 && b >= 16 && b <= 31
-      || a === 169 && b === 254 || a === 100 && b >= 64 && b <= 127
-  }
-
-  // fc00::/7 (unique-local) and fe80::/10 (link-local); the leading hextet is
-  // enough to decide both, so there is no need to expand the address.
-  const head = parseInt(addr.split(':')[0] || '', 16)
-  if (isNaN(head)) return false
-  return (head & 0xfe00) === 0xfc00 || (head & 0xffc0) === 0xfe80
-}
-
 /** Immediate socket peer address, or null when Bun cannot resolve it. */
 export function peerAddress(request: Request, server: RequestIpServer | null): string | null {
   const address = server?.requestIP(request)?.address
   return address ? normalizeIp(address) : null
 }
 
+export interface ProxyTrust {
+  /** Socket peers whose X-Forwarded-For is believed (the reverse proxy's source IPs). */
+  proxies: ReadonlySet<string>
+  /**
+   * Trusted hops that append to X-Forwarded-For in front of that proxy. 0 when the
+   * proxy talks to clients directly; 1 for Caddy behind Cloudflare, since Caddy keeps
+   * Cloudflare's header and appends the Cloudflare edge address after the client.
+   */
+  extraHops: number
+}
+
+function parseProxyTrust(env: NodeJS.ProcessEnv): ProxyTrust {
+  const list = (env.TRUSTED_PROXY_IPS ?? '127.0.0.1,::1')
+    .split(',')
+    .map(normalizeIp)
+    .filter(Boolean)
+  const hops = parseInt(env.TRUSTED_PROXY_EXTRA_HOPS ?? '0', 10)
+  return { proxies: new Set(list), extraHops: Number.isFinite(hops) && hops > 0 ? hops : 0 }
+}
+
+export const proxyTrust: ProxyTrust = parseProxyTrust(process.env)
+
+/**
+ * True only for requests this process makes to itself (SSR fetches): a loopback
+ * peer that carries no X-Forwarded-For. A reverse proxy on the same box always
+ * sets that header, so proxied traffic never counts as local.
+ */
+export function isSelfRequest(request: Request, server: RequestIpServer | null): boolean {
+  return isLoopback(peerAddress(request, server)) && !request.headers.has('x-forwarded-for')
+}
+
+export interface ResolvedClient {
+  ip: string
+  /** True when the peer was not a trusted proxy (nor this process itself), i.e. the proxy was bypassed. */
+  untrustedPeer: boolean
+}
+
 /**
  * The client IP a rate-limit bucket should be keyed on.
  *
- * X-Forwarded-For is only consulted when the immediate peer is private — i.e. a local
- * reverse proxy terminating TLS — because a public client can forge the header freely.
- * Within it, the rightmost non-private entry is the last hop we did not add ourselves;
- * anything further left is attacker-controlled.
+ * X-Forwarded-For is only consulted when the immediate peer is a configured trusted
+ * proxy, because anyone else can forge the header freely. Within it, the entry
+ * `extraHops` from the right is the last address a trusted hop recorded; anything
+ * further left is client-controlled. A header shorter than that means the request
+ * did not come through the outer hops, so its only (proxy-written) entry is used.
  */
-export function clientIp(request: Request, server: RequestIpServer | null): string {
+export function resolveClient(
+  request: Request,
+  server: RequestIpServer | null,
+  trust: ProxyTrust = proxyTrust,
+): ResolvedClient {
   const peer = peerAddress(request, server)
-  if (!isPrivateAddress(peer)) return peer ?? 'unknown'
+  if (!peer || !trust.proxies.has(peer)) {
+    return { ip: peer ?? 'unknown', untrustedPeer: !isSelfRequest(request, server) }
+  }
 
   const entries = (request.headers.get('x-forwarded-for') ?? '')
     .split(',')
     .map(normalizeIp)
     .filter(Boolean)
 
-  return entries.findLast((entry) => !isPrivateAddress(entry)) ?? entries[0] ?? peer ?? 'unknown'
+  const ip = entries[Math.max(0, entries.length - 1 - trust.extraHops)] ?? peer
+  return { ip, untrustedPeer: false }
+}
+
+export function clientIp(request: Request, server: RequestIpServer | null): string {
+  return resolveClient(request, server).ip
 }

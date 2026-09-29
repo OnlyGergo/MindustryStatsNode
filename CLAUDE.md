@@ -34,6 +34,8 @@ The HTTP layer lives in `backend/src/api` instead, and is not a service:
 - `WebServer.ts` - transport: rate limit tiers, CORS, static assets, the API, and the TanStack SSR catch-all. `startWebServer()` / `stopWebServer()`.
 - `app.ts` - the Elysia app itself (routes + error handling). Exports `api` and `type Api`; the frontend consumes that type via Eden Treaty in `frontend/src/util/api.ts`, so it must stay a chained expression rather than a class.
 - `routes/*.ts` - one chained Elysia instance per group.
+- Client IPs come from `api/lib/clientIp.ts`: X-Forwarded-For is only believed from `TRUSTED_PROXY_IPS` (default loopback; `TRUSTED_PROXY_EXTRA_HOPS=1` for Caddy behind Cloudflare). Only a loopback request *without* X-Forwarded-For (SSR self-fetches) skips rate limiting; anything reaching the app around the proxy is logged as a warning.
+- Chart routes must take `startDate`/`endDate` from `resolveRange()`'s return value, never straight from the query: it validates and clamps the window (max 400 days) so the bucket width and window always agree.
 - `middleware/cache.ts`, `middleware/rateLimit.ts` - spread into a route's hook options (`...withCache({...})`). Do NOT pass them as `use: [...]`, Elysia 1.4 silently ignores beforeHandle/afterHandle supplied that way.
 
 The server related services, pass data between eachother:

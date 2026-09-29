@@ -1,5 +1,5 @@
 import React from "react";
-import { formatUnsafeText, removeColors } from "../../util/mindustry.ts";
+import { formatTextLines, removeColors } from "../../util/mindustry.ts";
 import { countryCodeToFlag } from "../../util/general.ts";
 import { ServerElement } from "../../../../common/models/serverData.ts";
 import { useNavigate } from "@tanstack/react-router";
@@ -38,12 +38,14 @@ const ServerItem: React.FC<{
         )}
 
         {serverData?.description && (
-          <div
-            className="text-xs text-secondary truncate mb-2"
-            dangerouslySetInnerHTML={{
-              __html: formatUnsafeText(serverData.description),
-            }}
-          ></div>
+          <div className="text-xs text-secondary truncate mb-2">
+            {formatTextLines(serverData.description).map((line, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <br />}
+                {line}
+              </React.Fragment>
+            ))}
+          </div>
         )}
 
         {server.online && serverData && (

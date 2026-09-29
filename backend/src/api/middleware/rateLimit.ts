@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
 import { createLogger } from '../../logger.js'
-import { clientIp, isLoopback, peerAddress } from '../lib/clientIp.js'
+import { isSelfRequest, proxyTrust, resolveClient } from '../lib/clientIp.js'
 
 const logger = createLogger('RateLimit')
 
@@ -30,6 +30,20 @@ const store = new Map<string, Bucket>()
 const SWEEP_THRESHOLD = 20_000
 let lastSweep = 0
 
+// Requests that bypassed the reverse proxy are logged, but at most once per
+// peer per window so a flood cannot turn into a log flood.
+const UNTRUSTED_WARN_WINDOW_MS = 10 * 60_000
+const untrustedWarned = new Map<string, number>()
+
+function warnUntrustedPeer(ip: string, now: number) {
+  const last = untrustedWarned.get(ip)
+  if (last !== undefined && now - last < UNTRUSTED_WARN_WINDOW_MS) return
+  if (untrustedWarned.size > 10_000) untrustedWarned.clear()
+  untrustedWarned.set(ip, now)
+  logger.warn(`Request from ${ip}, which is not a trusted proxy (${[...proxyTrust.proxies].join(', ')}); `
+    + 'X-Forwarded-For ignored and rate limited by peer address. Set TRUSTED_PROXY_IPS if this is your reverse proxy.')
+}
+
 // Time-based, never size-based: sweeping whenever the map is merely large would
 // cost an O(n) walk on every request during exactly the flood it exists for.
 function sweep(now: number) {
@@ -51,10 +65,12 @@ export const rateLimit = (tiers: RateLimitTier[]) =>
     const tier = tiers.find((t) => t.match(pathname, request.method.toUpperCase()))
     if (!tier) return
 
-    if (isLoopback(peerAddress(request, server))) return // this process's own SSR fetches
+    if (isSelfRequest(request, server)) return // this process's own SSR fetches
 
     const now = Date.now()
-    const key = `${tier.name}:${clientIp(request, server)}`
+    const client = resolveClient(request, server)
+    if (client.untrustedPeer) warnUntrustedPeer(client.ip, now)
+    const key = `${tier.name}:${client.ip}`
 
     let bucket = store.get(key)
     if (!bucket || bucket.resetAt <= now) {
@@ -87,7 +103,7 @@ export const rateLimit = (tiers: RateLimitTier[]) =>
  */
 export const localOnly = () => ({
   beforeHandle({ request, server, set }: any) {
-    if (isLoopback(peerAddress(request, server))) return
+    if (isSelfRequest(request, server)) return
     set.status = 403
     return { error: 'Local only' }
   },

@@ -14,6 +14,16 @@ interface TooltipConfig {
     isAgg?: boolean;
 }
 
+const HTML_ESCAPES: Record<string, string> = {
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+};
+
+/** Labels and titles carry server-reported names (gamemodes, groups), so they are untrusted. */
+const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]!);
+
+/** Colours land inside a style attribute; anything that isn't a plain colour token is dropped. */
+const safeColor = (value: string): string => /^[#\w\s(),.%-]+$/.test(value) ? value : "transparent";
+
 export const createChartTooltip = (mountNode: HTMLDivElement) => {
     const tooltipEl = document.createElement("div");
     tooltipEl.style.cssText = `
@@ -47,10 +57,10 @@ export const createChartTooltip = (mountNode: HTMLDivElement) => {
                 return `
                   <div style="display: flex; gap: 24px; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <span style="display: flex; align-items: center; gap: 8px; color: #a3a3a3;">
-                      <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background-color: ${r.color};"></span>
-                      ${r.label}
+                      <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background-color: ${safeColor(r.color)};"></span>
+                      ${escapeHtml(r.label)}
                     </span>
-                    <span style="font-weight: 600; color: #f5f5f5;">${r.display ?? r.value.toLocaleString()}</span>
+                    <span style="font-weight: 600; color: #f5f5f5;">${escapeHtml(r.display ?? r.value.toLocaleString())}</span>
                   </div>
                 `;
             })
@@ -67,7 +77,7 @@ export const createChartTooltip = (mountNode: HTMLDivElement) => {
             : "";
 
         tooltipEl.innerHTML = `
-          <div style="color: #f97316; font-weight: 700; margin-bottom: 8px; border-bottom: 1px solid #262626; padding-bottom: 6px;">${title}</div>
+          <div style="color: #f97316; font-weight: 700; margin-bottom: 8px; border-bottom: 1px solid #262626; padding-bottom: 6px;">${escapeHtml(title)}</div>
           <div style="max-height: 200px; overflow-y: auto; padding-right: 4px;">
             ${rowsHtml}
           </div>

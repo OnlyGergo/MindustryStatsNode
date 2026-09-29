@@ -8,16 +8,17 @@ export function removeColors(text: string | null): string | null {
 
 
 /**
- * Formats text for unsafe HTML display by removing color codes and replacing newlines with <br/>.
- * Returns a sanitized string that can be safely used in innerHTML.
- * Also trims to a max of 500 characters to prevent excessive length.
+ * Splits server-supplied text into display lines with colour codes removed,
+ * trimmed to a max of 500 characters to prevent excessive length.
+ * The lines are plain text: render them as React children (joined with <br/>
+ * elements), never through innerHTML, since the source is attacker-controlled.
  * @param text
  */
-export function formatUnsafeText(text: string): string {
-    if (text === null) return "";
+export function formatTextLines(text: string | null): string[] {
+    if (text === null) return [];
     const cleanedText = removeColorsFromMindustry(text);
-    if (cleanedText === null) return "";
-    return String(cleanedText.replace(/\n/g, '<br/>').trim().substring(0, 500));
+    if (cleanedText === null) return [];
+    return cleanedText.trim().substring(0, 500).split('\n');
 }
 
 const modes = [' ', '', ' ', '', '']

@@ -19,11 +19,8 @@ export const globalRoutes = new Elysia({ prefix: '/api/global' })
   })
 
   .get('/gamemode-history', async ({ query }) => {
-    // Note: unlike /api/servers/:id/history, range alone drives hoursBack here —
-    // startDate/endDate are only forwarded to the repo as extra filters.
-    const { hoursBack, bucketMinutes } = resolveRange(query.range);
-    const startDate = parseTimestamp(query.startDate);
-    const endDate = parseTimestamp(query.endDate);
+    const { hoursBack, bucketMinutes, startDate, endDate } = resolveRange(
+      query.range, parseTimestamp(query.startDate), parseTimestamp(query.endDate));
 
     const history = await getGlobalGamemodeHistory(hoursBack, bucketMinutes, startDate, endDate);
     return ApiPacker.pack(history);

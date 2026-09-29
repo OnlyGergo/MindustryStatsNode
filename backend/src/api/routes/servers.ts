@@ -65,9 +65,8 @@ export const serverRoutes = new Elysia({ prefix: '/api' })
   })
 
   .get('/servers/:id/history', async ({ params, query }) => {
-    const startDate = parseTimestamp(query.startDate);
-    const endDate = parseTimestamp(query.endDate);
-    const { hoursBack, bucketMinutes } = resolveRange(query.range, startDate, endDate);
+    const { hoursBack, bucketMinutes, startDate, endDate } = resolveRange(
+      query.range, parseTimestamp(query.startDate), parseTimestamp(query.endDate));
 
     return ApiPacker.pack(await getAggregatedHistory(params.id, hoursBack, bucketMinutes, startDate, endDate));
   }, {
