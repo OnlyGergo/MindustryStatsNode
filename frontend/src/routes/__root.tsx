@@ -30,6 +30,7 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Mindustry Stats" },
       { name: "description", content: "Mindustry Stats is a web application that provides real-time statistics and analytics for Mindustry servers." },
+      { name: "theme-color", content: "#0f0f0f"}
     ],
     links: [
       { rel: "stylesheet", href: appCss },

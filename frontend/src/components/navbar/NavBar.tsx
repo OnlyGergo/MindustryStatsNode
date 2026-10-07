@@ -114,7 +114,7 @@ const NavBar: React.FC = () => {
   // MasterPanel / DetailShell siblings.
   return (
     <div className="relative z-40 bg-linear-to-r from-surface-primary/60 to-surface-primary/40 backdrop-blur-md border-b border-default shrink-0 flex flex-col">
-      <div className="h-14 px-4 flex items-center justify-between gap-3">
+      <div className="h-14 px-4 flex items-center justify-between gap-3 bg-surface-1">
         <div className="flex items-center gap-2.5 min-w-0">
           <BrandMark />
           {!isMobile && (
