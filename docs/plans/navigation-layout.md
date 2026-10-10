@@ -168,7 +168,7 @@ routes/_browse/{index,server.$serverId,network.$networkId,inactive,global}.tsx
 - The `index.css` `@theme` tokens and `@utility` classes. No component library is added.
 
 ## Delegation
-Same as the feature plan: Opus writes a tight spec per phase, a Sonnet worker implements it on its own branch, and Opus reviews the diff. N1 and N3 get the closest review, because route moves and search middlewares are where subtle breakage hides.
+No PRs. All phases go on one branch, in order, **one commit per phase** (EU format, e.g. `refactor: split routes into _browse layout (N1)`), and each commit must build and run on its own. Opus writes a tight spec per phase, a Sonnet worker implements it, and Opus reviews the diff before it is committed. N1 and N3 get the closest review, because route moves and search middlewares are where subtle breakage hides.
 
 ## Verification (every phase)
 - `bun run typecheck` and `bun run build` (root), plus `bun run lint` in `frontend`.
