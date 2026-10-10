@@ -2,11 +2,14 @@ import { createFileRoute } from '@tanstack/react-router';
 import InactiveServersDetail from '../../components/detail/InactiveServersDetail.tsx';
 import { DetailShell } from '../../components/sidebar/DetailShell.tsx';
 import { LoadingSpinner } from '../../components/LoadingSpinner.tsx';
+import { docTitle } from "../../util/pageTitle.ts";
 
 export const Route = createFileRoute('/_browse/inactive')({
+  staticData: { title: "Inactive Servers", back: true },
+  head: () => ({ meta: [{ title: docTitle("Inactive Servers") }] }),
   component: InactiveServers,
   pendingComponent: () => (
-      <DetailShell title="Inactive Servers">
+      <DetailShell>
         <LoadingSpinner showText={false} />
       </DetailShell>
   )
@@ -14,7 +17,7 @@ export const Route = createFileRoute('/_browse/inactive')({
 
 function InactiveServers() {
   return (
-    <DetailShell title="Inactive Servers">
+    <DetailShell>
       <InactiveServersDetail />
     </DetailShell>
   )

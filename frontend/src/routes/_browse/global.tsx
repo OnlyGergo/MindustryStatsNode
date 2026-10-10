@@ -6,11 +6,14 @@ import { ApiPacker } from "../../../../common/Packer.ts";
 import { GamemodeInfo } from "../../../../common/models/GlobalStatsTypes.ts";
 import { EmptyState } from "../../components/detail/EmptyState.tsx";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
+import { docTitle } from "../../util/pageTitle.ts";
 
 export const Route = createFileRoute("/_browse/global")({
+  staticData: { title: "Global Stats", back: true },
+  head: () => ({ meta: [{ title: docTitle("Global Stats") }] }),
   component: GlobalComponent,
   pendingComponent: () => (
-      <DetailShell title="Global Stats">
+      <DetailShell>
         <LoadingSpinner showText={false} />
       </DetailShell>
   ),
@@ -33,7 +36,7 @@ export const Route = createFileRoute("/_browse/global")({
 function GlobalComponent() {
   const { gamemodes, error } = Route.useLoaderData();
   return (
-    <DetailShell title="Global Stats">
+    <DetailShell>
       {gamemodes ? (
         <GlobalStatsChart gamemodeList={gamemodes} />
       ) : (

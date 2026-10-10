@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext.tsx";
+import { useDismiss } from "../../hooks/useDismiss.ts";
 
 const DiscordGlyph: React.FC = () => (
   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -18,18 +19,8 @@ const AccountMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  const close = useCallback(() => setIsOpen(false), []);
+  useDismiss(menuRef, isOpen, close);
 
   const handleEscape = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") {

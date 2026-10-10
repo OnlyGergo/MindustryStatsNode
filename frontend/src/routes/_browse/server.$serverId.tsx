@@ -4,11 +4,22 @@ import ServerDetail from "../../components/detail/ServerDetail.tsx";
 import { getBaseUrl } from "../../util/getApi.ts";
 import { DetailShell } from "../../components/sidebar/DetailShell.tsx";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
+import { docTitle } from "../../util/pageTitle.ts";
+import { removeColors } from "../../util/mindustry.ts";
+import { ServerDetails, ServerElement } from "../../../../common/models/serverData.ts";
+
+type LoadedServer = ServerDetails & ServerElement;
+
+const titleFor = (loaderData: unknown): string => {
+  const server = (loaderData as { serverDataElement?: LoadedServer | null } | undefined)?.serverDataElement;
+  if (!server) return "Server Details";
+  return removeColors(server.currentData?.serverName ?? null) || server.name || "Server Details";
+};
 
 export const Route = createFileRoute("/_browse/server/$serverId")({
   component: ServerComponent,
   pendingComponent: () => (
-      <DetailShell title="Server Details">
+      <DetailShell>
         <LoadingSpinner showText={false} />
       </DetailShell>
   ),
@@ -37,12 +48,15 @@ export const Route = createFileRoute("/_browse/server/$serverId")({
       return { error: ((err as Error)?.message ?? "Unknown error") };
     }
   },
+  // After `loader`: declared before it, TS can't infer the loader data type.
+  staticData: { title: titleFor, back: true },
+  head: ({ loaderData }) => ({ meta: [{ title: docTitle(titleFor(loaderData)) }] }),
 });
 
 function ServerComponent() {
   const { serverDataElement, error } = Route.useLoaderData();
   return (
-    <DetailShell title="Server Details">
+    <DetailShell>
       {serverDataElement ? (
         <ServerDetail serverDataElement={serverDataElement} />
       ) : (

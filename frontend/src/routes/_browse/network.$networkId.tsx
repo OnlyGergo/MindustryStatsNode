@@ -5,11 +5,15 @@ import NetworkDetail from "../../components/detail/NetworkDetail.tsx";
 import { getBaseUrl } from "../../util/getApi.ts";
 import { NetworkDetails } from "../../../../common/models/serverData";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
+import { docTitle } from "../../util/pageTitle.ts";
+
+const titleFor = (loaderData: unknown): string =>
+  (loaderData as { details?: NetworkDetails } | undefined)?.details?.name ?? "Network Details";
 
 export const Route = createFileRoute("/_browse/network/$networkId")({
   component: NetworkComponent,
   pendingComponent: () => (
-      <DetailShell title="Network Details">
+      <DetailShell>
         <LoadingSpinner showText={false} />
       </DetailShell>
   ),
@@ -28,12 +32,15 @@ export const Route = createFileRoute("/_browse/network/$networkId")({
       return { error: ((err as Error)?.message ?? "Unknown error") };
     }
   },
+  // After `loader`: declared before it, TS can't infer the loader data type.
+  staticData: { title: titleFor, back: true },
+  head: ({ loaderData }) => ({ meta: [{ title: docTitle(titleFor(loaderData)) }] }),
 });
 
 function NetworkComponent() {
   const { details, error } = Route.useLoaderData();
   return (
-      <DetailShell title="Network Details">
+      <DetailShell>
         {details ? (
             <NetworkDetail details={details} />
         ) : (

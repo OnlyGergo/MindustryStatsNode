@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @theme {
+  /* Layout split: list+detail side by side, inline nav. Matches useResponsive. */
+  --breakpoint-split: 950px;
+
   /* Surfaces */
   --color-bg: #0f0f0f;
   --color-surface-1: #161616;
