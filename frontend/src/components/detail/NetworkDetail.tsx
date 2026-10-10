@@ -2,6 +2,8 @@ import React from "react";
 import { Link } from "@tanstack/react-router";
 import NetworkHistoryChart from "./NetworkHistoryChart.tsx";
 import NetworkServerShare from "./NetworkServerShare.tsx";
+import NetworkActivity from "./NetworkActivity.tsx";
+import NetworkBreakdown from "./NetworkBreakdown.tsx";
 import NetworkServerList from "./NetworkServerList.tsx";
 import NetworkStatsRow from "./NetworkStatsRow.tsx";
 import NetworkSources from "./NetworkSources.tsx";
@@ -83,6 +85,8 @@ const NetworkDetail: React.FC<{ details: NetworkDetails }> = ({ details }) => {
         </div>
 
         <NetworkServerShare networkId={details.id} />
+        <NetworkActivity networkId={details.id} />
+        <NetworkBreakdown networkId={details.id} />
       </div>
     </div>
   );
