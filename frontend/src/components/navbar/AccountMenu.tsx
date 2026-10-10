@@ -2,6 +2,8 @@ import React, { useCallback, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext.tsx";
 import { Link } from "@tanstack/react-router";
 import { useDismiss } from "../../hooks/useDismiss.ts";
+import BottomSheet from "../layout/BottomSheet.tsx";
+import { COMMIT, SOURCE, VERSION } from "../../../../common/version.ts";
 
 const DiscordGlyph: React.FC = () => (
   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -9,18 +11,49 @@ const DiscordGlyph: React.FC = () => (
   </svg>
 );
 
+/** Version / commit / source links, previously in the mobile hamburger menu. */
+const SheetFooter: React.FC = () => (
+  <div className="mt-4 pt-3 border-t border-subtle text-xs text-tertiary flex items-center justify-between gap-2">
+    <span>{VERSION}</span>
+    <span>
+      Commit:{" "}
+      <a
+        className="hover:underline hover:text-accent"
+        target="_blank"
+        rel="noopener noreferrer"
+        href={`${SOURCE}/commit/${COMMIT}`}
+      >
+        {COMMIT}
+      </a>
+    </span>
+    <a
+      href={SOURCE}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="hover:text-accent transition-colors"
+      title="View source on GitHub"
+    >
+      Source
+    </a>
+  </div>
+);
+
 /**
- * Right-hand-side account control for the navbar: a "Log in with Discord" link
- * while logged out, or an avatar with a dropdown menu while logged in. Renders
- * nothing while the initial /me fetch is in flight, to avoid a layout jump.
+ * Right-hand-side account control for the top bar. At `split` and wider: a
+ * "Log in with Discord" link, or an avatar with a dropdown. Below it: a compact
+ * "Log in" pill or avatar that opens a bottom sheet. Both triggers are always
+ * rendered and CSS picks one, so SSR and client markup match. Renders nothing
+ * while the initial /me fetch is in flight, to avoid a layout jump.
  */
 const AccountMenu: React.FC = () => {
   const { me, loading, logout, loginHref } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const close = useCallback(() => setIsOpen(false), []);
+  const closeSheet = useCallback(() => setSheetOpen(false), []);
   useDismiss(menuRef, isOpen, close);
 
   const handleEscape = (event: React.KeyboardEvent) => {
@@ -32,6 +65,7 @@ const AccountMenu: React.FC = () => {
 
   const handleLogout = async () => {
     setIsOpen(false);
+    setSheetOpen(false);
     await logout();
   };
 
@@ -40,72 +74,131 @@ const AccountMenu: React.FC = () => {
     return <div className="w-8 h-8 shrink-0" aria-hidden="true" />;
   }
 
+  const sheetButton = "flex items-center justify-center rounded-full";
+
   if (!me) {
     return (
-      <a
-        href={loginHref}
-        className="button-secondary flex items-center gap-1.5 text-sm font-medium px-3 py-2 shrink-0"
-      >
-        <DiscordGlyph />
-        <span className="hidden sm:inline">Log in with Discord</span>
-        <span className="sm:hidden">Log in</span>
-      </a>
+      <>
+        <a
+          href={loginHref}
+          className="hidden split:flex button-secondary items-center gap-1.5 text-sm font-medium px-3 py-2 shrink-0"
+        >
+          <DiscordGlyph />
+          Log in with Discord
+        </a>
+
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={() => setSheetOpen(true)}
+          className="split:hidden button-secondary flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 shrink-0"
+        >
+          <DiscordGlyph />
+          Log in
+        </button>
+
+        <BottomSheet open={sheetOpen} onClose={closeSheet} label="Log in">
+          <p className="text-sm text-secondary mb-4">Sign in to leave reviews</p>
+          <a
+            href={loginHref}
+            className="flex items-center justify-center gap-2 w-full min-h-11 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-semibold transition-colors"
+          >
+            <DiscordGlyph />
+            Continue with Discord
+          </a>
+          <SheetFooter />
+        </BottomSheet>
+      </>
     );
   }
 
   const displayName = me.globalName ?? me.username;
 
   return (
-    <div className="relative shrink-0" ref={menuRef} onKeyDown={handleEscape}>
+    <>
+      <div className="hidden split:block relative shrink-0" ref={menuRef} onKeyDown={handleEscape}>
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={isOpen}
+          title={displayName}
+          onClick={() => setIsOpen(!isOpen)}
+          className="block rounded-full border border-default hover:border-accent transition-colors"
+        >
+          <img src={me.avatarUrl} alt="" width={28} height={28} className="rounded-full" />
+        </button>
+
+        {isOpen && (
+          <div
+            role="menu"
+            className="absolute top-full right-0 mt-1 z-50 w-48 max-w-[calc(100vw-2rem)] bg-surface-secondary border border-default backdrop-blur-md rounded shadow-xl overflow-hidden"
+          >
+            <div className="px-3 py-2 border-b border-subtle">
+              <span className="text-sm font-medium text-primary truncate block">{displayName}</span>
+            </div>
+
+            {me.isAdmin && (
+              <Link
+                to="/admin"
+                role="menuitem"
+                className="block w-full text-left px-3 py-2 text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                Admin
+              </Link>
+            )}
+
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleLogout}
+              className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
+            >
+              Log out
+            </button>
+          </div>
+        )}
+      </div>
+
       <button
-        ref={triggerRef}
         type="button"
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
+        aria-haspopup="dialog"
+        aria-label="Account"
         title={displayName}
-        onClick={() => setIsOpen(!isOpen)}
-        className="block rounded-full border border-default hover:border-accent transition-colors"
+        onClick={() => setSheetOpen(true)}
+        className={`split:hidden ${sheetButton} shrink-0 border border-default`}
       >
-        <img
-          src={me.avatarUrl}
-          alt=""
-          width={28}
-          height={28}
-          className="rounded-full"
-        />
+        <img src={me.avatarUrl} alt="" width={28} height={28} className="rounded-full" />
       </button>
 
-      {isOpen && (
-        <div
-          role="menu"
-          className="absolute top-full right-0 mt-1 z-50 w-48 max-w-[calc(100vw-2rem)] bg-surface-secondary border border-default backdrop-blur-md rounded shadow-xl overflow-hidden"
-        >
-          <div className="px-3 py-2 border-b border-subtle">
-            <span className="text-sm font-medium text-primary truncate block">{displayName}</span>
-          </div>
-
-          {me.isAdmin && (
-            <Link
-              to="/admin"
-              role="menuitem"
-              className="block w-full text-left px-3 py-2 text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Admin
-            </Link>
-          )}
-
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleLogout}
-            className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
-          >
-            Log out
-          </button>
+      <BottomSheet open={sheetOpen} onClose={closeSheet} label="Account">
+        <div className="flex items-center gap-3 mb-3">
+          <img src={me.avatarUrl} alt="" width={40} height={40} className="rounded-full" />
+          <span className="text-base font-semibold text-primary truncate">{displayName}</span>
         </div>
-      )}
-    </div>
+
+        {me.isAdmin && (
+          <Link
+            to="/admin"
+            onClick={closeSheet}
+            className="flex items-center min-h-11 px-3 rounded-lg text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
+          >
+            Admin
+          </Link>
+        )}
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center w-full min-h-11 px-3 rounded-lg text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
+        >
+          Log out
+        </button>
+
+        <SheetFooter />
+      </BottomSheet>
+    </>
   );
 };
 

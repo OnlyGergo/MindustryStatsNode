@@ -13,7 +13,7 @@ const BackButton: React.FC = () => {
     <Link
       to="/"
       aria-label="Back"
-      className="button-secondary p-2 shrink-0"
+      className="button-secondary p-2 -ml-1 shrink-0"
       onClick={(e) => {
         if (!canGoBack) return;
         e.preventDefault();

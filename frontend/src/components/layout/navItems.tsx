@@ -5,13 +5,40 @@ import { AuthMe } from "../../../../common/models/auth";
 export interface NavItem {
   to: "/inactive" | "/global" | "/admin";
   label: string;
+  /** Shorter label for the mobile dock. */
+  dockLabel?: string;
   icon?: React.ReactNode;
   /** Hidden when this returns false. Always shown when omitted. */
   visible?: (me: AuthMe | null) => boolean;
 }
 
+export const ServersIcon: React.FC = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M5 4h14a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1zm0 10h14a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4a1 1 0 011-1zM8 7h.01M8 17h.01"
+    />
+  </svg>
+);
+
 export const navItems: NavItem[] = [
-  { to: "/inactive", label: "Inactive Servers" },
+  {
+    to: "/inactive",
+    label: "Inactive Servers",
+    dockLabel: "Inactive",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    ),
+  },
   {
     to: "/global",
     label: "Global",
