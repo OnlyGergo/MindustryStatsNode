@@ -30,4 +30,16 @@ export const networkRoutes = new Elysia({ prefix: '/api/networks' })
       ttlMs: 300_000, // 5 minutes TTL
       getKey: ({ path, params }) => `${path}:${params.id}`,
     }),
+  })
+
+  .get('/:id/servers', async ({ params }) => {
+    const servers = await serverRepository.getAllServerElements(36, params.id);
+    return ApiPacker.pack(servers);
+  }, {
+    params: IdParam,
+    query: StrictNoQuery,
+    ...withCache({
+      ttlMs: 300_000, // 5 minutes TTL
+      getKey: ({ path, params }) => `${path}:${params.id}`,
+    }),
   });

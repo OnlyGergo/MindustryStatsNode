@@ -92,15 +92,23 @@ export interface ServerDetails {
 export interface NetworkDetails {
   id: number;
   name: string;
+  /** Players online right now: SUM over member families of the per-family MAX. */
+  playersNow: number;
+  /** Member families currently answering. */
+  onlineServers: number;
+  /** Fraction (0-1) of the site's players right now that are on this network. */
+  siteShare: number;
+  /** Mean network concurrency over the last 24h. */
+  avg24h: number;
   playerPeaks: {
     allTime: number;
+    /** Hour bucket the all-time peak fell in; null when the network has no stats. */
+    allTimeDate: Date | string | null;
     daily: number;
     weekly: number;
   };
   topServer: {
     id: number;
-    host: string;
-    port: number;
     players: number;
     name: string;
   } | null;
