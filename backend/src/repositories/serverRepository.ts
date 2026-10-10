@@ -418,7 +418,11 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             -- realistic-count bound is the same one the server list applies,
             -- so a garbage reading can't blow up the network total.
             SELECT gs.canonical_id,
-                   MAX(cur.players)   AS players,
+                   -- Only answering aliases carry a count: an offline alias can hold a
+                   -- stale one, and site_stats / playersNow count online rows only.
+                   -- An all-offline family therefore gets NULL players, which
+                   -- top_server sorts last (NULLS LAST) and active_servers ignores.
+                   MAX(cur.players) FILTER (WHERE cur.online) AS players,
                    BOOL_OR(cur.online) AS online
             FROM group_servers gs
             JOIN server_current cur ON cur.server_id = gs.server_id
@@ -580,7 +584,7 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             sg.id,
             sg.name,
             (SELECT COUNT(*)                                   FROM group_families) AS total_servers,
-            (SELECT COUNT(*) FROM latest_stats WHERE players > 0)                 AS active_servers,
+            (SELECT COUNT(*) FROM latest_stats WHERE online AND players > 0)                 AS active_servers,
             (SELECT daily_peak    FROM stats_24h)                                  AS daily_peak,
             (SELECT weekly_peak   FROM stats_long)                                 AS weekly_peak,
             (SELECT all_time_peak FROM peak_bucket)                                AS all_time_peak,

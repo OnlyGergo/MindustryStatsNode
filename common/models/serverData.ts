@@ -131,3 +131,12 @@ export interface ServerListStats {
   active_servers: number;
   active_percentage: number;
 }
+/** Columnar per-server history of a network (uPlot-shaped). */
+export interface NetworkServerHistory {
+  /** Top families by peak, then "Other" (id null) when anything is left over. */
+  series: { id: number | null; name: string }[];
+  /** Bucket starts, ms epoch. */
+  timestamps: number[];
+  /** One array per series, aligned to `timestamps`; null where the network had no data. Stacking them gives the main network chart's value. */
+  values: (number | null)[][];
+}

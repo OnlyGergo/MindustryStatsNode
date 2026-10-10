@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "@tanstack/react-router";
 import NetworkHistoryChart from "./NetworkHistoryChart.tsx";
+import NetworkServerShare from "./NetworkServerShare.tsx";
 import NetworkServerList from "./NetworkServerList.tsx";
 import NetworkStatsRow from "./NetworkStatsRow.tsx";
 import ShareButton from "../ShareButton.tsx";
@@ -21,9 +22,6 @@ const NetworkDetail: React.FC<{ details: NetworkDetails }> = ({ details }) => {
               {String(details.name)}
             </h1>
             <p className="text-secondary mb-2 text-sm sm:text-base wrap-break-word">Network</p>
-            <span className="text-xs sm:text-sm text-tertiary">
-              {details.activeServers}/{details.totalServers} servers active
-            </span>
             <div className="flex flex-wrap gap-2 mt-3">
               <ShareButton
                 networkId={details.id}
@@ -81,6 +79,8 @@ const NetworkDetail: React.FC<{ details: NetworkDetails }> = ({ details }) => {
             <NetworkHistoryChart network={details} />
           </div>
         </div>
+
+        <NetworkServerShare networkId={details.id} />
       </div>
     </div>
   );
