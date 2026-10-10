@@ -3,6 +3,7 @@ import { ServerElement } from "../../../../common/models/serverData.ts";
 import { useNetworkServers } from "../../hooks/api/useNetworkServers.ts";
 import { SORT_OPTIONS, SortCriteria, SortDirection } from "../../hooks/useServerList.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
+import { formatUptime } from "./NetworkStatsRow.tsx";
 import ServerItem from "../server-list/ServerItem.tsx";
 
 const compare = (a: number | string | null, b: number | string | null, dir: SortDirection): number => {
@@ -44,7 +45,14 @@ const NetworkServerList: React.FC<{ networkId: number }> = ({ networkId }) => {
   const renderRows = (list: ServerElement[]) => (
     <div className="divide-y divide-subtle border border-subtle rounded overflow-hidden">
       {list.map((server) => (
-        <ServerItem key={server.id} server={server} isSelected={false} />
+        <div key={server.id}>
+          <ServerItem server={server} isSelected={false} />
+          {server.uptime24h != null && (
+            <div className="px-4 pb-2 -mt-2 text-xs text-tertiary" title="Share of polls in the last 24h that the server answered">
+              {formatUptime(server.uptime24h)} up
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );
