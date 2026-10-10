@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext.tsx";
+import { Link } from "@tanstack/react-router";
 import { useDismiss } from "../../hooks/useDismiss.ts";
 
 const DiscordGlyph: React.FC = () => (
@@ -84,14 +85,14 @@ const AccountMenu: React.FC = () => {
           </div>
 
           {me.isAdmin && (
-            <a
-              href="/admin"
+            <Link
+              to="/admin"
               role="menuitem"
               className="block w-full text-left px-3 py-2 text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
               onClick={() => setIsOpen(false)}
             >
               Admin
-            </a>
+            </Link>
           )}
 
           <button

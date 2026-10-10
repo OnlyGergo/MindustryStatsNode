@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext.tsx";
 import { AuthMe } from "../../../../common/models/auth";
 
 export interface NavItem {
-  to: "/inactive" | "/global";
+  to: "/inactive" | "/global" | "/admin";
   label: string;
   icon?: React.ReactNode;
   /** Hidden when this returns false. Always shown when omitted. */
@@ -22,6 +22,21 @@ export const navItems: NavItem[] = [
           strokeLinejoin="round"
           strokeWidth="2"
           d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+        />
+      </svg>
+    ),
+  },
+  {
+    to: "/admin",
+    label: "Admin",
+    visible: (me) => !!me?.isAdmin,
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
         />
       </svg>
     ),
