@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import GlobalStatsChart from "../components/global-stats/GlobalStatsChart.tsx";
-import { DetailShell } from "../components/sidebar/DetailShell.tsx";
-import { getBaseUrl } from "../util/getApi.ts";
-import { ApiPacker } from "../../../common/Packer.ts";
-import { GamemodeInfo } from "../../../common/models/GlobalStatsTypes.ts";
-import { EmptyState } from "../components/detail/EmptyState.tsx";
-import { LoadingSpinner } from "../components/LoadingSpinner.tsx";
+import GlobalStatsChart from "../../components/global-stats/GlobalStatsChart.tsx";
+import { DetailShell } from "../../components/sidebar/DetailShell.tsx";
+import { getBaseUrl } from "../../util/getApi.ts";
+import { ApiPacker } from "../../../../common/Packer.ts";
+import { GamemodeInfo } from "../../../../common/models/GlobalStatsTypes.ts";
+import { EmptyState } from "../../components/detail/EmptyState.tsx";
+import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 
-export const Route = createFileRoute("/global")({
+export const Route = createFileRoute("/_browse/global")({
   component: GlobalComponent,
   pendingComponent: () => (
       <DetailShell title="Global Stats">

@@ -1,11 +1,9 @@
 import React from "react";
-import {Link, useRouterState} from "@tanstack/react-router";
-import ServerStatsSummary from "./ServerStatsSummary.tsx";
+import {Link, useNavigate, useRouterState} from "@tanstack/react-router";
 import AccountMenu from "./AccountMenu.tsx";
-import { useSidebar } from "../../context/SidebarContext.tsx";
+import { usePageTitle } from "../../context/PageTitleContext.tsx";
+import { useResponsive } from "../../hooks/useResponsive.ts";
 import { VERSION } from "../../../../common/version.ts";
-import { Route as InactiveRoute } from "../../routes/inactive.tsx";
-import { Route as GlobalRoute } from "../../routes/global.tsx";
 import Icon from "../../../public/favicon.svg?react";
 
 const BrandMark: React.FC = () => (
@@ -42,30 +40,25 @@ const NavLink: React.FC<{
 );
 
 /**
- * App-wide top navigation bar. Hosts the brand, the server-list/global stats
- * summary, navigation to the stats pages, and the sidebar collapse toggle.
- * On mobile, while a detail page is open, it collapses down to a
- * back-button + page-title bar instead.
+ * App-wide top navigation bar. Hosts the brand, navigation to the stats
+ * pages and the account menu. It lives outside the `_browse` layout, so it
+ * has no access to the server list. On mobile, while a detail page is open
+ * (any path other than "/"), it collapses down to a back-button + page-title
+ * bar instead.
  */
 const NavBar: React.FC = () => {
-  const {
-    handleToggleCollapse,
-    totalServers,
-    onlineServers,
-    totalPlayers,
-    isMobile,
-    showMasterPanel,
-    pageTitle,
-  } = useSidebar();
+  const { pageTitle } = usePageTitle();
+  const { isMobile } = useResponsive();
+  const navigate = useNavigate();
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const isMobileDetailView = isMobile && !showMasterPanel;
+  const isMobileDetailView = isMobile && pathname !== "/";
 
   if (isMobileDetailView) {
     return (
       <div className="bg-surface-primary backdrop-blur-md border-b border-default h-14 px-4 flex items-center shrink-0">
-        <BackButton onClick={handleToggleCollapse} />
+        <BackButton onClick={() => navigate({ to: "/" })} />
         <h2 className="text-lg font-semibold text-primary truncate">{pageTitle}</h2>
       </div>
     );
@@ -74,15 +67,15 @@ const NavBar: React.FC = () => {
   const navLinks = (
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <NavLink
-              to={InactiveRoute.to}
-              active={pathname === InactiveRoute.to}
+              to="/inactive"
+              active={pathname === "/inactive"}
           >
               Inactive Servers
           </NavLink>
 
           <NavLink
-              to={GlobalRoute.to}
-              active={pathname === GlobalRoute.to}
+              to="/global"
+              active={pathname === "/global"}
               icon={
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -98,14 +91,6 @@ const NavBar: React.FC = () => {
           </NavLink>
       <AccountMenu />
     </div>
-  );
-
-  const statsSummary = (
-    <ServerStatsSummary
-      onlineServers={onlineServers}
-      totalServers={totalServers}
-      totalPlayers={totalPlayers}
-    />
   );
 
   // `relative z-40` lifts the bar (and the AccountMenu dropdown overflowing it)
@@ -127,14 +112,8 @@ const NavBar: React.FC = () => {
           )}
         </div>
 
-        {!isMobile && statsSummary}
-
         {navLinks}
       </div>
-
-      {isMobile && (
-        <div className="px-4 pb-2 -mt-1 flex justify-center">{statsSummary}</div>
-      )}
     </div>
   );
 };

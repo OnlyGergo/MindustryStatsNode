@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DetailShell } from "../components/sidebar/DetailShell.tsx";
-import { EmptyState } from "../components/detail/EmptyState.tsx";
-import NetworkDetail from "../components/detail/NetworkDetail.tsx";
-import { getBaseUrl } from "../util/getApi.ts";
-import { NetworkDetails } from "../../../common/models/serverData";
-import { LoadingSpinner } from "../components/LoadingSpinner.tsx";
+import { DetailShell } from "../../components/sidebar/DetailShell.tsx";
+import { EmptyState } from "../../components/detail/EmptyState.tsx";
+import NetworkDetail from "../../components/detail/NetworkDetail.tsx";
+import { getBaseUrl } from "../../util/getApi.ts";
+import { NetworkDetails } from "../../../../common/models/serverData";
+import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 
-export const Route = createFileRoute("/network/$networkId")({
+export const Route = createFileRoute("/_browse/network/$networkId")({
   component: NetworkComponent,
   pendingComponent: () => (
       <DetailShell title="Network Details">

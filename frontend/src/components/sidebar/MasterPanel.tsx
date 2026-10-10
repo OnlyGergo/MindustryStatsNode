@@ -8,7 +8,9 @@ import SortDropdown from "../SortDropdown.tsx";
 import Tooltip from "../Tooltip.tsx";
 import { useServerList } from "../../hooks/useServerList.ts";
 import { COMMIT, SOURCE } from "../../../../common/version.ts";
-import { useSidebar } from "../../context/SidebarContext.tsx";
+import ServerStatsSummary from "../navbar/ServerStatsSummary.tsx";
+import { useServerListData } from "../../context/ServerListContext.tsx";
+import { useBrowseLayout } from "../../context/BrowseLayoutContext.tsx";
 import {formatRelativeTime} from "../../util/general.ts";
 
 const CollapseToggle: React.FC<{ collapsed: boolean; onClick: () => void; className?: string }> = ({ collapsed, onClick, className }) => (
@@ -30,15 +32,22 @@ const CollapseToggle: React.FC<{ collapsed: boolean; onClick: () => void; classN
 
 const MasterPanel: React.FC = () => {
   const {
-    isMasterPanelCollapsed: isCollapsed,
     serverGroups: rawServerGroups,
-    expandedGroups,
-    toggleGroupExpanded: onToggleGroup,
+    totalServers,
+    onlineServers,
+    totalPlayers,
     loading,
     error,
+    lastUpdated,
+  } = useServerListData();
+
+  const {
+    isMasterPanelCollapsed,
+    expandedGroups,
+    toggleGroupExpanded: onToggleGroup,
     isMobile,
-    lastUpdated
-  } = useSidebar();
+    handleToggleCollapse,
+  } = useBrowseLayout();
 
   const { networkId, serverId } = useParams({ strict: false });
 
@@ -64,9 +73,7 @@ const MasterPanel: React.FC = () => {
     sortOptions,
   } = useServerList(rawServers);
 
-  const { isMasterPanelCollapsed, handleToggleCollapse } = useSidebar();
-  
-  if (isCollapsed) {
+  if (isMasterPanelCollapsed) {
     return (
       <div className="m-2 align-top">
         <CollapseToggle collapsed={isMasterPanelCollapsed} onClick={handleToggleCollapse} />
@@ -82,6 +89,13 @@ const MasterPanel: React.FC = () => {
       >
         {/* Controls */}
         <div className="px-4 py-3 border-b border-subtle shrink-0">
+          <div className="mb-2.5 flex justify-center">
+            <ServerStatsSummary
+              onlineServers={onlineServers}
+              totalServers={totalServers}
+              totalPlayers={totalPlayers}
+            />
+          </div>
           <div className="mb-2.5 flex items-center gap-2">
             <SearchBar onSearchValueChange={setSearchTerm} value={searchTerm} />
             {!isMobile && (

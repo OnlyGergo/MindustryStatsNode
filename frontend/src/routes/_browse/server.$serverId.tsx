@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EmptyState } from "../components/detail/EmptyState.tsx";
-import ServerDetail from "../components/detail/ServerDetail.tsx";
-import { getBaseUrl } from "../util/getApi.ts";
-import { DetailShell } from "../components/sidebar/DetailShell.tsx";
-import { LoadingSpinner } from "../components/LoadingSpinner.tsx";
+import { EmptyState } from "../../components/detail/EmptyState.tsx";
+import ServerDetail from "../../components/detail/ServerDetail.tsx";
+import { getBaseUrl } from "../../util/getApi.ts";
+import { DetailShell } from "../../components/sidebar/DetailShell.tsx";
+import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 
-export const Route = createFileRoute("/server/$serverId")({
+export const Route = createFileRoute("/_browse/server/$serverId")({
   component: ServerComponent,
   pendingComponent: () => (
       <DetailShell title="Server Details">

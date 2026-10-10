@@ -9,59 +9,65 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as GlobalRouteImport } from './routes/global'
-import { Route as InactiveRouteImport } from './routes/inactive'
-import { Route as NetworkNetworkIdRouteImport } from './routes/network.$networkId'
-import { Route as ServerServerIdRouteImport } from './routes/server.$serverId'
+import { Route as BrowseRouteImport } from './routes/_browse'
+import { Route as BrowseIndexRouteImport } from './routes/_browse/index'
+import { Route as BrowseGlobalRouteImport } from './routes/_browse/global'
+import { Route as BrowseInactiveRouteImport } from './routes/_browse/inactive'
+import { Route as BrowseNetworkNetworkIdRouteImport } from './routes/_browse/network.$networkId'
+import { Route as BrowseServerServerIdRouteImport } from './routes/_browse/server.$serverId'
 
-const IndexRoute = IndexRouteImport.update({
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/_browse',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrowseIndexRoute = BrowseIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
-const GlobalRoute = GlobalRouteImport.update({
+const BrowseGlobalRoute = BrowseGlobalRouteImport.update({
   id: '/global',
   path: '/global',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
-const InactiveRoute = InactiveRouteImport.update({
+const BrowseInactiveRoute = BrowseInactiveRouteImport.update({
   id: '/inactive',
   path: '/inactive',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
-const NetworkNetworkIdRoute = NetworkNetworkIdRouteImport.update({
+const BrowseNetworkNetworkIdRoute = BrowseNetworkNetworkIdRouteImport.update({
   id: '/network/$networkId',
   path: '/network/$networkId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
-const ServerServerIdRoute = ServerServerIdRouteImport.update({
+const BrowseServerServerIdRoute = BrowseServerServerIdRouteImport.update({
   id: '/server/$serverId',
   path: '/server/$serverId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/global': typeof GlobalRoute
-  '/inactive': typeof InactiveRoute
-  '/network/$networkId': typeof NetworkNetworkIdRoute
-  '/server/$serverId': typeof ServerServerIdRoute
+  '/': typeof BrowseIndexRoute
+  '/global': typeof BrowseGlobalRoute
+  '/inactive': typeof BrowseInactiveRoute
+  '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
+  '/server/$serverId': typeof BrowseServerServerIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/global': typeof GlobalRoute
-  '/inactive': typeof InactiveRoute
-  '/network/$networkId': typeof NetworkNetworkIdRoute
-  '/server/$serverId': typeof ServerServerIdRoute
+  '/global': typeof BrowseGlobalRoute
+  '/inactive': typeof BrowseInactiveRoute
+  '/': typeof BrowseIndexRoute
+  '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
+  '/server/$serverId': typeof BrowseServerServerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/global': typeof GlobalRoute
-  '/inactive': typeof InactiveRoute
-  '/network/$networkId': typeof NetworkNetworkIdRoute
-  '/server/$serverId': typeof ServerServerIdRoute
+  '/_browse': typeof BrowseRouteWithChildren
+  '/_browse/global': typeof BrowseGlobalRoute
+  '/_browse/inactive': typeof BrowseInactiveRoute
+  '/_browse/': typeof BrowseIndexRoute
+  '/_browse/network/$networkId': typeof BrowseNetworkNetworkIdRoute
+  '/_browse/server/$serverId': typeof BrowseServerServerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -69,70 +75,89 @@ export interface FileRouteTypes {
     '/' | '/global' | '/inactive' | '/network/$networkId' | '/server/$serverId'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/global' | '/inactive' | '/network/$networkId' | '/server/$serverId'
+    '/global' | '/inactive' | '/' | '/network/$networkId' | '/server/$serverId'
   id:
     | '__root__'
-    | '/'
-    | '/global'
-    | '/inactive'
-    | '/network/$networkId'
-    | '/server/$serverId'
+    | '/_browse'
+    | '/_browse/global'
+    | '/_browse/inactive'
+    | '/_browse/'
+    | '/_browse/network/$networkId'
+    | '/_browse/server/$serverId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  GlobalRoute: typeof GlobalRoute
-  InactiveRoute: typeof InactiveRoute
-  NetworkNetworkIdRoute: typeof NetworkNetworkIdRoute
-  ServerServerIdRoute: typeof ServerServerIdRoute
+  BrowseRoute: typeof BrowseRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_browse': {
+      id: '/_browse'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof BrowseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_browse/': {
+      id: '/_browse/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseIndexRouteImport
+      parentRoute: typeof BrowseRoute
     }
-    '/global': {
-      id: '/global'
+    '/_browse/global': {
+      id: '/_browse/global'
       path: '/global'
       fullPath: '/global'
-      preLoaderRoute: typeof GlobalRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseGlobalRouteImport
+      parentRoute: typeof BrowseRoute
     }
-    '/inactive': {
-      id: '/inactive'
+    '/_browse/inactive': {
+      id: '/_browse/inactive'
       path: '/inactive'
       fullPath: '/inactive'
-      preLoaderRoute: typeof InactiveRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseInactiveRouteImport
+      parentRoute: typeof BrowseRoute
     }
-    '/network/$networkId': {
-      id: '/network/$networkId'
+    '/_browse/network/$networkId': {
+      id: '/_browse/network/$networkId'
       path: '/network/$networkId'
       fullPath: '/network/$networkId'
-      preLoaderRoute: typeof NetworkNetworkIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseNetworkNetworkIdRouteImport
+      parentRoute: typeof BrowseRoute
     }
-    '/server/$serverId': {
-      id: '/server/$serverId'
+    '/_browse/server/$serverId': {
+      id: '/_browse/server/$serverId'
       path: '/server/$serverId'
       fullPath: '/server/$serverId'
-      preLoaderRoute: typeof ServerServerIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseServerServerIdRouteImport
+      parentRoute: typeof BrowseRoute
     }
   }
 }
 
+interface BrowseRouteChildren {
+  BrowseGlobalRoute: typeof BrowseGlobalRoute
+  BrowseInactiveRoute: typeof BrowseInactiveRoute
+  BrowseIndexRoute: typeof BrowseIndexRoute
+  BrowseNetworkNetworkIdRoute: typeof BrowseNetworkNetworkIdRoute
+  BrowseServerServerIdRoute: typeof BrowseServerServerIdRoute
+}
+
+const BrowseRouteChildren: BrowseRouteChildren = {
+  BrowseGlobalRoute: BrowseGlobalRoute,
+  BrowseInactiveRoute: BrowseInactiveRoute,
+  BrowseIndexRoute: BrowseIndexRoute,
+  BrowseNetworkNetworkIdRoute: BrowseNetworkNetworkIdRoute,
+  BrowseServerServerIdRoute: BrowseServerServerIdRoute,
+}
+
+const BrowseRouteWithChildren =
+  BrowseRoute._addFileChildren(BrowseRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  GlobalRoute: GlobalRoute,
-  InactiveRoute: InactiveRoute,
-  NetworkNetworkIdRoute: NetworkNetworkIdRoute,
-  ServerServerIdRoute: ServerServerIdRoute,
+  BrowseRoute: BrowseRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import InactiveServersDetail from '../components/detail/InactiveServersDetail.tsx';
-import { DetailShell } from '../components/sidebar/DetailShell.tsx';
-import { LoadingSpinner } from '../components/LoadingSpinner.tsx';
+import InactiveServersDetail from '../../components/detail/InactiveServersDetail.tsx';
+import { DetailShell } from '../../components/sidebar/DetailShell.tsx';
+import { LoadingSpinner } from '../../components/LoadingSpinner.tsx';
 
-export const Route = createFileRoute('/inactive')({
+export const Route = createFileRoute('/_browse/inactive')({
   component: InactiveServers,
   pendingComponent: () => (
       <DetailShell title="Inactive Servers">

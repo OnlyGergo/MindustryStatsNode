@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useSidebar } from "../../context/SidebarContext";
+import { usePageTitle } from "../../context/PageTitleContext";
 
 interface DetailShellProps {
   title: string;
@@ -7,11 +7,11 @@ interface DetailShellProps {
 }
 
 /**
- * Wraps route-level detail content. Publishes its title to SidebarContext so
+ * Wraps route-level detail content. Publishes its title to PageTitleContext so
  * NavBar can display it in place of the brand bar on mobile detail views.
  */
 export const DetailShell: React.FC<DetailShellProps> = ({ title, children }) => {
-  const { setPageTitle } = useSidebar();
+  const { setPageTitle } = usePageTitle();
 
   useEffect(() => {
     setPageTitle(title);

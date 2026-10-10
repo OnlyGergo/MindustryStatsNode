@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DetailShell } from "../components/sidebar/DetailShell";
-import { EmptyState } from "../components/detail/EmptyState";
-import { LoadingSpinner } from "../components/LoadingSpinner";
+import { DetailShell } from "../../components/sidebar/DetailShell";
+import { EmptyState } from "../../components/detail/EmptyState";
+import { LoadingSpinner } from "../../components/LoadingSpinner";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_browse/")({
   component: IndexComponent,
   pendingComponent: () => (
       <DetailShell title="Home">
