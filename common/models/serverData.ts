@@ -121,6 +121,18 @@ export interface NetworkDetails {
   } | null;
   activeServers: number;
   totalServers: number;
+  /** Mean of the network's newest, non-removed reviews (one per reviewer per family). `average` is null when `count` is 0. */
+  rating: {
+    average: number | null;
+    count: number;
+  };
+  /** Mean network concurrency over the last 7 days, and over the 7 days before. Null when the window has no hourly data. */
+  trend: {
+    avgPlayers7d: number | null;
+    avgPlayersPrev7d: number | null;
+  };
+  /** Server lists the network's servers appear on, busiest first. `servers` counts distinct families. */
+  sources: { name: string; url: string; servers: number }[];
 }
 
 export interface ServerListStats {

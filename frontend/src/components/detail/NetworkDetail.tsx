@@ -4,6 +4,7 @@ import NetworkHistoryChart from "./NetworkHistoryChart.tsx";
 import NetworkServerShare from "./NetworkServerShare.tsx";
 import NetworkServerList from "./NetworkServerList.tsx";
 import NetworkStatsRow from "./NetworkStatsRow.tsx";
+import NetworkSources from "./NetworkSources.tsx";
 import ShareButton from "../ShareButton.tsx";
 import { NetworkDetails } from "../../../../common/models/serverData.ts";
 import { removeColors } from "../../util/mindustry.ts";
@@ -31,6 +32,7 @@ const NetworkDetail: React.FC<{ details: NetworkDetails }> = ({ details }) => {
           </div>
 
           <NetworkStatsRow details={details} />
+          <NetworkSources sources={details.sources} />
 
           {topServer && (
             <div className="mt-2 sm:mt-4 bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded text-xs sm:text-sm flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

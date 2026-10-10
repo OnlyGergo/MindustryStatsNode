@@ -508,7 +508,9 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             SELECT gs.canonical_id, st.bucket,
                    MAX(st.max_players)    AS players,
                    MAX(st.samples)        AS samples,
-                   MAX(st.online_samples) AS online_samples
+                   MAX(st.online_samples) AS online_samples,
+                   -- Per raw server the hour's mean is sum/samples; MAX across aliases.
+                   MAX(st.sum_players::float8 / NULLIF(st.samples, 0)) AS mean_players
             FROM server_stats_1h st
             JOIN group_servers gs ON gs.server_id = st.server_id
             GROUP BY gs.canonical_id, st.bucket
@@ -538,6 +540,35 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             FROM inst_1h
             ORDER BY total DESC NULLS LAST, bucket DESC
             LIMIT 1
+        ),
+        trend_1h AS (
+            -- Mean network concurrency per hour: SUM across families of each
+            -- family's MAX-across-aliases hourly mean, then AVG over the hours
+            -- present in each window. Hours with no data are absent, not zero.
+            SELECT AVG(total) FILTER (WHERE bucket > NOW() - INTERVAL '7 days')                                   AS avg_7d,
+                   AVG(total) FILTER (WHERE bucket > NOW() - INTERVAL '14 days' AND bucket <= NOW() - INTERVAL '7 days') AS avg_prev_7d
+            FROM (
+                SELECT bucket, SUM(mean_players) AS total
+                FROM fam_1h
+                WHERE bucket > NOW() - INTERVAL '14 days'
+                GROUP BY bucket
+            ) hourly
+        ),
+        network_reviews AS (
+            -- Same dedupe as getAllServerElements' newest_reviews, restricted
+            -- to this network's families: one row per (family, reviewer), their
+            -- newest. Removed rows are dropped only AFTER the dedupe, so an
+            -- older alias review can't resurface a moderator-removed one.
+            SELECT DISTINCT ON (sc.canonical_id, r.user_id) sc.canonical_id, r.rating, r.removed_at
+            FROM server_reviews r
+            JOIN server_canonical sc ON sc.server_id = r.server_id
+            WHERE sc.canonical_id IN (SELECT canonical_id FROM group_families)
+            ORDER BY sc.canonical_id, r.user_id, r.updated_at DESC, r.id DESC
+        ),
+        rating_agg AS (
+            SELECT AVG(rating)::float8 AS average, COUNT(*)::int AS review_count
+            FROM network_reviews
+            WHERE removed_at IS NULL
         ),
         group_live AS (
             -- The live address of each family in this group.  Spelled out
@@ -597,7 +628,25 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             (SELECT avg_players     FROM stats_24h)                                  AS avg_24h,
             (SELECT id          FROM top_server)                                   AS top_server_id,
             (SELECT players     FROM top_server)                                   AS top_server_players,
-            (SELECT server_name FROM top_server)                                   AS top_server_name
+            (SELECT server_name FROM top_server)                                   AS top_server_name,
+            (SELECT average      FROM rating_agg)                                  AS rating_average,
+            (SELECT review_count FROM rating_agg)                                  AS rating_count,
+            (SELECT avg_7d      FROM trend_1h)                                     AS trend_avg_7d,
+            (SELECT avg_prev_7d FROM trend_1h)                                     AS trend_avg_prev_7d,
+            (
+                SELECT COALESCE(json_agg(src ORDER BY src.servers DESC, src.name), CAST('[]' AS json))
+                FROM (
+                    -- Distinct families per list: a list that carries two aliases
+                    -- of one server still counts that server once.
+                    SELECT COALESCE(NULLIF(sl.display_name, ''), sl.name) AS name,
+                           sl.url,
+                           COUNT(DISTINCT gs.canonical_id)::int           AS servers
+                    FROM server_source_list ssl
+                    JOIN serverlists sl ON sl.id = ssl.serverlist_id AND sl.active
+                    JOIN group_servers gs ON gs.server_id = ssl.server_id
+                    GROUP BY sl.id, sl.name, sl.display_name, sl.url
+                ) src
+            )                                                                      AS sources
         FROM server_groups sg
         WHERE sg.id = :groupId
     `, { replacements: { groupId, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT }, type: QueryTypes.SELECT });
@@ -635,5 +684,21 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             : null,
         activeServers: parseInt(row.active_servers, 10) || 0,
         totalServers:  parseInt(row.total_servers,  10) || 0,
+        rating: {
+            // null, not 0, when nobody has reviewed the network.
+            average: row.rating_count > 0 && row.rating_average != null ? Number(row.rating_average) : null,
+            count:   Number(row.rating_count) || 0,
+        },
+        trend: {
+            avgPlayers7d:     row.trend_avg_7d == null ? null : Number(row.trend_avg_7d),
+            avgPlayersPrev7d: row.trend_avg_prev_7d == null ? null : Number(row.trend_avg_prev_7d),
+        },
+        sources: Array.isArray(row.sources)
+            ? row.sources.map((s: { name: string; url: string; servers: number }) => ({
+                name: s.name,
+                url: s.url,
+                servers: Number(s.servers) || 0,
+            }))
+            : [],
     };
 }
