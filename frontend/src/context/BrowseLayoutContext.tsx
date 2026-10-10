@@ -1,15 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { useResponsive } from "../hooks/useResponsive";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 interface BrowseLayoutContextValue {
+  /** Desktop-only (split+) collapse of the list into a rail; below split the list is never hidden by it. */
   isMasterPanelCollapsed: boolean;
-  showMasterPanel: boolean;
-  isMobile: boolean;
   expandedGroups: Set<string>;
   toggleGroupExpanded: (groupName: string) => void;
   handleToggleCollapse: () => void;
 }
+
+const COLLAPSE_KEY = "browse.listCollapsed";
 
 const BrowseLayoutContext = createContext<BrowseLayoutContextValue | null>(null);
 
@@ -24,33 +23,17 @@ export const useBrowseLayout = (): BrowseLayoutContextValue => {
 export const BrowseLayoutProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [isMasterPanelCollapsed, setIsMasterPanelCollapsed] =
-    useState<boolean>(false);
-  const [showMasterPanel, setShowMasterPanel] = useState<boolean>(true);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    new Set(),
-  );
-  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+  // SSR and first client render are always expanded; the stored value is applied after hydration.
+  const [isMasterPanelCollapsed, setIsMasterPanelCollapsed] = useState<boolean>(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  const { isMobile } = useResponsive();
-  const navigate = useNavigate();
-
-  // Mark as hydrated to ensure SSR/client match
   useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
-  // On mobile, only the home route ('/') shows the master list.
-  // Only update after hydration to avoid SSR mismatch
-  useEffect(() => {
-    if (!isHydrated) return;
-    if (isMobile) {
-      setShowMasterPanel(pathname === "/");
-      setIsMasterPanelCollapsed(false);
+    try {
+      if (localStorage.getItem(COLLAPSE_KEY) === "1") setIsMasterPanelCollapsed(true);
+    } catch {
+      // storage blocked: stay expanded
     }
-  }, [isMobile, pathname, isHydrated]);
+  }, []);
 
   const toggleGroupExpanded = (groupName: string) => {
     const newExpanded = new Set(expandedGroups);
@@ -62,20 +45,20 @@ export const BrowseLayoutProvider: React.FC<{ children: React.ReactNode }> = ({
     setExpandedGroups(newExpanded);
   };
 
-  const handleToggleCollapse = () => {
-    if (isMobile) {
-      // navigate to index so they can click any link
-      navigate({ to: "/" });
-      setShowMasterPanel(!showMasterPanel);
-    } else {
-      setIsMasterPanelCollapsed(!isMasterPanelCollapsed);
-    }
-  };
+  const handleToggleCollapse = useCallback(() => {
+    setIsMasterPanelCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
 
   const value: BrowseLayoutContextValue = {
     isMasterPanelCollapsed,
-    showMasterPanel,
-    isMobile,
     expandedGroups,
     toggleGroupExpanded,
     handleToggleCollapse,

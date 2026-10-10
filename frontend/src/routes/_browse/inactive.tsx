@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import InactiveServersDetail from '../../components/detail/InactiveServersDetail.tsx';
-import { DetailShell } from '../../components/sidebar/DetailShell.tsx';
+import { DetailShell } from '../../components/server-list/DetailShell.tsx';
 import { LoadingSpinner } from '../../components/LoadingSpinner.tsx';
 import { docTitle } from "../../util/pageTitle.ts";
 

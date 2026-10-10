@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Layout split: list+detail side by side, inline nav. Matches useResponsive. */
+  /* Layout split: list+detail side by side, inline nav. */
   --breakpoint-split: 950px;
 
   /* Surfaces */

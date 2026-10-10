@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DetailShell } from "../../components/sidebar/DetailShell";
+import { DetailShell } from "../../components/server-list/DetailShell";
 import { EmptyState } from "../../components/detail/EmptyState";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { docTitle } from "../../util/pageTitle.ts";

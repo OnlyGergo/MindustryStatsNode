@@ -1,12 +1,12 @@
 import React from "react";
-import { createFileRoute, Outlet, retainSearchParams, stripSearchParams } from "@tanstack/react-router";
+import { createFileRoute, Outlet, retainSearchParams, stripSearchParams, useMatches } from "@tanstack/react-router";
 import type { SearchSchemaInput } from "@tanstack/react-router";
 import { BROWSE_SEARCH_DEFAULTS, parseBrowseSearch } from "./-browseSearch.ts";
 import type { BrowseSearch } from "./-browseSearch.ts";
-import MasterPanel from "../components/sidebar/MasterPanel";
+import ServerListPanel from "../components/server-list/ServerListPanel";
 import { fetchServers } from "../hooks/useApi.ts";
 import { ServerListProvider } from "../context/ServerListContext.tsx";
-import { BrowseLayoutProvider, useBrowseLayout } from "../context/BrowseLayoutContext.tsx";
+import { BrowseLayoutProvider } from "../context/BrowseLayoutContext.tsx";
 import { ApiPacker } from "../../../common/Packer.ts";
 import { ServerElement } from "../../../common/models/serverData.ts";
 
@@ -28,17 +28,17 @@ export const Route = createFileRoute("/_browse")({
   component: BrowseLayout,
 });
 
+// List/detail swap is pure CSS below `split`; the matched route is known during SSR,
+// so server and client render the same markup. The list stays mounted either way.
 const BrowseContent: React.FC = () => {
-  const { isMobile, showMasterPanel } = useBrowseLayout();
+  const isIndex = useMatches({ select: (m) => m[m.length - 1]?.routeId === "/_browse/" });
 
   return (
     <div className="flex-1 flex min-h-0">
-      {(!isMobile || showMasterPanel) && <MasterPanel />}
-      {(!isMobile || !showMasterPanel) && (
-        <div className="flex-1" style={{ minWidth: 0 }}>
-          <Outlet />
-        </div>
-      )}
+      <ServerListPanel mobileVisible={isIndex} />
+      <div className={`flex-1 min-w-0 min-h-0 flex-col ${isIndex ? "hidden split:flex" : "flex"}`}>
+        <Outlet />
+      </div>
     </div>
   );
 };

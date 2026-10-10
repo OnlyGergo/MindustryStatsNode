@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DetailShell } from "../../components/sidebar/DetailShell.tsx";
+import { DetailShell } from "../../components/server-list/DetailShell.tsx";
 import { EmptyState } from "../../components/detail/EmptyState.tsx";
 import NetworkDetail from "../../components/detail/NetworkDetail.tsx";
 import { getBaseUrl } from "../../util/getApi.ts";

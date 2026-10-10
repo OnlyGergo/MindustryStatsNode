@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { EmptyState } from "../../components/detail/EmptyState.tsx";
 import ServerDetail from "../../components/detail/ServerDetail.tsx";
 import { getBaseUrl } from "../../util/getApi.ts";
-import { DetailShell } from "../../components/sidebar/DetailShell.tsx";
+import { DetailShell } from "../../components/server-list/DetailShell.tsx";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 import { docTitle } from "../../util/pageTitle.ts";
 import { removeColors } from "../../util/mindustry.ts";

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import GlobalStatsChart from "../../components/global-stats/GlobalStatsChart.tsx";
-import { DetailShell } from "../../components/sidebar/DetailShell.tsx";
+import { DetailShell } from "../../components/server-list/DetailShell.tsx";
 import { getBaseUrl } from "../../util/getApi.ts";
 import { ApiPacker } from "../../../../common/Packer.ts";
 import { GamemodeInfo } from "../../../../common/models/GlobalStatsTypes.ts";
