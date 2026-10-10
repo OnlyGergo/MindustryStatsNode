@@ -1,12 +1,16 @@
-import {useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {getRouteApi, useNavigate} from '@tanstack/react-router';
 import {ServerElement} from '../../../common/models/serverData';
 import {removeColors} from '../util/mindustry';
+import type {BrowseSearch} from '../routes/-browseSearch';
 
-// NOTE: This hook is purely client-side derived state (search/sort/group UI
-// preferences) over data that's already fetched by `useApi`/the route loader.
-// It doesn't perform its own network fetching, so no server function is
-// needed here for the TanStack Start migration -- it keeps working as-is
-// against whatever `rawServers` (SSR-hydrated or polled) is passed in.
+// NOTE: Sort/filter/group preferences live in the `_browse` route's search params
+// (see routes/-browseSearch.ts), so they survive navigation and reloads and
+// render correctly during SSR. This hook derives the displayed list from
+// `rawServers` (already fetched by `useApi`/the route loader) and does no
+// network fetching of its own.
+
+const browseRoute = getRouteApi('/_browse');
 
 export type SortCriteria = 'playerCount' | 'ping' | 'name' | 'rating';
 export type SortDirection = 'asc' | 'desc';
@@ -162,11 +166,41 @@ const makeGroupComparator = (sortOption: SortOption, direction: SortDirection) =
   };
 
 export const useServerList = (rawServers: ServerElement[]) => {
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [isGrouped, setIsGrouped] = useState<boolean>(true);
-  const [hideInactiveEnabled, setHideInactiveEnabled] = useState<boolean>(true);
-  const [sortCriteria, setSortCriteria] = useState<SortCriteria>('playerCount');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const { q, sort: sortCriteria, dir: sortDirection, grouped: isGrouped, inactive } = browseRoute.useSearch();
+  const hideInactiveEnabled = !inactive;
+  const navigate = useNavigate();
+
+  const patchSearch = (patch: Partial<BrowseSearch>) => {
+    void navigate({ to: '.', search: (prev) => ({ ...prev, ...patch }), replace: true });
+  };
+
+  // Local input state keeps typing instant; the URL is written debounced.
+  const [searchTerm, setSearchInput] = useState<string>(q);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastWritten = useRef<string>(q);
+
+  useEffect(() => {
+    // `q` changed from outside (Back/Forward, a link): resync, unless it's our own write
+    // or the user is mid-debounce.
+    if (q === lastWritten.current || timer.current !== null) return;
+    lastWritten.current = q;
+    setSearchInput(q);
+  }, [q]);
+
+  useEffect(() => () => {
+    if (timer.current !== null) clearTimeout(timer.current);
+  }, []);
+
+  const setSearchTerm = (value: string) => {
+    setSearchInput(value);
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      const next = value.trim().slice(0, 200);
+      lastWritten.current = next;
+      patchSearch({ q: next });
+    }, 300);
+  };
 
   const processedData = useMemo(() => {
     if (!rawServers || !Array.isArray(rawServers)) {
@@ -222,20 +256,19 @@ export const useServerList = (rawServers: ServerElement[]) => {
     }
   }, [rawServers, searchTerm, isGrouped, hideInactiveEnabled, sortCriteria, sortDirection]);
 
-  const toggleGrouping = () => setIsGrouped(!isGrouped);
-  const toggleHideInactive = () => setHideInactiveEnabled(!hideInactiveEnabled);
+  const toggleGrouping = () => patchSearch({ grouped: !isGrouped });
+  const toggleHideInactive = () => patchSearch({ inactive: hideInactiveEnabled });
 
   const handleSortChange = (criteria: SortCriteria, direction?: SortDirection) => {
-    setSortCriteria(criteria);
     if (direction) {
-      setSortDirection(direction);
+      patchSearch({ sort: criteria, dir: direction });
     } else if (criteria === sortCriteria) {
       // Toggle direction if same criteria selected
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      patchSearch({ sort: criteria, dir: sortDirection === 'asc' ? 'desc' : 'asc' });
     } else {
       // Default direction for new criteria
       const newOption = SORT_OPTIONS.find(option => option.key === criteria);
-      setSortDirection(newOption ? newOption.defaultDirection : 'desc');
+      patchSearch({ sort: criteria, dir: newOption ? newOption.defaultDirection : 'desc' });
     }
   };
 

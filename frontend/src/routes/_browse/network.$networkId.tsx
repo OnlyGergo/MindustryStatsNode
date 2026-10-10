@@ -17,6 +17,8 @@ export const Route = createFileRoute("/_browse/network/$networkId")({
         <LoadingSpinner showText={false} />
       </DetailShell>
   ),
+  // Pref changes (search params) keep the same match; only reload on entering/preloading.
+  shouldReload: ({ cause }) => cause !== "stay",
   loader: async ({ params }) => {
     const { networkId } = params;
     try {

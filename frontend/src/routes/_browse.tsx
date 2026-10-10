@@ -1,5 +1,8 @@
 import React from "react";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, retainSearchParams, stripSearchParams } from "@tanstack/react-router";
+import type { SearchSchemaInput } from "@tanstack/react-router";
+import { BROWSE_SEARCH_DEFAULTS, parseBrowseSearch } from "./-browseSearch.ts";
+import type { BrowseSearch } from "./-browseSearch.ts";
 import MasterPanel from "../components/sidebar/MasterPanel";
 import { fetchServers } from "../hooks/useApi.ts";
 import { ServerListProvider } from "../context/ServerListContext.tsx";
@@ -9,6 +12,15 @@ import { ServerElement } from "../../../common/models/serverData.ts";
 
 export const Route = createFileRoute("/_browse")({
   // SSR-fetched on first load; the client hook (useApi) takes over polling afterward.
+  validateSearch: (input: Partial<Record<keyof BrowseSearch, unknown>> & SearchSchemaInput): BrowseSearch =>
+    parseBrowseSearch(input),
+  search: {
+    // Prefs follow every link inside _browse; defaults are stripped so `/` stays clean.
+    middlewares: [retainSearchParams(true), stripSearchParams(BROWSE_SEARCH_DEFAULTS)],
+  },
+  // List prefs live in the search; changing them must never refetch /api/servers.
+  staleTime: Infinity,
+  shouldReload: false,
   loader: async () => {
     const data = await fetchServers();
     return { initialData: data };
