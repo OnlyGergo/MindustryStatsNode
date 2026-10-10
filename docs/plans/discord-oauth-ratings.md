@@ -109,7 +109,7 @@ The review text is the comment; one review per user per server family.
   - Do a manual merge (the statement in the `30_server_identity.sql` header) with one account holding a review on each alias. The list shows one review for that account, and the average counts it once.
 
 ## F3: Admin panel shell + ownership
-Needed before F4–F6.
+Needed before F4–F6. **Depends on N1, N2 and N5 in [`navigation-layout.md`](navigation-layout.md).** `admin` is a layout route alongside the pathless `_browse` layout, so it has no server list, and its tabs use the shared `TabNav`.
 - **Migration `35_owners.sql`:** `owners(id, user_id fk cascade, server_group_id null fk, server_id null fk, created_at, created_by)`.
   - `CHECK` that exactly one target is set.
   - Partial unique indexes on `(user_id, server_group_id)` and `(user_id, server_id)`. This allows several co-owners.
