@@ -34,6 +34,8 @@ const NetworkDetail: React.FC<{ details: NetworkDetails }> = ({ details }) => {
           </div>
 
           <NetworkStatsRow details={details} />
+          {/* Just a spacer, as otherwise there is an annoying gap */}
+          <div className="mt-2 sm:mt-4"></div>
           <NetworkSources sources={details.sources} />
 
           {topServer && (
