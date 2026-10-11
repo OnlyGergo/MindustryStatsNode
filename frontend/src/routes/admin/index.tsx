@@ -6,5 +6,5 @@ export const Route = createFileRoute("/admin/")({
 });
 
 function AdminOverview() {
-  return <EmptyState title="Admin" message="Admin tools coming soon" />;
+  return <EmptyState title="Admin" message="Pick a section from the tabs above." />;
 }

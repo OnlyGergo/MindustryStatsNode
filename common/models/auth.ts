@@ -11,7 +11,7 @@ export interface AuthMe {
   /** Discord CDN URL, falling back to one of Discord's default avatars. */
   avatarUrl: string;
   isAdmin: boolean;
-  /** Filled in by F3 (ownership); empty until then. Ids are public canonical ids. */
+  /** Network ids and public canonical server ids this user was assigned as owner (F3). */
   owns: {
     networks: number[];
     servers: number[];

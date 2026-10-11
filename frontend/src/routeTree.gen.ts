@@ -15,6 +15,7 @@ import { Route as BrowseIndexRouteImport } from './routes/_browse/index'
 import { Route as BrowseGlobalRouteImport } from './routes/_browse/global'
 import { Route as BrowseInactiveRouteImport } from './routes/_browse/inactive'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminOwnersRouteImport } from './routes/admin/owners'
 import { Route as BrowseNetworkNetworkIdRouteImport } from './routes/_browse/network.$networkId'
 import { Route as BrowseServerServerIdRouteImport } from './routes/_browse/server.$serverId'
 
@@ -47,6 +48,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminOwnersRoute = AdminOwnersRouteImport.update({
+  id: '/owners',
+  path: '/owners',
+  getParentRoute: () => AdminRoute,
+} as any)
 const BrowseNetworkNetworkIdRoute = BrowseNetworkNetworkIdRouteImport.update({
   id: '/network/$networkId',
   path: '/network/$networkId',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/global': typeof BrowseGlobalRoute
   '/inactive': typeof BrowseInactiveRoute
+  '/admin/owners': typeof AdminOwnersRoute
   '/admin/': typeof AdminIndexRoute
   '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
   '/server/$serverId': typeof BrowseServerServerIdRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/global': typeof BrowseGlobalRoute
   '/inactive': typeof BrowseInactiveRoute
+  '/admin/owners': typeof AdminOwnersRoute
   '/': typeof BrowseIndexRoute
   '/admin': typeof AdminIndexRoute
   '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
@@ -81,6 +89,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/_browse/global': typeof BrowseGlobalRoute
   '/_browse/inactive': typeof BrowseInactiveRoute
+  '/admin/owners': typeof AdminOwnersRoute
   '/_browse/': typeof BrowseIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/_browse/network/$networkId': typeof BrowseNetworkNetworkIdRoute
@@ -93,6 +102,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/global'
     | '/inactive'
+    | '/admin/owners'
     | '/admin/'
     | '/network/$networkId'
     | '/server/$serverId'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
   to:
     | '/global'
     | '/inactive'
+    | '/admin/owners'
     | '/'
     | '/admin'
     | '/network/$networkId'
@@ -110,6 +121,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/_browse/global'
     | '/_browse/inactive'
+    | '/admin/owners'
     | '/_browse/'
     | '/admin/'
     | '/_browse/network/$networkId'
@@ -165,6 +177,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/owners': {
+      id: '/admin/owners'
+      path: '/owners'
+      fullPath: '/admin/owners'
+      preLoaderRoute: typeof AdminOwnersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_browse/network/$networkId': {
       id: '/_browse/network/$networkId'
       path: '/network/$networkId'
@@ -202,10 +221,12 @@ const BrowseRouteWithChildren =
   BrowseRoute._addFileChildren(BrowseRouteChildren)
 
 interface AdminRouteChildren {
+  AdminOwnersRoute: typeof AdminOwnersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminOwnersRoute: AdminOwnersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 

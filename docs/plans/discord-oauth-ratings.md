@@ -109,6 +109,8 @@ The review text is the comment; one review per user per server family.
   - Do a manual merge (the statement in the `30_server_identity.sql` header) with one account holding a review on each alias. The list shows one review for that account, and the average counts it once.
 
 ## F3: Admin panel shell + ownership
+> **Done.** Migration `35_owners.sql`. `canManageServer` takes the user (`{id, isAdmin}`) rather than a bare id, so the admin bypass needs no extra lookup. `POST /owners` takes `{userId, networkId?|serverId?}` and checks exactly-one in the handler: Elysia strips unknown keys before matching a `t.Union`, so a body with both would have validated as the first branch. A target can be typed as an id or pasted as a `/network/:id` or `/server/:id` URL. Duplicate assignment answers 409.
+
 Needed before F4–F6. **Depends on N1, N2 and N5 in [`navigation-layout.md`](navigation-layout.md).** `admin` is a layout route alongside the pathless `_browse` layout, so it has no server list, and its tabs use the shared `TabNav`.
 - **Migration `35_owners.sql`:** `owners(id, user_id fk cascade, server_group_id null fk, server_id null fk, created_at, created_by)`.
   - `CHECK` that exactly one target is set.

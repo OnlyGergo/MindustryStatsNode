@@ -28,6 +28,7 @@ import { discordAvatarUrl } from '../auth/discordAvatar.js';
 import { upsertFromDiscord, deleteUser } from '../../repositories/user/userRepository.js';
 import { createSession, deleteSession } from '../../repositories/user/sessionRepository.js';
 import { clearCaches } from '../middleware/cache.js';
+import { getOwnedTargets } from '../../repositories/ownershipRepository.js';
 import type { AuthMe } from '../../../../common/models/auth.js';
 
 const logger = createLogger('Api');
@@ -264,7 +265,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
         globalName: user.globalName,
         avatarUrl: discordAvatarUrl(user.discordId, user.avatarHash),
         isAdmin: user.isAdmin,
-        owns: { networks: [], servers: [] },
+        owns: await getOwnedTargets(user.id),
       };
     },
     { optionalUser: true },

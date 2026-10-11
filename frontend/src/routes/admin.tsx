@@ -1,8 +1,14 @@
 import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
-import { TabNav } from "../components/layout/TabNav.tsx";
+import { TabNav, type TabNavItem } from "../components/layout/TabNav.tsx";
 import { LoadingSpinner } from "../components/LoadingSpinner.tsx";
 import { useAuth } from "../context/AuthContext.tsx";
 import { docTitle } from "../util/pageTitle.ts";
+
+// Later features add their queues here (Images, Announcements, Reports).
+const ADMIN_TABS: TabNavItem[] = [
+  { to: "/admin", label: "Overview", exact: true },
+  { to: "/admin/owners", label: "Owners" },
+];
 
 export const Route = createFileRoute("/admin")({
   staticData: { title: "Admin" },
@@ -14,7 +20,7 @@ export const Route = createFileRoute("/admin")({
  * Admin section layout. Deliberately outside `_browse`, so it has no server list
  * and fetches nothing from /api/servers. Auth is client-only (see AuthContext),
  * so this guard is UX only; the API enforces `requireAdmin` regardless.
- * Each tab is a child route (e.g. `admin/owners.tsx` in F3).
+ * Each tab is a child route under `routes/admin/`.
  */
 function AdminLayout() {
   const { me, loading } = useAuth();
@@ -33,7 +39,7 @@ function AdminLayout() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <TabNav tabs={[{ to: "/admin", label: "Overview", exact: true }]} />
+      <TabNav tabs={ADMIN_TABS} />
       <div className="flex-1 min-h-0 overflow-y-auto">
         <Outlet />
       </div>
