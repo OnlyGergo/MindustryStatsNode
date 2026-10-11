@@ -29,3 +29,12 @@ declare module '@tanstack/react-router' {
     router: ReturnType<typeof getRouter>
   }
 }
+
+declare module '@tanstack/react-router' {
+  interface StaticDataRouteOption {
+    /** Short page title for the top bar. A function receives the route's loader data. */
+    title?: string | ((loaderData: any) => string);
+    /** Show a Back button (mobile) instead of the brand icon. */
+    back?: boolean;
+  }
+}

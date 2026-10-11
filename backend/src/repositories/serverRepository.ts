@@ -11,17 +11,15 @@ import {
 } from '../models/index.js';
 import {
     GameMode,
+    type NetworkDetails,
     type ServerDetails,
     type ServerElement,
     type ServerMapData,
     type ServerMotdData,
 } from '../../../common/models/serverData.js';
 import { QueryTypes } from 'sequelize';
-import {
-    type NetworkDetails,
-} from '../../../common/models/RepositoryTypes.js';
 import {CURRENT_DATA_FRESH_THRESHOLD, MAX_REALISTIC_PLAYERCOUNT} from "../const.js";
-import { LIVE_MEMBER_SQL, canonicalJoin, serverFamilySql } from './canonicalIdentity.js';
+import { liveMemberSql, canonicalJoin, serverFamilySql } from './canonicalIdentity.js';
 import { bayesianScore } from './reviewScoring.js';
 
 // ─── Servers ─────────────────────────────────────────────────────────────────
@@ -46,13 +44,26 @@ export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds
     };
 }
 
-/** Returns all servers with their latest stats, map, and MOTD in one query. */
-export async function getAllServerElements(hoursBack: number = 36): Promise<ServerElement[]> {
+/**
+ * Returns all servers with their latest stats, map, and MOTD in one query.
+ *
+ * `groupId` restricts the result to one network: the families whose ROOT has
+ * `server_group_id = :groupId AND NOT aggregate_exclude` (the membership rule
+ * getNetworkDetails uses). The scope is applied inside the per-family CTEs so
+ * the DISTINCT ON sorts only touch that network's rows, not the whole site.
+ * Ratings are deliberately NOT scoped: `newest_reviews` also feeds the
+ * sitewide `global_rating` prior, which must stay sitewide.
+ */
+export async function getAllServerElements(hoursBack: number = 36, groupId?: number): Promise<ServerElement[]> {
+    const scoped = groupId !== undefined;
+    const familyScope = scoped
+        ? `sc.canonical_id IN (SELECT root.id FROM servers root WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude)`
+        : null;
     const rows: any[] = await sequelize.query(`
         WITH live_members AS (
             -- One row per FAMILY: this is the already-reduced row set every
             -- other CTE below joins onto, per canonical id.
-            ${LIVE_MEMBER_SQL}
+            ${liveMemberSql(familyScope)}
         ),
         family_meta AS (
             -- last_seen collapses across the whole family with MAX, same
@@ -68,6 +79,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             SELECT sc.canonical_id, MAX(s.last_seen) AS last_seen
             FROM server_canonical sc
             JOIN servers s ON s.id = sc.server_id
+            ${scoped ? `WHERE ${familyScope}` : ''}
             GROUP BY sc.canonical_id
         ),
         latest_motds AS (
@@ -83,7 +95,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             FROM server_motds_history h
             ${canonicalJoin('sc', 'h')}
             JOIN server_motds_registry r ON h.motd_id = r.id
-            WHERE h.valid_to IS NULL
+            WHERE h.valid_to IS NULL${scoped ? ` AND ${familyScope}` : ''}
             ORDER BY sc.canonical_id, h.valid_from DESC
         ),
         latest_maps AS (
@@ -96,7 +108,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             FROM server_maps_history h
             ${canonicalJoin('sc', 'h')}
             JOIN server_maps_registry r ON h.map_id = r.id
-            WHERE h.valid_to IS NULL
+            WHERE h.valid_to IS NULL${scoped ? ` AND ${familyScope}` : ''}
             ORDER BY sc.canonical_id, h.valid_from DESC
         ),
         latest_stats AS (
@@ -110,7 +122,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             FROM server_current cur
             ${canonicalJoin('sc', 'cur')}
             WHERE cur.timestamp > NOW() - interval '1 hour' * :hoursBack
-              AND cur.players >= 0 AND cur.players < :maxRealisticPlayerCount
+              AND cur.players >= 0 AND cur.players < :maxRealisticPlayerCount${scoped ? ` AND ${familyScope}` : ''}
             ORDER BY sc.canonical_id, cur.timestamp DESC
         ),
         newest_reviews AS (
@@ -127,7 +139,29 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             SELECT canonical_id, count(*)::int AS rating_count, sum(rating)::int AS rating_sum, avg(rating)::float8 AS rating_avg
             FROM newest_reviews WHERE removed_at IS NULL GROUP BY canonical_id
         ),
-        global_rating AS (
+        ${scoped ? `family_uptime AS (
+            -- 24h uptime per family, percent, scoped calls only. Same shape as
+            -- the network version: collapse map rows per raw server+bucket,
+            -- MAX across aliases per bucket, then online/total samples.
+            SELECT f.canonical_id,
+                   SUM(f.online_samples) * 100.0 / NULLIF(SUM(f.samples), 0) AS uptime_24h
+            FROM (
+                SELECT sc.canonical_id, r.bucket,
+                       MAX(r.samples) AS samples, MAX(r.online_samples) AS online_samples
+                FROM (
+                    SELECT st.server_id, st.bucket,
+                           SUM(st.samples) AS samples, SUM(st.online_samples) AS online_samples
+                    FROM server_stats_5m st
+                    WHERE st.bucket > NOW() - INTERVAL '24 hours'
+                      AND st.server_id IN (SELECT sc.server_id FROM server_canonical sc WHERE ${familyScope})
+                    GROUP BY st.server_id, st.bucket
+                ) r
+                ${canonicalJoin('sc', 'r')}
+                GROUP BY sc.canonical_id, r.bucket
+            ) f
+            GROUP BY f.canonical_id
+        ),
+        ` : ''}global_rating AS (
             -- The Bayesian prior's mean: every live review site-wide, not
             -- just this family's, so a brand-new server with one 5-star
             -- review is pulled toward the sitewide average rather than
@@ -144,7 +178,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             motds."serverName", motds.description,
             maps."modeName", maps."mapName", maps.mode, root.aggregate_exclude AS "aggregateExclude",
             fr.rating_count AS "ratingCount", fr.rating_sum AS "ratingSum", fr.rating_avg AS "ratingAvg",
-            gr.mean AS "globalRatingMean"
+            gr.mean AS "globalRatingMean"${scoped ? ', fu.uptime_24h AS "uptime24h"' : ''}
         FROM live_members lm
         -- Family-level properties (group, exclusion) come from the ROOT row,
         -- so a merge can never leave half a family in a different group or
@@ -156,9 +190,11 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
         LEFT JOIN latest_motds motds  ON motds.canonical_id = lm.canonical_id
         LEFT JOIN latest_maps  maps   ON maps.canonical_id  = lm.canonical_id
         LEFT JOIN family_ratings fr   ON fr.canonical_id    = lm.canonical_id
+        ${scoped ? 'LEFT JOIN family_uptime fu ON fu.canonical_id = lm.canonical_id' : ''}
         CROSS JOIN global_rating gr
+        ${scoped ? 'WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude' : ''}
         ORDER BY sg.name, lm.host, lm.port
-    `, { replacements: { hoursBack, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT }, type: QueryTypes.SELECT });
+    `, { replacements: { hoursBack, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT, ...(scoped ? { groupId } : {}) }, type: QueryTypes.SELECT });
 
     return rows.map((row): ServerElement => {
         const element: ServerElement = {
@@ -179,6 +215,7 @@ export async function getAllServerElements(hoursBack: number = 36): Promise<Serv
             ratingCount: row.ratingCount ?? 0,
             ratingScore: bayesianScore(row.ratingSum ?? 0, row.ratingCount ?? 0, row.globalRatingMean ?? null),
         };
+        if (scoped) element.uptime24h = row.uptime24h == null ? null : Number(row.uptime24h);
 
         // currentData is current - only populate if "fresh" aka 5 minutes
         if (row.timestamp && row.timestamp > new Date(Date.now() - CURRENT_DATA_FRESH_THRESHOLD).getTime()) {
@@ -376,24 +413,162 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             -- address migration both the old and new address can answer for
             -- a while, and summing would double-count one real server. The
             -- hour bound keeps long-dead servers from counting as active.
-            SELECT gs.canonical_id, MAX(cur.players) AS players
+            --
+            -- online (any alias answering) drives "servers online"; the
+            -- realistic-count bound is the same one the server list applies,
+            -- so a garbage reading can't blow up the network total.
+            SELECT gs.canonical_id,
+                   -- Only answering aliases carry a count: an offline alias can hold a
+                   -- stale one, and site_stats / playersNow count online rows only.
+                   -- An all-offline family therefore gets NULL players, which
+                   -- top_server sorts last (NULLS LAST) and active_servers ignores.
+                   MAX(cur.players) FILTER (WHERE cur.online) AS players,
+                   BOOL_OR(cur.online) AS online
             FROM group_servers gs
             JOIN server_current cur ON cur.server_id = gs.server_id
             WHERE cur.timestamp > NOW() - INTERVAL '1 hour'
+              AND cur.players >= 0 AND cur.players < :maxRealisticPlayerCount
             GROUP BY gs.canonical_id
         ),
-        peaks AS (
-            -- Hourly continuous aggregate: max() is decomposable, so
-            -- max(max_players) is the same number the raw scan produced, without
-            -- walking (and decompressing) every chunk back to day one. This
-            -- already collapses aliases correctly -- MAX over the union of a
-            -- group's raw members equals MAX over each family then MAX of those.
-            SELECT
-                MAX(max_players) FILTER (WHERE bucket > NOW() - interval '1 day')  AS daily_peak,
-                MAX(max_players) FILTER (WHERE bucket > NOW() - interval '7 days') AS weekly_peak,
-                MAX(max_players)                                                   AS all_time_peak
-            FROM server_stats_1h
-            WHERE server_id IN (SELECT server_id FROM group_servers)
+        site_stats AS (
+            -- Site-wide "players now", same rule as latest_stats applied to
+            -- every non-excluded family: per-family MAX, then SUM across
+            -- families. server_current holds one row per raw server, so this
+            -- is a small scan. Only online families contribute, matching
+            -- network_now below.
+            SELECT COALESCE(SUM(fam.players), 0) AS players
+            FROM (
+                SELECT sc.canonical_id, MAX(cur.players) AS players
+                FROM server_current cur
+                ${canonicalJoin('sc', 'cur')}
+                JOIN servers root ON root.id = sc.canonical_id
+                WHERE NOT root.aggregate_exclude
+                  AND cur.online
+                  AND cur.timestamp > NOW() - INTERVAL '1 hour'
+                  AND cur.players >= 0 AND cur.players < :maxRealisticPlayerCount
+                GROUP BY sc.canonical_id
+            ) fam
+        ),
+        network_now AS (
+            SELECT COALESCE(SUM(players) FILTER (WHERE online), 0) AS players_now,
+                   COUNT(*)  FILTER (WHERE online)                 AS online_servers
+            FROM latest_stats
+        ),
+        raw_5m AS (
+            -- Last 24h at the finest resolution the aggregates offer, one row
+            -- per RAW server and 5m bucket. server_stats_5m is also keyed by
+            -- map_registry_id, so a server that changed map inside a bucket
+            -- has several rows here: collapse them first (MAX for the peak,
+            -- SUM for the sample counters) or it would count twice.
+            SELECT st.server_id, st.bucket,
+                   MAX(st.max_players)        AS peak_players,
+                   SUM(st.sum_players)::float8 AS sum_players,
+                   SUM(st.samples)            AS samples,
+                   SUM(st.online_samples)     AS online_samples
+            FROM server_stats_5m st
+            WHERE st.bucket > NOW() - INTERVAL '24 hours'
+              AND st.server_id IN (SELECT server_id FROM group_servers)
+            GROUP BY st.server_id, st.bucket
+        ),
+        fam_5m AS (
+            -- Per FAMILY and bucket: MAX across aliases, never SUM (both
+            -- addresses answer for a while around an IP change).
+            SELECT gs.canonical_id, r.bucket,
+                   MAX(r.peak_players)                         AS peak_players,
+                   MAX(r.sum_players / NULLIF(r.samples, 0))   AS mean_players,
+                   MAX(r.samples)                              AS samples,
+                   MAX(r.online_samples)                       AS online_samples
+            FROM raw_5m r
+            JOIN group_servers gs ON gs.server_id = r.server_id
+            GROUP BY gs.canonical_id, r.bucket
+        ),
+        inst_5m AS (
+            -- Per instant: SUM across families = network concurrency then.
+            -- Buckets where nothing reported are absent, not zero.
+            SELECT bucket,
+                   SUM(peak_players) AS peak_total,
+                   SUM(mean_players) AS mean_total
+            FROM fam_5m
+            GROUP BY bucket
+        ),
+        stats_24h AS (
+            -- Daily peak: busiest 5m instant (the chart's 1d preset reads this
+            -- tier, so the peak agrees with its highest point). avg_24h is the
+            -- mean of the per-instant means, not of peaks. Uptime is the
+            -- online/total sample ratio of the family-collapsed buckets, in
+            -- percent like get_server_details; NULL when there are no samples.
+            SELECT (SELECT MAX(peak_total) FROM inst_5m) AS daily_peak,
+                   (SELECT AVG(mean_total) FROM inst_5m) AS avg_players,
+                   (SELECT SUM(online_samples) * 100.0 / NULLIF(SUM(samples), 0) FROM fam_5m) AS uptime_24h
+        ),
+        fam_1h AS (
+            -- Hourly tier, per family: same MAX-across-aliases collapse as
+            -- get_server_details' family_stats_1h. This view has no map key,
+            -- so one row per raw server and bucket already.
+            SELECT gs.canonical_id, st.bucket,
+                   MAX(st.max_players)    AS players,
+                   MAX(st.samples)        AS samples,
+                   MAX(st.online_samples) AS online_samples,
+                   -- Per raw server the hour's mean is sum/samples; MAX across aliases.
+                   MAX(st.sum_players::float8 / NULLIF(st.samples, 0)) AS mean_players
+            FROM server_stats_1h st
+            JOIN group_servers gs ON gs.server_id = st.server_id
+            GROUP BY gs.canonical_id, st.bucket
+        ),
+        inst_1h AS (
+            SELECT bucket, SUM(players) AS total
+            FROM fam_1h
+            GROUP BY bucket
+        ),
+        stats_long AS (
+            -- Weekly and all-time peaks are the busiest hourly instant, where
+            -- an instant is the SUM across families of each family's hourly
+            -- max. That is what the long-range charts (7d and up read
+            -- server_stats_1h) plot, so the peak equals the chart's highest
+            -- point. It is an upper bound on true concurrency (families need
+            -- not peak in the same minute of the hour); a 5m scan over all
+            -- history would be too heavy. Since an hour bucket's sum is at
+            -- least any 5m instant inside it, weekly >= daily always holds.
+            SELECT (SELECT MAX(total) FILTER (WHERE bucket > NOW() - INTERVAL '7 days') FROM inst_1h) AS weekly_peak,
+                   (SELECT SUM(online_samples) FILTER (WHERE bucket > NOW() - INTERVAL '7 days') * 100.0
+                           / NULLIF(SUM(samples) FILTER (WHERE bucket > NOW() - INTERVAL '7 days'), 0)
+                    FROM fam_1h) AS uptime_7d
+        ),
+        peak_bucket AS (
+            -- The hour of the all-time peak (ties: most recent) and its value.
+            SELECT bucket AS peak_date, total AS all_time_peak
+            FROM inst_1h
+            ORDER BY total DESC NULLS LAST, bucket DESC
+            LIMIT 1
+        ),
+        trend_1h AS (
+            -- Mean network concurrency per hour: SUM across families of each
+            -- family's MAX-across-aliases hourly mean, then AVG over the hours
+            -- present in each window. Hours with no data are absent, not zero.
+            SELECT AVG(total) FILTER (WHERE bucket > NOW() - INTERVAL '7 days')                                   AS avg_7d,
+                   AVG(total) FILTER (WHERE bucket > NOW() - INTERVAL '14 days' AND bucket <= NOW() - INTERVAL '7 days') AS avg_prev_7d
+            FROM (
+                SELECT bucket, SUM(mean_players) AS total
+                FROM fam_1h
+                WHERE bucket > NOW() - INTERVAL '14 days'
+                GROUP BY bucket
+            ) hourly
+        ),
+        network_reviews AS (
+            -- Same dedupe as getAllServerElements' newest_reviews, restricted
+            -- to this network's families: one row per (family, reviewer), their
+            -- newest. Removed rows are dropped only AFTER the dedupe, so an
+            -- older alias review can't resurface a moderator-removed one.
+            SELECT DISTINCT ON (sc.canonical_id, r.user_id) sc.canonical_id, r.rating, r.removed_at
+            FROM server_reviews r
+            JOIN server_canonical sc ON sc.server_id = r.server_id
+            WHERE sc.canonical_id IN (SELECT canonical_id FROM group_families)
+            ORDER BY sc.canonical_id, r.user_id, r.updated_at DESC, r.id DESC
+        ),
+        rating_agg AS (
+            SELECT AVG(rating)::float8 AS average, COUNT(*)::int AS review_count
+            FROM network_reviews
+            WHERE removed_at IS NULL
         ),
         group_live AS (
             -- The live address of each family in this group.  Spelled out
@@ -419,10 +594,20 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             -- pick above: a DISTINCT ON in this select would force
             -- canonical_id to sort first and hand back the lowest id rather
             -- than the busiest server.
-            SELECT gl.canonical_id AS id, gl.host, gl.port, ls.players, sg2.name AS server_name
+            SELECT gl.canonical_id AS id, ls.players, COALESCE(NULLIF(mo.server_name, ''), sg2.name) AS server_name
             FROM group_live gl
             JOIN server_groups sg2    ON sg2.id = :groupId
             LEFT JOIN latest_stats ls ON ls.canonical_id = gl.canonical_id
+            LEFT JOIN LATERAL (
+                -- Display name of the family's current MOTD (any alias).
+                SELECT r.server_name
+                FROM server_canonical scm
+                JOIN server_motds_history h ON h.server_id = scm.server_id AND h.valid_to IS NULL
+                JOIN server_motds_registry r ON r.id = h.motd_id
+                WHERE scm.canonical_id = gl.canonical_id
+                ORDER BY h.valid_from DESC
+                LIMIT 1
+            ) mo ON TRUE
             ORDER BY ls.players DESC NULLS LAST
             LIMIT 1
         )
@@ -430,39 +615,90 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             sg.id,
             sg.name,
             (SELECT COUNT(*)                                   FROM group_families) AS total_servers,
-            (SELECT COUNT(*) FROM latest_stats WHERE players > 0)                 AS active_servers,
-            (SELECT daily_peak    FROM peaks)                                      AS daily_peak,
-            (SELECT weekly_peak   FROM peaks)                                      AS weekly_peak,
-            (SELECT all_time_peak FROM peaks)                                      AS all_time_peak,
+            (SELECT COUNT(*) FROM latest_stats WHERE online AND players > 0)                 AS active_servers,
+            (SELECT daily_peak    FROM stats_24h)                                  AS daily_peak,
+            (SELECT weekly_peak   FROM stats_long)                                 AS weekly_peak,
+            (SELECT all_time_peak FROM peak_bucket)                                AS all_time_peak,
+            (SELECT uptime_24h    FROM stats_24h)                                  AS uptime_24h,
+            (SELECT uptime_7d     FROM stats_long)                                 AS uptime_7d,
+            (SELECT peak_date   FROM peak_bucket)                                  AS all_time_peak_date,
+            (SELECT players_now     FROM network_now)                              AS players_now,
+            (SELECT online_servers  FROM network_now)                              AS online_servers,
+            (SELECT players         FROM site_stats)                               AS site_players,
+            (SELECT avg_players     FROM stats_24h)                                  AS avg_24h,
             (SELECT id          FROM top_server)                                   AS top_server_id,
-            (SELECT host        FROM top_server)                                   AS top_server_host,
-            (SELECT port        FROM top_server)                                   AS top_server_port,
             (SELECT players     FROM top_server)                                   AS top_server_players,
-            (SELECT server_name FROM top_server)                                   AS top_server_name
+            (SELECT server_name FROM top_server)                                   AS top_server_name,
+            (SELECT average      FROM rating_agg)                                  AS rating_average,
+            (SELECT review_count FROM rating_agg)                                  AS rating_count,
+            (SELECT avg_7d      FROM trend_1h)                                     AS trend_avg_7d,
+            (SELECT avg_prev_7d FROM trend_1h)                                     AS trend_avg_prev_7d,
+            (
+                SELECT COALESCE(json_agg(src ORDER BY src.servers DESC, src.name), CAST('[]' AS json))
+                FROM (
+                    -- Distinct families per list: a list that carries two aliases
+                    -- of one server still counts that server once.
+                    SELECT COALESCE(NULLIF(sl.display_name, ''), sl.name) AS name,
+                           sl.url,
+                           COUNT(DISTINCT gs.canonical_id)::int           AS servers
+                    FROM server_source_list ssl
+                    JOIN serverlists sl ON sl.id = ssl.serverlist_id AND sl.active
+                    JOIN group_servers gs ON gs.server_id = ssl.server_id
+                    GROUP BY sl.id, sl.name, sl.display_name, sl.url
+                ) src
+            )                                                                      AS sources
         FROM server_groups sg
         WHERE sg.id = :groupId
-    `, { replacements: { groupId }, type: QueryTypes.SELECT });
+    `, { replacements: { groupId, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT }, type: QueryTypes.SELECT });
 
     if (!row) return undefined;
+
+    const playersNow = Number(row.players_now) || 0;
+    const sitePlayers = Number(row.site_players) || 0;
 
     return {
         id:   row.id,
         name: row.name,
+        playersNow,
+        onlineServers: Number(row.online_servers) || 0,
+        // 0-1; the network is part of the site total, so this can't exceed 1.
+        siteShare: sitePlayers > 0 ? Math.min(1, playersNow / sitePlayers) : 0,
+        avg24h: Number(row.avg_24h) || 0,
         playerPeaks: {
-            allTime: row.all_time_peak ?? 0,
-            daily:   row.daily_peak   ?? 0,
-            weekly:  row.weekly_peak  ?? 0,
+            allTime: Number(row.all_time_peak) || 0,
+            allTimeDate: row.all_time_peak_date ?? null,
+            daily:   Number(row.daily_peak)   || 0,
+            weekly:  Number(row.weekly_peak)  || 0,
+        },
+        // Percent 0-100; null (not 0) when there are no samples in the window.
+        uptime: {
+            last24h: row.uptime_24h == null ? null : Number(row.uptime_24h),
+            last7d:  row.uptime_7d  == null ? null : Number(row.uptime_7d),
         },
         topServer: row.top_server_id
             ? {
                 id:      row.top_server_id,
-                host:    row.top_server_host,
-                port:    row.top_server_port,
                 players: row.top_server_players ?? 0,
                 name:    row.top_server_name,
             }
             : null,
         activeServers: parseInt(row.active_servers, 10) || 0,
         totalServers:  parseInt(row.total_servers,  10) || 0,
+        rating: {
+            // null, not 0, when nobody has reviewed the network.
+            average: row.rating_count > 0 && row.rating_average != null ? Number(row.rating_average) : null,
+            count:   Number(row.rating_count) || 0,
+        },
+        trend: {
+            avgPlayers7d:     row.trend_avg_7d == null ? null : Number(row.trend_avg_7d),
+            avgPlayersPrev7d: row.trend_avg_prev_7d == null ? null : Number(row.trend_avg_prev_7d),
+        },
+        sources: Array.isArray(row.sources)
+            ? row.sources.map((s: { name: string; url: string; servers: number }) => ({
+                name: s.name,
+                url: s.url,
+                servers: Number(s.servers) || 0,
+            }))
+            : [],
     };
 }

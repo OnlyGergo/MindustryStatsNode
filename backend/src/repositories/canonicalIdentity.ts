@@ -64,8 +64,13 @@ export function aggregateExcludeSql(alias?: string): string {
     return `${prefix}server_id IN (${familyMembersSql('NOT root.aggregate_exclude')})`;
 }
 
-/** The live address of a family: its newest non-retired member, root as fallback. */
-export const LIVE_MEMBER_SQL = `
+/**
+ * The live address of a family: its newest non-retired member, root as fallback.
+ * `where` (optional, sees the canonical row as `sc`) scopes the scan to some
+ * families before the DISTINCT ON sort, for callers that only need a few.
+ */
+export function liveMemberSql(where?: string | null): string {
+    return `
     SELECT DISTINCT ON (sc.canonical_id)
            sc.canonical_id,
            s.id   AS live_server_id,
@@ -75,6 +80,7 @@ export const LIVE_MEMBER_SQL = `
            s.updated_at
     FROM server_canonical sc
     JOIN servers s ON s.id = sc.server_id
+    ${where ? `WHERE ${where}` : ''}
     -- The root is the oldest observation, which makes it a stable identity but
     -- a stale address; what a visitor needs is whatever the server answers on
     -- today.  Retired rows sort last so they only win when the whole family is
@@ -84,3 +90,7 @@ export const LIVE_MEMBER_SQL = `
              s.last_seen DESC NULLS LAST,
              s.id DESC
 `;
+}
+
+/** Unscoped live-member query (every family). */
+export const LIVE_MEMBER_SQL = liveMemberSql();

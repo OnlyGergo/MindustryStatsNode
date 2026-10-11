@@ -1,7 +1,7 @@
 import React from "react";
 import ServerItem from "./ServerItem";
 import { ServerElement } from "../../../../common/models/serverData.ts";
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 
 const ServerGroup: React.FC<{
   name: string;
@@ -20,8 +20,6 @@ const ServerGroup: React.FC<{
   isSelected,
   networkId
 }) => {
-  const navigate = useNavigate();
-
   const onlineServersCount = servers.filter((s) => s.online).length;
   const totalPlayers = servers.reduce(
     (sum, server) =>
@@ -48,11 +46,10 @@ const ServerGroup: React.FC<{
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate({to: `/network/${networkId}`}).then(() => {});
-            }}
+          <Link
+            to="/network/$networkId"
+            params={{ networkId: String(networkId) }}
+            onClick={(e) => e.stopPropagation()}
             className={`p-1.5 ${isSelected ? "button-accent" : "button-secondary"}`}
             title="View network graph"
           >
@@ -69,7 +66,7 @@ const ServerGroup: React.FC<{
                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
               />
             </svg>
-          </button>
+          </Link>
           <span className="text-lg font-bold text-accent">
             {totalPlayers}
           </span>

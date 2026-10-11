@@ -2,7 +2,7 @@ import React from "react";
 import { formatTextLines, removeColors } from "../../util/mindustry.ts";
 import { countryCodeToFlag } from "../../util/general.ts";
 import { ServerElement } from "../../../../common/models/serverData.ts";
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { CompactStarRatingDisplay } from "../detail/StarRating.tsx";
 
 const ServerItem: React.FC<{
@@ -16,16 +16,16 @@ const ServerItem: React.FC<{
     : "bg-status-offline text-status-offline border-status-offline";
 
   const flagEmoji = countryCodeToFlag(server.countryCode);
-  const navigate = useNavigate();
 
   return (
-    <div
+    <Link
+      to="/server/$serverId"
+      params={{ serverId: String(server.id) }}
       className={`p-4 cursor-pointer transition-colors flex items-start justify-between ${
         isSelected
           ? "bg-accent-muted border-l-4 border-default"
           : "hover:bg-accent-hover border-default"
       }`}
-      onClick={() => navigate({ to: `/server/${server.id}` })}
     >
       <div className="flex flex-col flex-1 min-w-0 mr-4">
         {serverData?.serverName && (
@@ -75,7 +75,7 @@ const ServerItem: React.FC<{
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 };
 

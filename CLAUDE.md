@@ -22,6 +22,7 @@ All connections to write database: `collector/internal/repository/*`
 All connections to write user-content DB: `backend/src/repositories/user/*`
 Canonical-identity SQL fragments (used by every read that touches a server): `backend/src/repositories/canonicalIdentity.ts`
 Bucket-width/tier maths shared by the chart queries: `backend/src/repositories/aggregateTiers.ts`
+Ownership (F3): admin-only writes `backend/src/repositories/user/ownerRepository.ts`, reads + `canManageServer` `backend/src/repositories/ownershipRepository.ts`, routes `backend/src/api/routes/admin.ts`, UI `/admin/owners`
 Reviews: write path `backend/src/repositories/user/reviewRepository.ts`, public reads `backend/src/repositories/reviewReadRepository.ts`, routes `backend/src/api/routes/reviews.ts`, shared contracts `common/models/reviews.ts` + aspect list `common/models/ratings.ts`
 
 ## Libraries
@@ -83,6 +84,10 @@ One review per user per server **family**, stored in `server_reviews` against th
 - Ranking: the server list carries `rating` (raw mean, for display), `ratingCount`, and `ratingScore` (Bayesian `(C·m + Σ)/(C + n)`, C = 5, m = site-wide mean, sort only) — see `reviewScoring.ts`.
 - Aspect ratings (F9) are fixed nullable columns (`rating_maps`, …). Their SQL, validation and UI are all derived from `REVIEW_ASPECTS` in `common/models/ratings.ts`, so a new aspect is a migration plus one line there — never hand-list the aspect columns.
 - Review bodies are plain text (≤ 2000 chars, normalised by `reviewBody.ts`), rendered with React escaping and `whitespace-pre-line`; never `dangerouslySetInnerHTML`. `common/profanity.ts` is a stub until F7.
+
+## Ownership + admin panel
+
+`owners` rows grant one user either a whole network (`server_group_id`) or one server family (`server_id`, the raw id the admin entered); a CHECK enforces exactly one, and several users may co-own a target. Owners are assigned **only by admins** at `/admin/owners` (`/api/admin/owners`); there is deliberately no self-service claim flow. `canManageServer(user, rawServerId)` is the one check later features use: admin, OR owns the family root's `server_group_id`, OR owns any member of the family, so both survive merges. `/api/auth/me` reports `owns` as network ids + public canonical server ids. Every `/api/admin/*` route is `requireAdmin` (writes also `requireOrigin`) and never cached; new admin sections are a child route under `frontend/src/routes/admin/` plus one entry in `ADMIN_TABS` in `admin.tsx`.
 
 ## Notable Design Decisions
 
