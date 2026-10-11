@@ -217,6 +217,38 @@ export function buildShareData(
     return { labels, data: [xs, ...cumulative.reverse()], players, totals };
 }
 
+/**
+ * Absolute-value stacked view: same ShareData shape as buildShareData (so
+ * buildShareSeries and the tooltip helpers work unchanged) but `data` holds
+ * cumulative player counts instead of percentages.  `players` rows are given
+ * bottom of stack first; the stack height at each timestamp is their sum, and a
+ * timestamp where `totals` is null (every row null) stays a gap.
+ */
+export function buildStackedData(
+    timestamps: number[],          // milliseconds
+    labels: string[],
+    players: (number | null)[][],
+): ShareData {
+    const xs = timestamps.map((ts) => ts / 1000);
+    const totals = timestamps.map((_, i) => {
+        if (players.every((row) => row[i] == null)) return null;
+        let sum = 0;
+        for (const row of players) sum += row[i] ?? 0;
+        return sum;
+    });
+
+    const running = timestamps.map(() => 0);
+    const cumulative = players.map((row) =>
+        row.map((v, i) => {
+            if (totals[i] == null) return null;
+            running[i] += v ?? 0;
+            return running[i];
+        }),
+    );
+
+    return { labels, data: [xs, ...cumulative.reverse()], players, totals };
+}
+
 function shareColor(label: string): string {
     return label === SHARE_OTHER_LABEL ? "#a3a3a3" : getModeColor(label);
 }

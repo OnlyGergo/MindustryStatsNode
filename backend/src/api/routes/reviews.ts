@@ -8,6 +8,7 @@
 
 import { Elysia, status, t } from 'elysia';
 import { authPlugin } from '../auth/plugin.js';
+import { paginationKey, parsePagination } from '../lib/pagination.js';
 import { AspectsBody, IdParam, ReviewsQuery, StrictNoQuery } from '../lib/schemas.js';
 import { withCache, clearCaches } from '../middleware/cache.js';
 import { getReviewPage, getReviewSummary } from '../../repositories/reviewReadRepository.js';
@@ -16,7 +17,6 @@ import { normalizeReviewBody } from '../../repositories/user/reviewBody.js';
 import { REVIEW_BODY_MAX, type ReviewSort } from '../../../../common/models/reviews.js';
 import { containsProfanity } from '../../../../common/profanity.js';
 
-const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 10;
 const MAX_PER_PAGE = 50;
 
@@ -24,8 +24,7 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
   .use(authPlugin)
 
   .get('/servers/:id/reviews', async ({ params, query }) => {
-    const page = Math.max(parseInt(query.page ?? '', 10) || DEFAULT_PAGE, 1);
-    const perPage = Math.min(Math.max(parseInt(query.perPage ?? '', 10) || DEFAULT_PER_PAGE, 1), MAX_PER_PAGE);
+    const { page, perPage } = parsePagination(query, DEFAULT_PER_PAGE, MAX_PER_PAGE);
     const sort: ReviewSort = query.sort ?? 'newest';
 
     return getReviewPage(params.id, page, perPage, sort);
@@ -35,7 +34,7 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
     ...withCache({
       name: 'reviews',
       ttlMs: 30_000,
-      getKey: ({ path, params, query }) => `${path}:${params.id}:${query.page ?? '1'}:${query.perPage ?? '10'}:${query.sort ?? 'newest'}`,
+      getKey: ({ path, params, query }) => `${path}:${params.id}:${paginationKey(parsePagination(query, DEFAULT_PER_PAGE, MAX_PER_PAGE))}:${query.sort ?? 'newest'}`,
     }),
   })
 

@@ -20,51 +20,63 @@ function getEndpointBaseUrl(id: number | string, type: HistoryType): string {
   }
 }
 
-export function useHistory<T>(id: number | string, type: HistoryType) {
+/**
+ * Range selection shared by every network/server history chart: the selected
+ * preset or custom dates, their validation, and the resulting query string
+ * (`null` while there is nothing valid to fetch yet).
+ */
+export function useHistoryRange() {
   const [selectedRange, setSelectedRange] = useState<DateRangeOption>("1d");
   const [customStartDate, setCustomStartDate] = useState<string>("");
   const [customEndDate, setCustomEndDate] = useState<string>("");
 
+  let dateError: string | null = null;
+  let queryString: string | null = `range=${selectedRange}`;
+
+  if (selectedRange === "custom") {
+    queryString = null;
+    if (customStartDate && customEndDate) {
+      const startTs = new Date(customStartDate).getTime();
+      const endTs = new Date(customEndDate).getTime();
+      if (endTs <= startTs) {
+        dateError = "End date must be after start date";
+      } else {
+        queryString = `startDate=${startTs}&endDate=${endTs}`;
+      }
+    }
+  }
+
+  return {
+    selectedRange,
+    setSelectedRange,
+    customStartDate,
+    setCustomStartDate,
+    customEndDate,
+    setCustomEndDate,
+    dateError,
+    queryString,
+  };
+}
+
+export function useHistory<T>(id: number | string, type: HistoryType) {
+  const range = useHistoryRange();
+  const { queryString } = range;
+
   const [chartData, setChartData] = useState<T[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [dateError, setDateError] = useState<string | null>(null);
 
   const endpointBaseUrl = getEndpointBaseUrl(id, type);
 
   useEffect(() => {
-    // 1. Date range validation
-    if (selectedRange === "custom") {
-      if (!customStartDate || !customEndDate) {
-        setDateError(null);
-        return;
-      }
+    if (queryString === null) return;
 
-      const startTs = new Date(customStartDate).getTime();
-      const endTs = new Date(customEndDate).getTime();
-
-      if (endTs <= startTs) {
-        setDateError("End date must be after start date");
-        return;
-      }
-      setDateError(null);
-    }
-
-    // 2. Fetch history
     const fetchHistoryData = async () => {
       setLoading(true);
       setFetchError(null);
 
       try {
-        let url = `${endpointBaseUrl}?range=${selectedRange}`;
-
-        if (selectedRange === "custom" && customStartDate && customEndDate) {
-          const startTs = new Date(customStartDate).getTime();
-          const endTs = new Date(customEndDate).getTime();
-          url = `${endpointBaseUrl}?startDate=${startTs}&endDate=${endTs}`;
-        }
-
-        const response = await fetch(url);
+        const response = await fetch(`${endpointBaseUrl}?${queryString}`);
         if (!response.ok) {
           throw new Error(`Status ${response.status}: ${response.statusText}`);
         }
@@ -80,18 +92,12 @@ export function useHistory<T>(id: number | string, type: HistoryType) {
     };
 
     fetchHistoryData();
-  }, [selectedRange, customStartDate, customEndDate, endpointBaseUrl]);
+  }, [queryString, endpointBaseUrl]);
 
   return {
     chartData,
     loading,
     fetchError,
-    dateError,
-    selectedRange,
-    setSelectedRange,
-    customStartDate,
-    setCustomStartDate,
-    customEndDate,
-    setCustomEndDate,
+    ...range,
   };
 }

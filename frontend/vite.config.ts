@@ -38,8 +38,8 @@ export default defineConfig({
       devOptions: { enabled: false },
       manifest: {
         id: '/',
-        name: 'Mindustry Stats',
-        short_name: 'Mindustry Stats',
+        name: 'Mindustry Tracker',
+        short_name: 'Mindustry Tracker',
         description: 'Real-time statistics and analytics for Mindustry servers.',
         start_url: '/',
         scope: '/',

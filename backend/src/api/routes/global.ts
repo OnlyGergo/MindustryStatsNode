@@ -3,7 +3,7 @@ import { getGlobalPlayerHistory } from '../../repositories/StatsRepository.js';
 import { getGlobalGamemodeHistory } from '../../repositories/GlobalStatsRepository.js';
 import { ApiPacker } from '../../../../common/Packer.js';
 import { StrictHistoryQuery, StrictRangeQuery } from '../lib/schemas.js';
-import { parseTimestamp, resolveRange } from '../lib/timeRange.js';
+import { parseTimestamp, rangeKey, resolveRange } from '../lib/timeRange.js';
 import { withCache } from '../middleware/cache.js';
 
 export const globalRoutes = new Elysia({ prefix: '/api/global' })
@@ -14,7 +14,7 @@ export const globalRoutes = new Elysia({ prefix: '/api/global' })
     query: StrictRangeQuery,
     ...withCache({
       ttlMs: 300_000, // 5 minutes TTL
-      getKey: ({ path, query }) => `${path}:${query.range || ''}`,
+      getKey: ({ path, query }) => `${path}:${rangeKey(query.range)}`,
     }),
   })
 
@@ -28,6 +28,6 @@ export const globalRoutes = new Elysia({ prefix: '/api/global' })
     query: StrictHistoryQuery,
     ...withCache({
       ttlMs: 600_000, // 10 minutes TTL
-      getKey: ({ path, query }) => `${path}:${query.range || ''}:${query.startDate || ''}:${query.endDate || ''}`,
+      getKey: ({ path, query }) => `${path}:${rangeKey(query.range, query.startDate, query.endDate)}`,
     }),
   });
