@@ -14,5 +14,26 @@
     <path fill="#b0bac0" d="M203 266L160 309L240 389H256V313H250Z"/>
     <path fill="#f4f4f4" d="M256 313H262L309 266L352 309L272 389H256Z"/>
   </g>
+  <defs><clipPath id="silhouette"><path d="M184 91H328L416 179V344L339 421H173L96 344V179Z"/></clipPath></defs>
+  <g id="radar" clip-path="url(#silhouette)">
+    <path fill="#0f0f0f" fill-opacity="0.62" d="M184 91H328L416 179V344L339 421H173L96 344V179Z"/>
+    <g fill="none" stroke="#ff6b35" stroke-linecap="round">
+      <circle cx="256" cy="256" r="150" stroke-width="12" stroke-opacity="0.45"/>
+      <circle cx="256" cy="256" r="100" stroke-width="12" stroke-opacity="0.7"/>
+      <circle cx="256" cy="256" r="50" stroke-width="12" stroke-opacity="0.95"/>
+      <path d="M256 96V416M96 256H416" stroke-width="8" stroke-opacity="0.55"/>
+    </g>
+    <path fill="#ff6b35" fill-opacity="0.7" d="M256 256L415.4 298.7A165 165 0 0 0 418.5 227.3Z"/>
+    <path fill="#ff6b35" fill-opacity="0.5" d="M256 256L418.5 227.3A165 165 0 0 0 391.2 161.4Z"/>
+    <path fill="#ff6b35" fill-opacity="0.3" d="M256 256L391.2 161.4A165 165 0 0 0 338.5 113.1Z"/>
+    <path fill="#ff6b35" fill-opacity="0.14" d="M256 256L338.5 113.1A165 165 0 0 0 270.4 91.6Z"/>
+    <path d="M256 256L415.4 298.7" stroke="#ff6b35" stroke-width="14" stroke-linecap="round"/>
+    <g fill="#ffd2bf" stroke="#0f0f0f" stroke-width="4">
+      <circle cx="176" cy="196" r="14"/>
+      <circle cx="320" cy="160" r="14"/>
+      <circle cx="196" cy="340" r="12"/>
+    </g>
+    <circle cx="256" cy="256" r="12" fill="#ff6b35"/>
+  </g>
   <path id="frame" fill="#404049" fill-rule="evenodd" d="M184 91H328L416 179V344L339 421H173L96 344V179Z M224 123V213L240 229H272L288 213V123H315L384 192V331L326 389H186L128 331V192L197 123Z"/>
 </svg>

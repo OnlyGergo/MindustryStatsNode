@@ -19,7 +19,6 @@
     "uplot": "^1.6.32"
   },
   "devDependencies": {
-    "vite-plugin-svgr": "^5.2.0",
     "@eslint/js": "^10.0.1",
     "@tanstack/react-start-plugin": "^1.131.50",
     "@types/react": "^19.3.0",
@@ -33,6 +32,8 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~7.0.2",
     "typescript-eslint": "^8.70.1",
-    "vite": "^8.3.1"
+    "vite": "^8.3.1",
+    "vite-plugin-pwa": "^2.0.0",
+    "vite-plugin-svgr": "^5.2.0"
   }
 }

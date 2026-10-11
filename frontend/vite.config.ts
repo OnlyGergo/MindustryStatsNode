@@ -3,6 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
+import { VitePWA } from 'vite-plugin-pwa';
 
 const backend = { target: 'http://localhost:3000', changeOrigin: true };
 
@@ -29,5 +30,32 @@ export default defineConfig({
     tanstackStart({}),
     viteReact(),
     svgr(),
+    // Manifest only: no service worker, no offline caching (live SSR stats must never be served stale).
+    VitePWA({
+      injectRegister: false,
+      manifestFilename: 'manifest.webmanifest',
+      pwaAssets: { disabled: true },
+      devOptions: { enabled: false },
+      manifest: {
+        id: '/',
+        name: 'Mindustry Stats',
+        short_name: 'Mindustry Stats',
+        description: 'Real-time statistics and analytics for Mindustry servers.',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        orientation: 'any',
+        background_color: '#0f0f0f',
+        theme_color: '#0f0f0f',
+        categories: ['games', 'utilities'],
+        lang: 'en',
+        icons: [
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+        ],
+      },
+    }),
   ]
 });
