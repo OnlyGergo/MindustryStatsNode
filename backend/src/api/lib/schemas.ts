@@ -41,5 +41,7 @@ const aspectFields = Object.fromEntries(
 export const AspectsBody = t.Optional(t.Partial(t.Object(aspectFields, { additionalProperties: false })));
 
 // Shared path param schemas — t.Numeric() coerces and rejects non-numeric ids with a 422
-export const IdParam = t.Object({ id: t.Numeric() });
-export const ModeIdParam = t.Object({ modeId: t.Numeric() });
+// Integers only: `5.5` / `1e0` would otherwise be distinct (always-miss) cache keys for nothing.
+const IntId = () => t.Numeric({ minimum: 1, multipleOf: 1 });
+export const IdParam = t.Object({ id: IntId() });
+export const ModeIdParam = t.Object({ modeId: IntId() });

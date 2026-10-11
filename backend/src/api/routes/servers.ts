@@ -5,7 +5,8 @@ import { getMapHistory, getMotdHistory } from '../../repositories/serverReposito
 import { getAggregatedHistory } from '../../repositories/StatsRepository.js';
 import { ApiPacker } from '../../../../common/Packer.js';
 import { IdParam, StrictHistoryQuery, StrictNoQuery, StrictPaginationQuery } from '../lib/schemas.js';
-import { parseTimestamp, resolveRange } from '../lib/timeRange.js';
+import { parseTimestamp, rangeKey, resolveRange } from '../lib/timeRange.js';
+import { paginationKey, parsePagination } from '../lib/pagination.js';
 import { withCache } from '../middleware/cache.js';
 const logger = createLogger('Api');
 
@@ -33,34 +34,30 @@ export const serverRoutes = new Elysia({ prefix: '/api' })
   })
 
   .get('/servers/:id/motd-history', async ({ params, query }) => {
-    const { page = '1', perPage = '20' } = query;
-    const pageNumber = parseInt(page, 10) || 1;
-    const perPageNumber = Math.min(parseInt(perPage, 10) || 20, 100);
+    const { page, perPage } = parsePagination(query, 20, 100);
 
-    const result = await getMotdHistory(params.id, pageNumber, perPageNumber);
+    const result = await getMotdHistory(params.id, page, perPage);
     return result.data;
   }, {
     params: IdParam,
     query: StrictPaginationQuery,
     ...withCache({
       ttlMs: 300_000, // 5 minutes TTL
-      getKey: ({ path, params, query }) => `${path}:${params.id}:${query.page || '1'}:${query.perPage || '20'}`,
+      getKey: ({ path, params, query }) => `${path}:${params.id}:${paginationKey(parsePagination(query, 20, 100))}`,
     }),
   })
 
   .get('/servers/:id/map-history', async ({ params, query }) => {
-    const { page = '1', perPage = '20' } = query;
-    const pageNumber = parseInt(page, 10) || 1;
-    const perPageNumber = Math.min(parseInt(perPage, 10) || 20, 100);
+    const { page, perPage } = parsePagination(query, 20, 100);
 
-    const result = await getMapHistory(params.id, pageNumber, perPageNumber);
+    const result = await getMapHistory(params.id, page, perPage);
     return result.data;
   }, {
     params: IdParam,
     query: StrictPaginationQuery,
     ...withCache({
       ttlMs: 300_000, // 5 minutes TTL
-      getKey: ({ path, params, query }) => `${path}:${params.id}:${query.page || '1'}:${query.perPage || '20'}`,
+      getKey: ({ path, params, query }) => `${path}:${params.id}:${paginationKey(parsePagination(query, 20, 100))}`,
     }),
   })
 
@@ -74,6 +71,6 @@ export const serverRoutes = new Elysia({ prefix: '/api' })
     query: StrictHistoryQuery,
     ...withCache({
       ttlMs: 300_000, // 5 minutes TTL
-      getKey: ({ path, params, query }) => `${path}:${params.id}:${query.range || ''}:${query.startDate || ''}:${query.endDate || ''}`,
+      getKey: ({ path, params, query }) => `${path}:${params.id}:${rangeKey(query.range, query.startDate, query.endDate)}`,
     }),
   });

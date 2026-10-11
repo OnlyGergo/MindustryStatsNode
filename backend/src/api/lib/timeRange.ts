@@ -50,13 +50,32 @@ export function resolveRange(range?: string, startDate?: number, endDate?: numbe
     startDate != null && endDate != null &&
     startDate >= 0 && endDate > startDate && endDate <= maxEnd
   ) {
-    const start = Math.max(startDate, endDate - MAX_WINDOW_HOURS * HOUR_MS);
-    const hoursBack = Math.ceil((endDate - start) / HOUR_MS);
+    const clampedStart = Math.max(startDate, endDate - MAX_WINDOW_HOURS * HOUR_MS);
+    const hoursBack = Math.ceil((endDate - clampedStart) / HOUR_MS);
     const bucketMinutes = Math.max(1, Math.round((hoursBack * 60) / apiConfig.GRAPH_MAX_POINTS));
-    return { hoursBack, bucketMinutes, startDate: start, endDate };
+
+    // Snap both ends down to the bucket width. Without this every distinct millisecond
+    // value is a distinct cache key, so a client can defeat the response cache (and flood
+    // the DB) just by nudging startDate/endDate. Snapped, a window can only land on one
+    // of a bounded set of keys, and the bucket grid is what the data is cut on anyway.
+    const bucketMs = bucketMinutes * 60_000;
+    const start = Math.floor(clampedStart / bucketMs) * bucketMs;
+    const end = Math.floor(endDate / bucketMs) * bucketMs;
+    if (end > start) return { hoursBack, bucketMinutes, startDate: start, endDate: end };
+    // Window narrower than one bucket: fall through to the preset default below.
   }
 
   const hoursBack = (range && HOURS_BACK[range]) || 24;
   const bucketMinutes = Math.max(1, Math.round((hoursBack * 60) / apiConfig.GRAPH_MAX_POINTS));
   return { hoursBack, bucketMinutes };
+}
+
+/**
+ * Canonical cache-key fragment for a resolved range. Built from the *resolved* window,
+ * never the raw query, so `range=bogus`, `range=`, no range, and a half-supplied custom
+ * window (which resolveRange ignores) all share the one entry they actually produce.
+ */
+export function rangeKey(range?: string, startDate?: string, endDate?: string): string {
+  const r = resolveRange(range, parseTimestamp(startDate), parseTimestamp(endDate));
+  return r.startDate != null ? `${r.startDate}-${r.endDate}` : `${r.hoursBack}h`;
 }

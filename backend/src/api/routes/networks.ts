@@ -3,7 +3,7 @@ import * as serverRepository from '../../repositories/serverRepository.js';
 import { getNetworkPlayerHistory } from '../../repositories/StatsRepository.js';
 import { ApiPacker } from '../../../../common/Packer.js';
 import { IdParam, StrictNoQuery, StrictRangeQuery } from '../lib/schemas.js';
-import { resolveRange } from '../lib/timeRange.js';
+import { rangeKey, resolveRange } from '../lib/timeRange.js';
 import { withCache } from '../middleware/cache.js';
 
 export const networkRoutes = new Elysia({ prefix: '/api/networks' })
@@ -15,7 +15,7 @@ export const networkRoutes = new Elysia({ prefix: '/api/networks' })
     query: StrictRangeQuery,
     ...withCache({
       ttlMs: 600_000, // 10 minutes TTL
-      getKey: ({ path, params, query }) => `${path}:${params.id}:${query.range || ''}`,
+      getKey: ({ path, params, query }) => `${path}:${params.id}:${rangeKey(query.range)}`,
     }),
   })
 

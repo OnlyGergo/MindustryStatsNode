@@ -4,7 +4,7 @@ import { removeColorsFromMindustry } from '../../../../common/Mindustry.js';
 import { type ServerShareEntry } from '../../../../common/models/GlobalStatsTypes.js';
 import { ApiPacker } from '../../../../common/Packer.js';
 import { ModeIdParam, StrictHistoryQuery, StrictNoQuery } from '../lib/schemas.js';
-import { parseTimestamp, resolveRange } from '../lib/timeRange.js';
+import { parseTimestamp, rangeKey, resolveRange } from '../lib/timeRange.js';
 import { withCache } from '../middleware/cache.js';
 
 export const gamemodeRoutes = new Elysia({ prefix: '/api/gamemodes' })
@@ -29,6 +29,6 @@ export const gamemodeRoutes = new Elysia({ prefix: '/api/gamemodes' })
     query: StrictHistoryQuery,
     ...withCache({
       ttlMs: 600_000, // 10 minutes TTL
-      getKey: ({ path, params, query }) => `${path}:${params.modeId}:${query.range || ''}:${query.startDate || ''}:${query.endDate || ''}`,
+      getKey: ({ path, params, query }) => `${path}:${params.modeId}:${rangeKey(query.range, query.startDate, query.endDate)}`,
     }),
   });

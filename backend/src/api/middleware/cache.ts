@@ -173,11 +173,13 @@ export const withCache = <TQuery = any, TParams = any>(options: CacheOptions<TQu
   const methods = new Set((options.methods ?? ['GET', 'HEAD']).map((m) => m.toUpperCase()))
   const maxBodyBytes = options.maxBodyBytes ?? 1024 * 1024
 
+  // Key on the matched route pattern, not the raw URL path: `/api/servers/` and
+  // `/api/servers` (Elysia matches both) are one resource, and must not be two entries.
   const keyOf = (ctx: any): string =>
     getKey({
       query: ctx.query as TQuery,
       params: ctx.params as TParams,
-      path: ctx.path,
+      path: (ctx.route as string | undefined) ?? String(ctx.path).replace(/\/+$/, ''),
       method: ctx.request?.method ?? 'GET',
     })
 
@@ -216,6 +218,11 @@ export const withCache = <TQuery = any, TParams = any>(options: CacheOptions<TQu
       }
 
       store.hits++
+
+      // Refresh recency (Map keeps insertion order), so a flood of one-off keys evicts
+      // cold entries rather than the hot ones that are actually being served.
+      store.map.delete(key)
+      store.map.set(key, cached)
 
       if (cached.kind === 'response') {
         // A Response body is a one-shot stream, so the stored bytes are rehydrated
