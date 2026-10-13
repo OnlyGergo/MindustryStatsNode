@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { EmptyState } from "../../components/detail/EmptyState.tsx";
 import ServerDetail from "../../components/detail/ServerDetail.tsx";
 import { getBaseUrl } from "../../util/getApi.ts";
+import { fetchCustomisation } from "../../util/customisation.ts";
 import { DetailShell } from "../../components/server-list/DetailShell.tsx";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 import { docTitle } from "../../util/pageTitle.ts";
@@ -37,10 +38,14 @@ export const Route = createFileRoute("/_browse/server/$serverId")({
 
     try {
       const baseUrl = getBaseUrl();
-      const response = await fetch(`${baseUrl}/api/servers/${serverId}/details`);
+      // In parallel; fetchCustomisation never throws, so it can't break the page.
+      const [response, customisation] = await Promise.all([
+        fetch(`${baseUrl}/api/servers/${serverId}/details`),
+        fetchCustomisation(baseUrl, "servers", serverId),
+      ]);
       if (response.ok) {
         serverDataElement = await response.json();
-        return { serverDataElement };
+        return { serverDataElement, customisation };
       } else {
         const errorText = await response.text();
         return { error: errorText };
@@ -56,11 +61,11 @@ export const Route = createFileRoute("/_browse/server/$serverId")({
 });
 
 function ServerComponent() {
-  const { serverDataElement, error } = Route.useLoaderData();
+  const { serverDataElement, customisation, error } = Route.useLoaderData();
   return (
     <DetailShell>
       {serverDataElement ? (
-        <ServerDetail serverDataElement={serverDataElement} />
+        <ServerDetail serverDataElement={serverDataElement} customisation={customisation ?? null} />
       ) : (
         <EmptyState
           title="Select a Server or Network"

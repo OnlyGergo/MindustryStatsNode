@@ -3,6 +3,7 @@ import { DetailShell } from "../../components/server-list/DetailShell.tsx";
 import { EmptyState } from "../../components/detail/EmptyState.tsx";
 import NetworkDetail from "../../components/detail/NetworkDetail.tsx";
 import { getBaseUrl } from "../../util/getApi.ts";
+import { fetchCustomisation } from "../../util/customisation.ts";
 import { NetworkDetails } from "../../../../common/models/serverData";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 import { docTitle } from "../../util/pageTitle.ts";
@@ -23,10 +24,13 @@ export const Route = createFileRoute("/_browse/network/$networkId")({
     const { networkId } = params;
     try {
       const baseUrl = getBaseUrl();
-      const r = await fetch(`${baseUrl}/api/networks/${networkId}/details`);
+      const [r, customisation] = await Promise.all([
+        fetch(`${baseUrl}/api/networks/${networkId}/details`),
+        fetchCustomisation(baseUrl, "networks", networkId),
+      ]);
       if (r.ok) {
         const data: NetworkDetails = await r.json();
-        return { details: data };
+        return { details: data, customisation };
       }
       return { error: "Failed to fetch network details" };
     } catch (err) {
@@ -40,11 +44,11 @@ export const Route = createFileRoute("/_browse/network/$networkId")({
 });
 
 function NetworkComponent() {
-  const { details, error } = Route.useLoaderData();
+  const { details, customisation, error } = Route.useLoaderData();
   return (
       <DetailShell>
         {details ? (
-            <NetworkDetail details={details} />
+            <NetworkDetail details={details} customisation={customisation ?? null} />
         ) : (
             <EmptyState
                 title="Unexpected Error"

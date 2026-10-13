@@ -1,4 +1,5 @@
 import React from "react";
+import { useRouter } from "@tanstack/react-router";
 import ServerHistoryChart from "./ServerHistoryChart.tsx";
 import MapHistoryTable from "./table/MapHistoryTable.tsx";
 import MotdHistoryTable from "./table/MotdHistoryTable.tsx";
@@ -14,9 +15,23 @@ import {
   ServerDetails,
   ServerElement,
 } from "../../../../common/models/serverData.ts";
+import CustomisePanel from "./CustomisePanel.tsx";
+import { useAuth } from "../../context/AuthContext.tsx";
+import { customisationStyle } from "../../util/customisation.ts";
+import type { PublicCustomisation } from "../../../../common/models/customisation.ts";
 import { getModeName } from "../../../../common/Gamemode.ts";
 
-const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement }> = ({ serverDataElement }) => {
+const ServerDetail: React.FC<{
+  serverDataElement: ServerDetails & ServerElement;
+  customisation: PublicCustomisation | null;
+}> = ({ serverDataElement, customisation }) => {
+  const { me } = useAuth();
+  const router = useRouter();
+  const canCustomise =
+    !!me &&
+    (me.isAdmin ||
+      me.owns.servers.includes(serverDataElement.id) ||
+      me.owns.networks.includes(serverDataElement.groupId));
   const serverData = serverDataElement.currentData;
   const serverStatus = serverDataElement.online
     ? "Online"
@@ -35,7 +50,7 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
   const reviews = useServerReviews(serverDataElement.id);
 
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
+    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary" style={customisationStyle(customisation)}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
@@ -125,6 +140,13 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
             </div>
           )}
         </div>
+
+        {canCustomise && (
+          <CustomisePanel
+            target={{ serverId: serverDataElement.id }}
+            onSaved={() => void router.invalidate()}
+          />
+        )}
 
         {/* Player Peaks and Uptime */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">

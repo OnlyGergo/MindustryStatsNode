@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import NetworkHistoryChart from "./NetworkHistoryChart.tsx";
 import NetworkServerShare from "./NetworkServerShare.tsx";
 import NetworkActivity from "./NetworkActivity.tsx";
@@ -9,14 +9,24 @@ import NetworkStatsRow from "./NetworkStatsRow.tsx";
 import NetworkSources from "./NetworkSources.tsx";
 import ShareButton from "../ShareButton.tsx";
 import { NetworkDetails } from "../../../../common/models/serverData.ts";
+import CustomisePanel from "./CustomisePanel.tsx";
+import { useAuth } from "../../context/AuthContext.tsx";
+import { customisationStyle } from "../../util/customisation.ts";
+import type { PublicCustomisation } from "../../../../common/models/customisation.ts";
 import { removeColors } from "../../util/mindustry.ts";
 
-const NetworkDetail: React.FC<{ details: NetworkDetails }> = ({ details }) => {
+const NetworkDetail: React.FC<{ details: NetworkDetails; customisation: PublicCustomisation | null }> = ({
+  details,
+  customisation,
+}) => {
+  const { me } = useAuth();
+  const router = useRouter();
+  const canCustomise = !!me && (me.isAdmin || me.owns.networks.includes(details.id));
   const { topServer, playerPeaks } = details;
   const peakDate = playerPeaks.allTimeDate ? new Date(playerPeaks.allTimeDate).getTime() : null;
 
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
+    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary" style={customisationStyle(customisation)}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-surface-secondary border border-subtle backdrop-blur-md rounded p-4 sm:p-6 mb-4 sm:mb-6">
@@ -54,6 +64,13 @@ const NetworkDetail: React.FC<{ details: NetworkDetails }> = ({ details }) => {
             </div>
           )}
         </div>
+
+        {canCustomise && (
+          <CustomisePanel
+            target={{ networkId: details.id }}
+            onSaved={() => void router.invalidate()}
+          />
+        )}
 
         {/* Player Peaks */}
         <div className="bg-surface-secondary border border-subtle p-4 sm:p-6 rounded mb-4 sm:mb-6">
