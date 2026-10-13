@@ -23,6 +23,7 @@ All connections to write user-content DB: `backend/src/repositories/user/*`
 Canonical-identity SQL fragments (used by every read that touches a server): `backend/src/repositories/canonicalIdentity.ts`
 Bucket-width/tier maths shared by the chart queries: `backend/src/repositories/aggregateTiers.ts`
 Ownership (F3): admin-only writes `backend/src/repositories/user/ownerRepository.ts`, reads + `canManageServer` `backend/src/repositories/ownershipRepository.ts`, routes `backend/src/api/routes/admin.ts`, UI `/admin/owners`
+Customisation (F4): owner routes `backend/src/api/routes/owner.ts`, image serving `backend/src/api/routes/uploads.ts`, sniffing/stripping `backend/src/api/lib/imageValidation.ts`, writes `backend/src/repositories/user/{customisationRepository,imageRepository,uploadStorage}.ts`, reads `backend/src/repositories/customisationReadRepository.ts`, contracts `common/models/customisation.ts`, UI `components/detail/CustomisePanel.tsx` + `/admin/images`
 Reviews: write path `backend/src/repositories/user/reviewRepository.ts`, public reads `backend/src/repositories/reviewReadRepository.ts`, routes `backend/src/api/routes/reviews.ts`, shared contracts `common/models/reviews.ts` + aspect list `common/models/ratings.ts`
 
 ## Libraries
@@ -88,6 +89,13 @@ One review per user per server **family**, stored in `server_reviews` against th
 ## Ownership + admin panel
 
 `owners` rows grant one user either a whole network (`server_group_id`) or one server family (`server_id`, the raw id the admin entered); a CHECK enforces exactly one, and several users may co-own a target. Owners are assigned **only by admins** at `/admin/owners` (`/api/admin/owners`); there is deliberately no self-service claim flow. `canManageServer(user, rawServerId)` is the one check later features use: admin, OR owns the family root's `server_group_id`, OR owns any member of the family, so both survive merges. `/api/auth/me` reports `owns` as network ids + public canonical server ids. Every `/api/admin/*` route is `requireAdmin` (writes also `requireOrigin`) and never cached; new admin sections are a child route under `frontend/src/routes/admin/` plus one entry in `ADMIN_TABS` in `admin.tsx`.
+
+## Customisation + uploads
+A network or server family can set an accent colour and a background image (`customisations`, one row per target, raw `server_id` like every user-content table). The public read merges **field by field**: the family's newest server row, then the family ROOT's network row; the network page shows the network row alone. Saving is a full replace (both fields null deletes the row so the network shows through) and collapses the family to one row under `pg_advisory_xact_lock(4001, canonical_id)`, same newest-row-wins idea as reviews.
+
+Uploads (`uploaded_images`) are PNG/JPEG/WebP only, never SVG. The format is sniffed from magic bytes, dimensions read from the header, and EXIF/XMP/text plus anything after the end marker stripped, all in pure JS (no decoding, no native deps); only the stripped bytes are written to `UPLOAD_DIR/<uuid>.<ext>`, with a server-generated name. Limits come from env (`UPLOAD_MAX_BYTES`, `UPLOAD_MAX_WIDTH`, `UPLOAD_MAX_HEIGHT`; defaults 2 MiB, 3840x2160), and an uploader may hold 10 pending images. An image starts `pending`; `GET /uploads/:id` serves it publicly only once approved (immutable cache, `nosniff`, sandbox CSP) and looks the session up only for pending ones, which admins alone can see — everything else is a plain 404. A background may only be set to an approved image uploaded for the same target (same network, or same server family). Rejecting, including taking down an approved image, deletes the file and un-sets it everywhere. Public reads are `withCache({ name: 'customisation' })`; every customisation write and every approve/reject calls `clearCaches('customisation')`.
+
+The frontend applies it as scoped CSS variables on the detail page wrapper (`util/customisation.ts`, which re-validates the colour and the `/uploads/<uuid>` URL before they reach a style attribute); `index.css` is never touched.
 
 ## Notable Design Decisions
 

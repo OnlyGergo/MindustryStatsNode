@@ -124,6 +124,8 @@ Needed before F4–F6. **Depends on N1, N2 and N5 in [`navigation-layout.md`](na
 - **Verify:** a non-admin gets 403 from the API. Assigning a network makes `canManageServer` true for every server in it, including after a merge.
 
 ## F4: Per-server customisation (core for you)
+> **Done.** Migrations `36_uploaded_images.sql` + `37_customisations.sql`. Deviations: uploads record the target they were made for, and a background can only use an approved image from the same network or server family. Metadata (EXIF/XMP/text) is stripped on upload, since files are public; EXIF orientation goes with it. A pre-buffer `parse` guard refuses a missing/oversized Content-Length, a missing session cookie or a bad Origin before the body is read. Max 10 pending uploads per user. Admins can also take down an approved image (reject), which deletes the file and un-sets it. `/uploads/*` has its own rate-limit tier. The customisation is fetched in the route loaders alongside the details, so SSR renders the accent from the first paint, and the network page applies its own defaults too.
+
 Covers the theme accent and background image.
 - **Migration `36_customisation.sql`:**
   - `customisations(id, server_group_id null, server_id null, accent_color char(7) null, background_image_id null, updated_by, updated_at)`, with CHECK exactly-one-target and a unique index per target
