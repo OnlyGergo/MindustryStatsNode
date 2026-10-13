@@ -10,6 +10,8 @@ import { globalRoutes } from './routes/global.js';
 import { gamemodeRoutes } from './routes/gamemodes.js';
 import { serverListRoutes } from './routes/serverLists.js';
 import { adminRoutes } from './routes/admin.js';
+import { ownerRoutes } from './routes/owner.js';
+import { uploadRoutes } from './routes/uploads.js';
 
 const logger = createLogger('Api');
 
@@ -39,6 +41,8 @@ export const api = new Elysia({ name: 'api' })
   .use(globalRoutes)
   .use(gamemodeRoutes)
   .use(serverListRoutes)
-  .use(adminRoutes);
+  .use(adminRoutes)
+  .use(ownerRoutes)
+  .use(uploadRoutes);
 
 export type Api = typeof api;

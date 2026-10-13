@@ -56,14 +56,14 @@ export function toAuthUser(row: SessionUser): AuthUser {
   };
 }
 
-type CookieJar = Record<string, { value?: unknown; set(config: Record<string, unknown>): unknown }>;
+export type CookieJar = Record<string, { value?: unknown; set(config: Record<string, unknown>): unknown }>;
 
 /**
  * Resolves the `sid` cookie to its user. When the lookup slid the DB expiry
  * forward, the cookie is re-issued with the same expiry, otherwise the browser
  * would still drop it 30 days after login however active the user is.
  */
-async function resolveUser(cookie: CookieJar): Promise<AuthUser | null> {
+export async function resolveUser(cookie: CookieJar): Promise<AuthUser | null> {
   const sid = cookie[SESSION_COOKIE];
   const token = sid?.value;
   if (!sid || typeof token !== 'string' || !token) return null;

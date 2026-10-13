@@ -12,10 +12,21 @@ import { Elysia, status, t } from 'elysia';
 import { authPlugin } from '../auth/plugin.js';
 import { listOwners, searchUsers } from '../../repositories/ownershipRepository.js';
 import { addOwner, removeOwner } from '../../repositories/user/ownerRepository.js';
+import { listImagesForAdmin } from '../../repositories/customisationReadRepository.js';
+import { approveImage, rejectImage, type ModerateImageResult } from '../../repositories/user/imageRepository.js';
+import { clearCaches } from '../middleware/cache.js';
+import { UPLOAD_ID_RE } from '../../../../common/models/customisation.js';
 
 /** bigserial ids travel as strings; reject anything that is not a plain positive integer. */
 const BigIdString = t.String({ pattern: '^[1-9][0-9]{0,18}$' });
 const PositiveInt = t.Integer({ minimum: 1, maximum: 2_147_483_647 });
+const ImageIdParam = t.Object({ id: t.String({ pattern: UPLOAD_ID_RE.source }) });
+
+function moderationError(result: Exclude<ModerateImageResult, { kind: 'ok' }>, action: string) {
+  return result.kind === 'not_found'
+    ? status(404, { error: 'Image not found' })
+    : status(409, { error: `Can't ${action} an image that is ${result.status}` });
+}
 
 export const adminRoutes = new Elysia({ prefix: '/api/admin' })
   .use(authPlugin)
@@ -72,4 +83,44 @@ export const adminRoutes = new Elysia({ prefix: '/api/admin' })
     requireAdmin: true,
     requireOrigin: true,
     params: t.Object({ id: BigIdString }),
+  })
+
+  // Owner images awaiting (or past) review -- F4. Never cached.
+  .get('/images', async ({ query, set }) => {
+    set.headers['cache-control'] = 'no-store';
+    return listImagesForAdmin(query.status ?? 'pending');
+  }, {
+    requireAdmin: true,
+    query: t.Object({
+      status: t.Optional(t.Union([t.Literal('pending'), t.Literal('approved'), t.Literal('rejected')])),
+    }, { additionalProperties: false }),
+  })
+
+  .post('/images/:id/approve', async ({ params, user, set }) => {
+    set.headers['cache-control'] = 'no-store';
+    const result = await approveImage(params.id, user.id);
+    if (result.kind !== 'ok') return moderationError(result, 'approve');
+    clearCaches('customisation');
+    set.status = 204;
+  }, {
+    requireAdmin: true,
+    requireOrigin: true,
+    params: ImageIdParam,
+  })
+
+  // Also the takedown for an already-approved image: it is un-set everywhere and its file deleted.
+  .post('/images/:id/reject', async ({ params, body, user, set }) => {
+    set.headers['cache-control'] = 'no-store';
+    const reason = body?.reason?.trim() || null;
+    const result = await rejectImage(params.id, user.id, reason);
+    if (result.kind !== 'ok') return moderationError(result, 'reject');
+    clearCaches('customisation');
+    set.status = 204;
+  }, {
+    requireAdmin: true,
+    requireOrigin: true,
+    params: ImageIdParam,
+    body: t.Optional(t.Object({
+      reason: t.Optional(t.Nullable(t.String({ maxLength: 500 }))),
+    }, { additionalProperties: false })),
   });

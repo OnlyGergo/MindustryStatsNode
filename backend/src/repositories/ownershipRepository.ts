@@ -40,6 +40,32 @@ export async function canManageServer(
   return row?.allowed ?? false;
 }
 
+/** Admin, or owner of that network (an owners row carrying the server_group_id). */
+export async function canManageNetwork(
+  user: { id: string; isAdmin: boolean },
+  groupId: number,
+): Promise<boolean> {
+  if (user.isAdmin) return true;
+
+  const [row] = await sequelize.query<{ allowed: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM owners o
+       WHERE o.user_id = CAST(:userId AS bigint) AND o.server_group_id = :groupId
+     ) AS allowed`,
+    { replacements: { userId: user.id, groupId }, type: QueryTypes.SELECT },
+  );
+  return row?.allowed ?? false;
+}
+
+/** A customisation / upload target: exactly one of a network or a (raw or canonical) server id. */
+export type ManageTarget = { networkId: number } | { serverId: number };
+
+export function canManageTarget(user: { id: string; isAdmin: boolean }, target: ManageTarget): Promise<boolean> {
+  return 'networkId' in target
+    ? canManageNetwork(user, target.networkId)
+    : canManageServer(user, target.serverId);
+}
+
 /** What `/api/auth/me` reports under `owns`. Server ids are public canonical ids. */
 export async function getOwnedTargets(userId: string): Promise<{ networks: number[]; servers: number[] }> {
   const rows = await sequelize.query<{ kind: 'network' | 'server'; id: number }>(

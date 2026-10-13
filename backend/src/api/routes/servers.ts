@@ -8,6 +8,7 @@ import { IdParam, StrictHistoryQuery, StrictNoQuery, StrictPaginationQuery } fro
 import { parseTimestamp, rangeKey, resolveRange } from '../lib/timeRange.js';
 import { paginationKey, parsePagination } from '../lib/pagination.js';
 import { withCache } from '../middleware/cache.js';
+import { getServerCustomisation } from '../../repositories/customisationReadRepository.js';
 const logger = createLogger('Api');
 
 export const serverRoutes = new Elysia({ prefix: '/api' })
@@ -72,5 +73,20 @@ export const serverRoutes = new Elysia({ prefix: '/api' })
     ...withCache({
       ttlMs: 300_000, // 5 minutes TTL
       getKey: ({ path, params, query }) => `${path}:${params.id}:${rangeKey(query.range, query.startDate, query.endDate)}`,
+    }),
+  })
+
+  // Accent colour + background, the server's settings over its network's. Owner writes clear this store.
+  .get('/servers/:id/customisation', async ({ params }) => {
+    const customisation = await getServerCustomisation(params.id);
+    if (!customisation) return status(404, { error: 'Server not found' });
+    return customisation;
+  }, {
+    params: IdParam,
+    query: StrictNoQuery,
+    ...withCache({
+      name: 'customisation',
+      ttlMs: 60_000,
+      getKey: ({ path, params }) => `${path}:${params.id}`,
     }),
   });

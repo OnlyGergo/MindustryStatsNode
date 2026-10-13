@@ -36,7 +36,12 @@ const envSchema = z.object({
     USERDB_USER: z.string().optional(),
     USERDB_PASSWORD: z.string().optional(),
 
-    UPLOAD_DIR: z.string().default('./uploads')
+    // Owner image uploads (F4). The byte cap is also what the route's
+    // pre-buffer Content-Length guard allows (plus multipart overhead).
+    UPLOAD_DIR: z.string().default('./uploads'),
+    UPLOAD_MAX_BYTES: z.string().regex(/^[1-9]\d*$/).default('2097152').transform(Number),
+    UPLOAD_MAX_WIDTH: z.string().regex(/^[1-9]\d*$/).default('3840').transform(Number),
+    UPLOAD_MAX_HEIGHT: z.string().regex(/^[1-9]\d*$/).default('2160').transform(Number)
 }).superRefine((data, ctx) => {
     if (!data.COOKIE_SECRET && data.NODE_ENV === 'production') {
         ctx.addIssue({

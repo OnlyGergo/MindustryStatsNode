@@ -30,6 +30,8 @@ const rateLimitTiers: RateLimitTier[] = [
   { name: 'auth', limit: 20, windowMs: MINUTE, match: (p) => p.startsWith('/api/auth/') },
   { name: 'entity', limit: 40, windowMs: MINUTE, match: (p) => ENTITY_PATH.test(p) },
   { name: 'api', limit: 120, windowMs: MINUTE, match: (p) => p.startsWith('/api') || p === '/config' || p === '/sitemap.xml' },
+  // Served images: immutable and long-cached, but a page with a gallery pulls several.
+  { name: 'uploads', limit: 120, windowMs: MINUTE, match: (p) => p.startsWith('/uploads/') },
   // SSR pages embed the same data the API serves (/server/:id renders its details
   // server-side), so leaving them open would just move the crawl one layer up.
   { name: 'page', limit: 40, windowMs: MINUTE, match: (p) => !STATIC_ASSET.test(p) },
