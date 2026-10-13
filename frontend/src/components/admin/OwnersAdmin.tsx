@@ -30,7 +30,7 @@ export const parseTarget = (text: string, kind: TargetKind): { kind: TargetKind;
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
-const UserLabel: React.FC<{ avatarUrl: string; name: string; sub: string }> = ({ avatarUrl, name, sub }) => (
+export const UserLabel: React.FC<{ avatarUrl: string; name: string; sub: string }> = ({ avatarUrl, name, sub }) => (
   <div className="flex items-center gap-2 min-w-0">
     <img src={avatarUrl} alt="" className="w-7 h-7 rounded-full shrink-0" loading="lazy" />
     <div className="flex flex-col min-w-0">
@@ -40,7 +40,7 @@ const UserLabel: React.FC<{ avatarUrl: string; name: string; sub: string }> = ({
   </div>
 );
 
-const TargetLabel: React.FC<{ target: OwnerEntry["target"] }> = ({ target }) => {
+export const TargetLabel: React.FC<{ target: OwnerEntry["target"] }> = ({ target }) => {
   if (target.kind === "network") {
     return (
       <Link

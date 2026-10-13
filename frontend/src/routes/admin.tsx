@@ -8,6 +8,7 @@ import { docTitle } from "../util/pageTitle.ts";
 const ADMIN_TABS: TabNavItem[] = [
   { to: "/admin", label: "Overview", exact: true },
   { to: "/admin/owners", label: "Owners" },
+  { to: "/admin/images", label: "Images" },
 ];
 
 export const Route = createFileRoute("/admin")({
