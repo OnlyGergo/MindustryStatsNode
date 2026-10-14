@@ -8,26 +8,29 @@
 // F5: owners (and admins) can post one public reply per review, under
 // /servers/:id/reviews/:reviewId/reply. Replies ride along on the cached
 // public list, so their writes clear the same 'reviews' store.
+//
+// F7: any logged-in user can report a review; the queue lives in admin.ts.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Elysia, status, t } from 'elysia';
 import { authPlugin } from '../auth/plugin.js';
 import { paginationKey, parsePagination } from '../lib/pagination.js';
-import { AspectsBody, IdParam, IntId, ReviewsQuery, StrictNoQuery } from '../lib/schemas.js';
+import { AspectsBody, IdParam, IntId, ReportReasonSchema, ReviewsQuery, StrictNoQuery } from '../lib/schemas.js';
 import { withCache, clearCaches } from '../middleware/cache.js';
 import { getReviewPage, getReviewSummary } from '../../repositories/reviewReadRepository.js';
 import { deleteMyReview, getMyReview, upsertReview } from '../../repositories/user/reviewRepository.js';
 import { deleteReply, upsertReply } from '../../repositories/user/reviewReplyRepository.js';
+import { reportReview } from '../../repositories/user/reportRepository.js';
 import { normalizeReviewBody } from '../../repositories/user/reviewBody.js';
 import { canManageServer } from '../../repositories/ownershipRepository.js';
-import { REPLY_BODY_MAX, REVIEW_BODY_MAX, type ReviewSort } from '../../../../common/models/reviews.js';
+import { REPLY_BODY_MAX, REPORT_NOTE_MAX, REVIEW_BODY_MAX, type ReviewSort } from '../../../../common/models/reviews.js';
 import { containsProfanity } from '../../../../common/profanity.js';
 
 const DEFAULT_PER_PAGE = 10;
 const MAX_PER_PAGE = 50;
 
 // Review ids are bigserial, so they stay strings end to end (PublicReview.id).
-const ReplyParams = t.Object({
+const ReviewParams = t.Object({
   id: IntId(),
   reviewId: t.String({ pattern: '^[1-9][0-9]{0,17}$' }),
 });
@@ -129,7 +132,7 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
     clearCaches('reviews');
     return { ok: true as const };
   }, {
-    params: ReplyParams,
+    params: ReviewParams,
     requireUser: true,
     requireOrigin: true,
     body: t.Object({
@@ -144,7 +147,24 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
     clearCaches('reviews');
     set.status = 204;
   }, {
-    params: ReplyParams,
+    params: ReviewParams,
     requireUser: true,
     requireOrigin: true,
+  })
+
+  // Nothing public changes, so there is no cache to clear; the queue is
+  // admin-only and uncached.
+  .post('/servers/:id/reviews/:reviewId/report', async ({ params, user, body, set }) => {
+    const result = await reportReview(user.id, params.id, params.reviewId, body.reason, normalizeReviewBody(body.note));
+    if (result === 'not_found') return status(404, { error: 'Review not found' });
+    if (result === 'own_review') return status(403, { error: "You can't report your own review" });
+    set.status = 204;
+  }, {
+    params: ReviewParams,
+    requireUser: true,
+    requireOrigin: true,
+    body: t.Object({
+      reason: ReportReasonSchema,
+      note: t.Optional(t.Nullable(t.String({ maxLength: REPORT_NOTE_MAX }))),
+    }, { additionalProperties: false }),
   });

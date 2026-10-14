@@ -1,5 +1,6 @@
 import { t } from 'elysia';
 import { REVIEW_ASPECTS, type ReviewAspectKey } from '../../../../common/models/ratings.js';
+import { REPORT_REASONS } from '../../../../common/models/reviews.js';
 
 // Reusable strict query parameter schemas (disallow any additional/unexpected query parameters)
 export const StrictNoQuery = t.Object({}, { additionalProperties: false });
@@ -45,3 +46,11 @@ export const AspectsBody = t.Optional(t.Partial(t.Object(aspectFields, { additio
 export const IntId = () => t.Numeric({ minimum: 1, multipleOf: 1 });
 export const IdParam = t.Object({ id: IntId() });
 export const ModeIdParam = t.Object({ modeId: IntId() });
+
+// F7: built from REPORT_REASONS, so this schema and the UI share one list with the DB CHECK.
+export const ReportReasonSchema = t.UnionEnum(REPORT_REASONS);
+
+export const ModerationQuery = t.Object({
+  view: t.Optional(t.Union([t.Literal('open'), t.Literal('removed'), t.Literal('dismissed')])),
+  page: t.Optional(t.String()),
+}, { additionalProperties: false });

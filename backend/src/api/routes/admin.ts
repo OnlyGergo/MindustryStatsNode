@@ -14,12 +14,20 @@ import { listOwners, searchUsers } from '../../repositories/ownershipRepository.
 import { addOwner, removeOwner } from '../../repositories/user/ownerRepository.js';
 import { listImagesForAdmin } from '../../repositories/customisationReadRepository.js';
 import { approveImage, rejectImage, type ModerateImageResult } from '../../repositories/user/imageRepository.js';
+import { dismissReports, getModerationQueue, moderateReply, moderateReview } from '../../repositories/user/moderationRepository.js';
+import { normalizeReviewBody } from '../../repositories/user/reviewBody.js';
 import { clearCaches } from '../middleware/cache.js';
+import { ModerationQuery } from '../lib/schemas.js';
+import { REMOVED_REASON_MAX, REVIEW_BODY_MAX } from '../../../../common/models/reviews.js';
 import { UPLOAD_ID_RE } from '../../../../common/models/customisation.js';
 
 /** bigserial ids travel as strings; reject anything that is not a plain positive integer. */
 const BigIdString = t.String({ pattern: '^[1-9][0-9]{0,18}$' });
 const PositiveInt = t.Integer({ minimum: 1, maximum: 2_147_483_647 });
+const ReviewIdParam = t.Object({ id: BigIdString });
+const REPORTS_PER_PAGE = 20;
+const RemoveBody = t.Object({ action: t.Literal('remove'), reason: t.String({ minLength: 1, maxLength: REMOVED_REASON_MAX }) }, { additionalProperties: false });
+const RestoreBody = t.Object({ action: t.Literal('restore') }, { additionalProperties: false });
 const ImageIdParam = t.Object({ id: t.String({ pattern: UPLOAD_ID_RE.source }) });
 
 function moderationError(result: Exclude<ModerateImageResult, { kind: 'ok' }>, action: string) {
@@ -123,4 +131,76 @@ export const adminRoutes = new Elysia({ prefix: '/api/admin' })
     body: t.Optional(t.Object({
       reason: t.Optional(t.Nullable(t.String({ maxLength: 500 }))),
     }, { additionalProperties: false })),
+  })
+
+  // ── F7: review reports + moderation ───────────────────────────────────────
+  // These payloads name the real author of anonymous reviews, which is one
+  // more reason none of this may ever be cached.
+  .get('/reports', async ({ query, set }) => {
+    set.headers['cache-control'] = 'no-store';
+    const page = Math.max(parseInt(query.page ?? '', 10) || 1, 1);
+    return getModerationQueue(query.view ?? 'open', page, REPORTS_PER_PAGE);
+  }, {
+    requireAdmin: true,
+    query: ModerationQuery,
+  })
+
+  // All open reports on a review at once: the queue is grouped by review, and
+  // "this review is fine" is a decision about the review. Nothing public changes.
+  .post('/reviews/:id/reports/dismiss', async ({ params, user, set }) => {
+    await dismissReports(params.id, user.id);
+    set.status = 204;
+  }, {
+    requireAdmin: true,
+    requireOrigin: true,
+    params: ReviewIdParam,
+  })
+
+  .patch('/reviews/:id', async ({ params, user, body }) => {
+    let review;
+    if (body.action === 'remove') {
+      const reason = normalizeReviewBody(body.reason);
+      if (!reason) return status(422, { error: 'A reason is required' });
+      review = await moderateReview(params.id, user.id, { action: 'remove', reason });
+    } else if (body.action === 'restore') {
+      review = await moderateReview(params.id, user.id, { action: 'restore' });
+    } else {
+      review = await moderateReview(params.id, user.id, { action: 'edit', body: normalizeReviewBody(body.body) });
+    }
+    if (!review) return status(404, { error: 'Review not found' });
+
+    // The public list and summary read these rows, same clear as a user's own write.
+    clearCaches('reviews');
+    return review;
+  }, {
+    requireAdmin: true,
+    requireOrigin: true,
+    params: ReviewIdParam,
+    // Each branch is a distinct `action` literal, so the strip-before-match
+    // pitfall from POST /owners can't make one body validate as another.
+    body: t.Union([
+      RemoveBody,
+      RestoreBody,
+      t.Object({ action: t.Literal('edit'), body: t.Nullable(t.String({ maxLength: REVIEW_BODY_MAX })) }, { additionalProperties: false }),
+    ]),
+  })
+
+  .patch('/reviews/:id/reply', async ({ params, user, body }) => {
+    let review;
+    if (body.action === 'remove') {
+      const reason = normalizeReviewBody(body.reason);
+      if (!reason) return status(422, { error: 'A reason is required' });
+      review = await moderateReply(params.id, user.id, { action: 'remove', reason });
+    } else {
+      review = await moderateReply(params.id, user.id, { action: 'restore' });
+    }
+    if (!review) return status(404, { error: 'Reply not found' });
+
+    clearCaches('reviews');
+    return review;
+  }, {
+    requireAdmin: true,
+    requireOrigin: true,
+    params: ReviewIdParam,
+    body: t.Union([RemoveBody, RestoreBody]),
   });
