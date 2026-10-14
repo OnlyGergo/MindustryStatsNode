@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { api } from "../../util/api.ts";
 import { formatDate } from "../../util/general.ts";
 import { REPLY_BODY_MAX, type ReviewReply as ReviewReplyData } from "../../../../common/models/reviews.ts";
+import { containsProfanity } from "../../../../common/profanity.ts";
 
 interface ReviewReplyProps {
   serverId: number;
@@ -86,6 +87,7 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
   };
 
   if (editing) {
+    const hasProfanity = containsProfanity(draft);
     return (
       <form onSubmit={handleSave} className="mt-3 ml-3 sm:ml-6 pl-3 border-l-2 border-accent flex flex-col gap-2">
         <span className="text-xs font-medium text-secondary">Response from the owner</span>
@@ -100,14 +102,19 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
             autoFocus
             className="w-full bg-surface-secondary border border-subtle rounded p-2 text-sm text-primary resize-y"
           />
-          <div className="text-xs text-tertiary text-right mt-0.5">{draft.length}/{REPLY_BODY_MAX}</div>
+          <div className="flex justify-between gap-2 mt-0.5">
+            <span className="text-xs text-status-offline">
+              {hasProfanity && "Please remove inappropriate language before submitting."}
+            </span>
+            <span className="text-xs text-tertiary shrink-0">{draft.length}/{REPLY_BODY_MAX}</span>
+          </div>
         </div>
         {error && <div className="text-sm text-status-offline">{error}</div>}
         <div className="flex gap-2">
           <button
             type="submit"
             className="button-accent text-xs sm:text-sm px-3 py-1 disabled:opacity-50"
-            disabled={busy || !draft.trim()}
+            disabled={busy || !draft.trim() || hasProfanity}
           >
             {reply ? "Update reply" : "Post reply"}
           </button>
