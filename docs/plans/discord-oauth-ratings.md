@@ -146,6 +146,8 @@ Covers the theme accent and background image.
 - **Verify:** a renamed `.exe` gets rejected. A pending image returns 404 publicly. Once approved, the background shows on every server in the network, and a per-server override wins.
 
 ## F5: Owner replies (Google Maps style)
+> **Done.** Migration `38_review_replies.sql`. The upsert is one `INSERT … SELECT … ON CONFLICT (review_id)` statement that scopes the review to the URL's family and skips removed reviews, so it needs no lock; a moderator-removed reply is not overwritten (403). Replies ride on the public review list (`PublicReview.reply`), so writes clear `reviews`. Body uses the review normalisation, ≤ 2000 chars, and the profanity stub. `author_user_id` cascades on account deletion, like reviews. A co-owner's or admin's reply replaces the existing one. Not carried over: a reply on a merge-leftover duplicate review that `upsertReview` deletes goes with it.
+
 - **Migration `37_review_replies.sql`:** `review_replies(review_id pk/fk cascade, author_user_id, body, created_at, updated_at, removed_at)`. That is one reply per review.
 - **Routes:** `PUT` / `DELETE /api/servers/:id/reviews/:reviewId/reply`. Checks: `canManageServer`, and the review must belong to that family. Writes call `clearCaches('reviews')`.
 - **UI:** the reply renders under its review as "Response from the owner", with the owner's name shown. Managers get an inline reply box.
