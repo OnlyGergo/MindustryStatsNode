@@ -5,6 +5,7 @@ import path from 'path';
 import { createLogger } from '../logger.js';
 import { api } from './app.js';
 import { apiConfig } from './context.js';
+import { env } from '../config/env.js';
 import { rateLimit, type RateLimitTier } from './middleware/rateLimit.js';
 import { initCache, stopCache } from './middleware/cache.js';
 
@@ -105,7 +106,10 @@ export async function createWebServer() {
     // Ahead of everything, including the route cache — a crawler must not get
     // unmetered hits just because its target happens to be cached.
     .use(rateLimit(rateLimitTiers))
-    .use(cors({ origin: apiConfig.CORS_ORIGIN, credentials: true }));
+    // Only our own origin: the frontend is served from this same port, so nothing
+    // legitimate needs cross-origin access, and a wildcard (or reflected) origin
+    // next to credentials would let any site read cookie-authenticated GETs.
+    .use(cors({ origin: env.SITE_ORIGIN, credentials: true }));
 
   // In dev Vite serves the client assets itself, via the catch-all below.
   // alwaysStatic: otherwise, outside NODE_ENV=production, the plugin mounts a
