@@ -1,6 +1,7 @@
 import React from "react";
 import { StarRatingDisplay } from "./StarRating.tsx";
 import ReviewReply from "./ReviewReply.tsx";
+import ReviewActions from "./ReviewActions.tsx";
 import { formatDate } from "../../util/general.ts";
 import type { PublicReview, ReviewSort } from "../../../../common/models/reviews.ts";
 
@@ -102,6 +103,8 @@ const ReviewList: React.FC<ReviewListProps> = ({
               canReply={canReply}
               onChanged={onChanged}
             />
+
+            <ReviewActions serverId={serverId} reviewId={review.id} onRemoved={onChanged} />
           </div>
         ))}
       </div>

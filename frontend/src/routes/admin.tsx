@@ -4,11 +4,12 @@ import { LoadingSpinner } from "../components/LoadingSpinner.tsx";
 import { useAuth } from "../context/AuthContext.tsx";
 import { docTitle } from "../util/pageTitle.ts";
 
-// Later features add their queues here (Images, Announcements, Reports).
+// Later features add their queues here (Announcements).
 const ADMIN_TABS: TabNavItem[] = [
   { to: "/admin", label: "Overview", exact: true },
   { to: "/admin/owners", label: "Owners" },
   { to: "/admin/images", label: "Images" },
+  { to: "/admin/reports", label: "Reports" },
 ];
 
 export const Route = createFileRoute("/admin")({

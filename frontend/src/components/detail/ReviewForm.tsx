@@ -5,6 +5,7 @@ import { api } from "../../util/api.ts";
 import { REVIEW_BODY_MAX } from "../../../../common/models/reviews.ts";
 import type { MyReview } from "../../../../common/models/reviews.ts";
 import { REVIEW_ASPECTS, type AspectRatings } from "../../../../common/models/ratings.ts";
+import { containsProfanity } from "../../../../common/profanity.ts";
 
 // null = not rated -- distinct from "not yet touched" only in that both render the same
 // empty StarRatingInput, so no third state is needed here.
@@ -55,6 +56,9 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
 
   // Keyed off the saved review, not the live edits: tied to `aspects`, clearing
   // the last one would snap the section shut under the user's cursor.
+  // Same check the backend's 422 runs, so the user hears about it before submitting.
+  const hasProfanity = containsProfanity(body);
+
   const savedAnyAspect = REVIEW_ASPECTS.some((a) => mine?.aspects?.[a.key] != null);
 
   const handleDelete = async () => {
@@ -150,7 +154,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
           disabled={submitting}
           className="w-full bg-surface-tertiary border border-subtle rounded p-2 text-sm text-primary resize-y"
         />
-        <div className="text-xs text-tertiary text-right mt-0.5">{body.length}/{REVIEW_BODY_MAX}</div>
+        <div className="flex justify-between gap-2 mt-0.5">
+          <span className="text-xs text-status-offline">
+            {hasProfanity && "Please remove inappropriate language before submitting."}
+          </span>
+          <span className="text-xs text-tertiary shrink-0">{body.length}/{REVIEW_BODY_MAX}</span>
+        </div>
       </div>
 
       <details className="border border-subtle rounded" open={savedAnyAspect}>
@@ -201,7 +210,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
         <button
           type="submit"
           className="button-accent text-xs sm:text-sm px-3 py-1.5 disabled:opacity-50"
-          disabled={submitting || rating < 1}
+          disabled={submitting || rating < 1 || hasProfanity}
         >
           {mine ? "Update" : "Submit"}
         </button>
