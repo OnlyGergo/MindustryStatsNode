@@ -47,11 +47,6 @@ const NetworkServerList: React.FC<{ networkId: number }> = ({ networkId }) => {
       {list.map((server) => (
         <div key={server.id} className="border border-subtle">
           <ServerItem server={server} isSelected={false} />
-          {server.uptime24h != null && (
-            <div className="px-4 pb-2 -mt-2 text-xs text-tertiary" title="Share of polls in the last 24h that the server answered">
-              {formatUptime(server.uptime24h)} up
-            </div>
-          )}
         </div>
       ))}
     </div>

@@ -6,7 +6,6 @@ import MotdHistoryTable from "./table/MotdHistoryTable.tsx";
 import ReviewSummary from "./ReviewSummary.tsx";
 import ReviewForm from "./ReviewForm.tsx";
 import ReviewList from "./ReviewList.tsx";
-import { removeColors } from "../../util/mindustry.ts";
 import { formatDate } from "../../util/general.ts";
 import CopyButton from "../CopyButton.tsx";
 import ShareButton from "../ShareButton.tsx";
@@ -20,6 +19,8 @@ import { useAuth } from "../../context/AuthContext.tsx";
 import { customisationStyle } from "../../util/customisation.ts";
 import type { PublicCustomisation } from "../../../../common/models/customisation.ts";
 import { getModeName } from "../../../../common/Gamemode.ts";
+import { MindustryText } from "../MindustryText.tsx";
+import { removeColors } from "../../util/mindustry.ts";
 
 const ServerDetail: React.FC<{
   serverDataElement: ServerDetails & ServerElement;
@@ -58,12 +59,12 @@ const ServerDetail: React.FC<{
             <div className="flex-1 min-w-0">
               {serverData?.serverName && (
                 <h1 className="text-xl sm:text-2xl font-bold text-primary mb-2 wrap-break-word">
-                  {String(removeColors(serverData.serverName))}
+                  <MindustryText text={serverData.serverName}/>
                 </h1>
               )}
               {serverData?.description && (
                 <p className="text-secondary mb-4 text-sm sm:text-base wrap-break-word">
-                  {String(removeColors(serverData.description))}
+                  <MindustryText text={serverData.description}/>
                 </p>
               )}
 
@@ -114,7 +115,7 @@ const ServerDetail: React.FC<{
               <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
                 <span className="text-tertiary">Map: </span>
                 <span className="font-medium text-primary wrap-break-word">
-                  {String(removeColors(serverData.mapName)) || "Unknown"}
+                  <MindustryText text={serverData.mapName || "Unknown"}/>
                 </span>
               </div>
               <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">

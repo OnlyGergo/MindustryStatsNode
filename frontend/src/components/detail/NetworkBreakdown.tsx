@@ -1,8 +1,8 @@
 import { NetworkBreakdown as Breakdown } from "../../../../common/models/networkAnalytics.ts";
 import { useNetworkBreakdown } from "../../hooks/api/useNetworkAnalytics.ts";
 import { countryCodeToFlag } from "../../util/general.ts";
-import { removeColors } from "../../util/mindustry.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
+import { MindustryText } from "../MindustryText.tsx";
 
 const nf = new Intl.NumberFormat("en-US");
 
@@ -57,7 +57,7 @@ const Content = ({ data }: { data: Breakdown }) => {
               <li key={`${m.mapName}-${m.mode}-${i}`}>
                 <div className="flex justify-between gap-2 text-xs sm:text-sm">
                   <span className="text-primary truncate">
-                    {removeColors(m.mapName) || m.mapName}
+                    <MindustryText text={m.mapName}/>
                     {m.mode && <span className="text-tertiary"> · {m.mode}</span>}
                   </span>
                   <span className="text-tertiary shrink-0">{nf.format(Math.round(m.playerHours))} player-h</span>

@@ -13,7 +13,7 @@ import CustomisePanel from "./CustomisePanel.tsx";
 import { useAuth } from "../../context/AuthContext.tsx";
 import { customisationStyle } from "../../util/customisation.ts";
 import type { PublicCustomisation } from "../../../../common/models/customisation.ts";
-import { removeColors } from "../../util/mindustry.ts";
+import { MindustryText } from "../MindustryText.tsx";
 
 const NetworkDetail: React.FC<{ details: NetworkDetails; customisation: PublicCustomisation | null }> = ({
   details,
@@ -57,7 +57,7 @@ const NetworkDetail: React.FC<{ details: NetworkDetails; customisation: PublicCu
                   params={{ serverId: String(topServer.id) }}
                   className="font-medium text-accent hover:underline wrap-break-word"
                 >
-                  {removeColors(topServer.name) || topServer.name}
+                  <MindustryText text={topServer.name}/>
                 </Link>
               </span>
               <span className="text-primary font-medium">{topServer.players} players</span>

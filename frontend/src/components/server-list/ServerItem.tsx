@@ -1,9 +1,10 @@
 import React from "react";
-import { formatTextLines, removeColors } from "../../util/mindustry.ts";
+import { formatTextLines } from "../../util/mindustry.ts";
 import { countryCodeToFlag } from "../../util/general.ts";
 import { ServerElement } from "../../../../common/models/serverData.ts";
 import { Link } from "@tanstack/react-router";
 import { CompactStarRatingDisplay } from "../detail/StarRating.tsx";
+import { MindustryText } from "../MindustryText.tsx";
 
 const ServerItem: React.FC<{
   server: ServerElement;
@@ -33,7 +34,7 @@ const ServerItem: React.FC<{
             <span className="text-base" title={server.countryCode || "Unknown"}>
               {flagEmoji}
             </span>
-            <span>{String(removeColors(serverData.serverName))}</span>
+            <MindustryText text={serverData.serverName} />
           </div>
         )}
 
@@ -42,7 +43,7 @@ const ServerItem: React.FC<{
             {formatTextLines(serverData.description).map((line, i) => (
               <React.Fragment key={i}>
                 {i > 0 && <br />}
-                {line}
+                <MindustryText text={line} />
               </React.Fragment>
             ))}
           </div>
@@ -50,7 +51,7 @@ const ServerItem: React.FC<{
 
         {server.online && serverData && (
           <div className="text-xs text-tertiary">
-            <span>{String(removeColors(serverData.mapName)) || "Unknown"}</span>
+            <MindustryText text={serverData.mapName || "Unknown"}/>
           </div>
         )}
       </div>
@@ -71,7 +72,6 @@ const ServerItem: React.FC<{
                 / {String(serverData.playerLimit)}
               </span>
             </div>
-            <div className="text-xs text-tertiary">players</div>
           </div>
         )}
       </div>
