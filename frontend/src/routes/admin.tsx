@@ -10,6 +10,7 @@ const ADMIN_TABS: TabNavItem[] = [
   { to: "/admin/owners", label: "Owners" },
   { to: "/admin/images", label: "Images" },
   { to: "/admin/reports", label: "Reports" },
+  { to: "/admin/merges", label: "Merges" },
 ];
 
 export const Route = createFileRoute("/admin")({

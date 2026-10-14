@@ -20,6 +20,8 @@ import { clearCaches } from '../middleware/cache.js';
 import { ModerationQuery } from '../lib/schemas.js';
 import { REMOVED_REASON_MAX, REVIEW_BODY_MAX } from '../../../../common/models/reviews.js';
 import { UPLOAD_ID_RE } from '../../../../common/models/customisation.js';
+import { getMergedFamilies, getMergeFamily, getMergeSuggestions } from '../../repositories/adminMergeRepository.js';
+import { dismissMergeSuggestion, mergeServers, unmergeServer, type MergeResult } from '../../repositories/user/serverMergeRepository.js';
 
 /** bigserial ids travel as strings; reject anything that is not a plain positive integer. */
 const BigIdString = t.String({ pattern: '^[1-9][0-9]{0,18}$' });
@@ -29,6 +31,17 @@ const REPORTS_PER_PAGE = 20;
 const RemoveBody = t.Object({ action: t.Literal('remove'), reason: t.String({ minLength: 1, maxLength: REMOVED_REASON_MAX }) }, { additionalProperties: false });
 const RestoreBody = t.Object({ action: t.Literal('restore') }, { additionalProperties: false });
 const ImageIdParam = t.Object({ id: t.String({ pattern: UPLOAD_ID_RE.source }) });
+
+/**
+ * A merge changes what nearly every public route returns (lists, details,
+ * charts, reviews, customisation), so a successful one clears every cache.
+ */
+function mergeResponse(result: MergeResult) {
+  if (result.kind === 'not_found') return status(404, { error: 'Server not found' });
+  if (result.kind === 'conflict') return status(409, { error: result.message });
+  clearCaches();
+  return { rootId: result.rootId };
+}
 
 function moderationError(result: Exclude<ModerateImageResult, { kind: 'ok' }>, action: string) {
   return result.kind === 'not_found'
@@ -203,4 +216,56 @@ export const adminRoutes = new Elysia({ prefix: '/api/admin' })
     requireOrigin: true,
     params: ReviewIdParam,
     body: t.Union([RemoveBody, RestoreBody]),
+  })
+
+  // ── Server merges ─────────────────────────────────────────────────────────
+  // Reads on the read connection; writes go through the SECURITY DEFINER
+  // functions from 40_admin_server_merge.sql (see serverMergeRepository).
+  .get('/merge-suggestions', async ({ set }) => {
+    set.headers['cache-control'] = 'no-store';
+    return getMergeSuggestions();
+  }, {
+    requireAdmin: true,
+  })
+
+  .get('/merged-families', async ({ set }) => {
+    set.headers['cache-control'] = 'no-store';
+    return getMergedFamilies();
+  }, {
+    requireAdmin: true,
+  })
+
+  // Any member id works; the preview for the manual merge form.
+  .get('/families/:id', async ({ params, set }) => {
+    set.headers['cache-control'] = 'no-store';
+    return (await getMergeFamily(params.id)) ?? status(404, { error: 'Server not found' });
+  }, {
+    requireAdmin: true,
+    params: t.Object({ id: t.Numeric({ minimum: 1, maximum: 2_147_483_647 }) }),
+  })
+
+  .post('/merges', async ({ body }) => {
+    if (body.sourceId === body.targetId) return status(409, { error: 'Pick two different servers' });
+    return mergeResponse(await mergeServers(body.sourceId, body.targetId));
+  }, {
+    requireAdmin: true,
+    requireOrigin: true,
+    body: t.Object({ sourceId: PositiveInt, targetId: PositiveInt }, { additionalProperties: false }),
+  })
+
+  // Detaches one raw member from its family: the inverse of a merge.
+  .delete('/merges/:id', async ({ params }) => mergeResponse(await unmergeServer(params.id)), {
+    requireAdmin: true,
+    requireOrigin: true,
+    params: t.Object({ id: t.Numeric({ minimum: 1, maximum: 2_147_483_647 }) }),
+  })
+
+  .post('/merge-dismissals', async ({ body, user, set }) => {
+    if (body.a === body.b) return status(422, { error: 'Pick two different servers' });
+    await dismissMergeSuggestion(body.a, body.b, user.id);
+    set.status = 204;
+  }, {
+    requireAdmin: true,
+    requireOrigin: true,
+    body: t.Object({ a: PositiveInt, b: PositiveInt }, { additionalProperties: false }),
   });
