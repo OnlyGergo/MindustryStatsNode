@@ -38,6 +38,8 @@ The HTTP layer lives in `backend/src/api` instead, and is not a service:
 - `routes/*.ts` - one chained Elysia instance per group.
 - Client IPs come from `api/lib/clientIp.ts`: X-Forwarded-For is only believed from `TRUSTED_PROXY_IPS` (default loopback; `TRUSTED_PROXY_EXTRA_HOPS=1` for Caddy behind Cloudflare). Only a loopback request *without* X-Forwarded-For (SSR self-fetches) skips rate limiting; anything reaching the app around the proxy is logged as a warning.
 - Chart routes must take `startDate`/`endDate` from `resolveRange()`'s return value, never straight from the query: it validates and clamps the window (max 400 days) so the bucket width and window always agree.
+- CORS allows `SITE_ORIGIN` only (with credentials); there is no `CORS_ORIGIN` setting, since the frontend is same-origin.
+- `middleware/cache.ts`: a hit never extends an entry's TTL (Elysia runs `afterHandle` after a `beforeHandle` short-circuit too, so the hook must skip it), concurrent misses on one key share one handler run, and per-caller headers (`x-ratelimit-*`, `access-control-*`, `vary`) are never stored.
 - `middleware/cache.ts`, `middleware/rateLimit.ts` - spread into a route's hook options (`...withCache({...})`). Do NOT pass them as `use: [...]`, Elysia 1.4 silently ignores beforeHandle/afterHandle supplied that way.
 
 The server related services, pass data between eachother:
@@ -63,7 +65,7 @@ Rules every read has to follow:
 
 Chart queries are all the same three-step shape: peak per (instant, canonical server) → sum across servers per instant → pick the busiest instant in each coarse bucket, then gapfill. Summing per-server bucket maxima instead would add up peaks that never coexisted.
 
-`server_events` is the annotation stream that drives chart overlays — spans (`ends_at` set: a data-quality era, a global outage) and point events (`ends_at` NULL: version bump, IP change), `server_id` NULL meaning global. Rows are inserted manually; there is no reader or uPlot rendering yet.
+`server_events` is the annotation stream that drives chart overlays — spans (`ends_at` set: a data-quality era, a global outage) and point events (`ends_at` NULL: version bump, IP change), `server_id` NULL meaning global. Rows are inserted manually, except the `address_change` events `merge_server_families`/`unmerge_server` write and remove; there is no reader or uPlot rendering yet.
 
 ## User accounts (Discord login)
 
@@ -92,6 +94,7 @@ One review per user per server **family**, stored in `server_reviews` against th
 - Queue and actions: the `/reports` and `/reviews/:id…` routes in `api/routes/admin.ts`, over `repositories/user/moderationRepository.ts`. That repository is the only place an anonymous review's author is selected.
 - Remove is a soft delete (`removed_at`/`removed_reason`/`removed_by`, on reviews and on replies); restore clears it. Remove/edit mark a review's open reports `actioned`; dismiss marks them `dismissed`. Every action that changes a public row calls `clearCaches('reviews')`.
 - An admin edit never bumps `updated_at`, because that column decides which alias row is the user's review.
+- `DISCORD_REPORTS_WEBHOOK_URL` must point at a moderators-only channel: report notifications name the author even of an anonymous review.
 - UI: the `Reports` tab (`routes/admin/reports.tsx` → `components/admin/ReportsAdmin.tsx`), plus Report/Remove actions on review cards (`components/detail/ReviewActions.tsx`).
 
 ## Ownership + admin panel

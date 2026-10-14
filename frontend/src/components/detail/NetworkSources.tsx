@@ -3,6 +3,9 @@ import { NetworkDetails } from "../../../../common/models/serverData.ts";
 
 const nf = new Intl.NumberFormat("en-US");
 
+/** Only plain web links reach an href; anything else (javascript:, data:) renders as text. */
+const isWebUrl = (url: string): boolean => /^https?:\/\//i.test(url);
+
 /** Server lists this network's servers appear on, as links out to each list. */
 const NetworkSources: React.FC<{ sources: NetworkDetails["sources"] }> = ({ sources }) => {
   if (sources.length === 0) return null;
@@ -13,14 +16,18 @@ const NetworkSources: React.FC<{ sources: NetworkDetails["sources"] }> = ({ sour
       {sources.map((source, i) => (
         <React.Fragment key={`${source.url}-${i}`}>
           {i > 0 && <span aria-hidden="true"> · </span>}
-          <a
-            href={source.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:underline"
-          >
-            {source.name}
-          </a>
+          {isWebUrl(source.url) ? (
+            <a
+              href={source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:underline"
+            >
+              {source.name}
+            </a>
+          ) : (
+            <span>{source.name}</span>
+          )}
           <span> ({nf.format(source.servers)} {source.servers === 1 ? "server" : "servers"})</span>
         </React.Fragment>
       ))}

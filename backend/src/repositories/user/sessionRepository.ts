@@ -34,8 +34,14 @@ export async function createSession(userId: string): Promise<{ token: string; ex
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
 
+  // Expired rows are otherwise only removed when their own token comes back,
+  // which an abandoned browser never does; sweeping this user's on login keeps
+  // the table bounded without a timer.
   await userSequelize.query(
-    `INSERT INTO user_sessions (token_hash, user_id, expires_at)
+    `WITH swept AS (
+       DELETE FROM user_sessions WHERE user_id = :userId AND expires_at <= now()
+     )
+     INSERT INTO user_sessions (token_hash, user_id, expires_at)
      VALUES (:tokenHash, :userId, :expiresAt)`,
     { replacements: { tokenHash, userId, expiresAt }, type: QueryTypes.INSERT },
   );
