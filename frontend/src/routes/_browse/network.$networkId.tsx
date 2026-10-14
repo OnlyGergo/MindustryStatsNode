@@ -7,6 +7,8 @@ import { fetchCustomisation } from "../../util/customisation.ts";
 import { NetworkDetails } from "../../../../common/models/serverData";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 import { docTitle } from "../../util/pageTitle.ts";
+import { useEffect } from "react";
+import { useBodyCustomisation } from "../../hooks/useBodyCustomisations.ts";
 
 const titleFor = (loaderData: unknown): string =>
   (loaderData as { details?: NetworkDetails } | undefined)?.details?.name ?? "Network Details";
@@ -45,10 +47,15 @@ export const Route = createFileRoute("/_browse/network/$networkId")({
 
 function NetworkComponent() {
   const { details, customisation, error } = Route.useLoaderData();
+  
+  if (customisation !== null && customisation !== undefined) {
+    useBodyCustomisation({ customisation });
+  }
+  
   return (
       <DetailShell>
         {details ? (
-            <NetworkDetail details={details} customisation={customisation ?? null} />
+            <NetworkDetail details={details} />
         ) : (
             <EmptyState
                 title="Unexpected Error"

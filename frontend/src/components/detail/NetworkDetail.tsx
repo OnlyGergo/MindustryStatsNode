@@ -11,13 +11,10 @@ import ShareButton from "../ShareButton.tsx";
 import { NetworkDetails } from "../../../../common/models/serverData.ts";
 import CustomisePanel from "./CustomisePanel.tsx";
 import { useAuth } from "../../context/AuthContext.tsx";
-import { customisationStyle } from "../../util/customisation.ts";
-import type { PublicCustomisation } from "../../../../common/models/customisation.ts";
 import { MindustryText } from "../MindustryText.tsx";
 
-const NetworkDetail: React.FC<{ details: NetworkDetails; customisation: PublicCustomisation | null }> = ({
-  details,
-  customisation,
+const NetworkDetail: React.FC<{ details: NetworkDetails; }> = ({
+  details
 }) => {
   const { me } = useAuth();
   const router = useRouter();
@@ -26,7 +23,7 @@ const NetworkDetail: React.FC<{ details: NetworkDetails; customisation: PublicCu
   const peakDate = playerPeaks.allTimeDate ? new Date(playerPeaks.allTimeDate).getTime() : null;
 
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary" style={customisationStyle(customisation)}>
+    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-surface-secondary border border-subtle backdrop-blur-md rounded p-4 sm:p-6 mb-4 sm:mb-6">

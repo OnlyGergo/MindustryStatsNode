@@ -8,6 +8,7 @@ import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 import { docTitle } from "../../util/pageTitle.ts";
 import { removeColors } from "../../util/mindustry.ts";
 import { ServerDetails, ServerElement } from "../../../../common/models/serverData.ts";
+import { useBodyCustomisation } from "../../hooks/useBodyCustomisations.ts";
 
 type LoadedServer = ServerDetails & ServerElement;
 
@@ -62,10 +63,15 @@ export const Route = createFileRoute("/_browse/server/$serverId")({
 
 function ServerComponent() {
   const { serverDataElement, customisation, error } = Route.useLoaderData();
+
+  if (customisation !== null && customisation !== undefined) {
+    useBodyCustomisation({ customisation });
+  }
+  
   return (
     <DetailShell>
       {serverDataElement ? (
-        <ServerDetail serverDataElement={serverDataElement} customisation={customisation ?? null} />
+        <ServerDetail serverDataElement={serverDataElement} />
       ) : (
         <EmptyState
           title="Select a Server or Network"

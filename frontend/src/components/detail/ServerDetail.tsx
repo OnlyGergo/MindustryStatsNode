@@ -16,16 +16,13 @@ import {
 } from "../../../../common/models/serverData.ts";
 import CustomisePanel from "./CustomisePanel.tsx";
 import { useAuth } from "../../context/AuthContext.tsx";
-import { customisationStyle } from "../../util/customisation.ts";
-import type { PublicCustomisation } from "../../../../common/models/customisation.ts";
 import { getModeName } from "../../../../common/Gamemode.ts";
 import { MindustryText } from "../MindustryText.tsx";
 import { removeColors } from "../../util/mindustry.ts";
 
 const ServerDetail: React.FC<{
   serverDataElement: ServerDetails & ServerElement;
-  customisation: PublicCustomisation | null;
-}> = ({ serverDataElement, customisation }) => {
+}> = ({ serverDataElement }) => {
   const { me } = useAuth();
   const router = useRouter();
   // Owners (and admins) can customise the page and reply to reviews; the API re-checks both.
@@ -52,7 +49,7 @@ const ServerDetail: React.FC<{
   const reviews = useServerReviews(serverDataElement.id);
 
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary" style={customisationStyle(customisation)}>
+    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
