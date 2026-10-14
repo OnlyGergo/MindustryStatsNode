@@ -67,17 +67,14 @@ const NAMED_COLORS: Record<string, PackedColor> = {
   purple: 0xa020f0ff,
   violet: 0xee82eeff,
   maroon: 0xb03060ff,
+
+  // https://github.com/Anuken/Mindustry/blob/17012d61d9e4c3cbd9820d87e81c24495486ac53/core/src/mindustry/core/UI.java#L101
+  accent: 0xffd37fff,
+  unlaunched: 0x8982edff,
+  highlight: 0xffe0a5ff, // accent lerp by 0.3 towards white
+  stat: 0xffd37fff,
+  negstat: 0xe55454ff,
 };
-
-const normalizeName = (s: string): string => s.toLowerCase().split("_").join("");
-
-/** Add or override a named colour (e.g. extra names your server defines). Hex string, 6 or 8 digits. */
-export function registerColor(name: string, hex: string): boolean {
-  const c = parseHexColor(hex);
-  if (c === null) return false;
-  NAMED_COLORS[normalizeName(name)] = c;
-  return true;
-}
 
 function clampAlpha(c: PackedColor): PackedColor {
   return (c & 0xff) >= MIN_ALPHA ? c : (((c & 0xffffff00) | MIN_ALPHA) >>> 0);
@@ -90,34 +87,27 @@ function hexDigit(code: number): number {
   return -1;
 }
 
-function parseHexPair(s: string, from: number): number {
-  const hi = hexDigit(s.charCodeAt(from));
-  const lo = hexDigit(s.charCodeAt(from + 1));
-  return hi < 0 || lo < 0 ? -1 : hi * 16 + lo;
-}
-
-/** Port of Mindustry's parseColorOrNull: optional '#', 6 or 8 hex digits. */
-function parseHexColor(hex: string): PackedColor | null {
-  if (!hex) return null;
-  const offset = hex.charCodeAt(0) === 35 ? 1 : 0; // '#'
-  const len = hex.length - offset;
-  if (len !== 6 && len !== 8) return null;
-
-  const r = parseHexPair(hex, offset);
-  const g = parseHexPair(hex, offset + 2);
-  const b = parseHexPair(hex, offset + 4);
-  const a = len === 8 ? parseHexPair(hex, offset + 6) : 255;
-  if (r < 0 || g < 0 || b < 0 || a < 0) return null;
-
-  return clampAlpha(((r << 24) | (g << 16) | (b << 8) | a) >>> 0);
+/** Port of Arc: optional '#' and any amount of valid hex digits 
+ * Source: https://github.com/Anuken/Arc/blob/7445105cd2683daf5b9ac7033ebb07265d3e814d/arc-core/src/arc/graphics/g2d/GlyphLayout.java#L427
+ */
+function parseMarkupHex(tag: string): PackedColor | null {
+  const d = tag.length - 1;
+  if (d < 1 || d > 8 || d === 7) return null;
+  let c = 0;
+  for (let i = 1; i <= d; i++) {
+    const v = hexDigit(tag.charCodeAt(i));
+    if (v < 0) return null;
+    c = c * 16 + v;
+  }
+  if (d <= 6) c = c * 16 ** (8 - d) + 0xff;
+  return c >>> 0;
 }
 
 /** Resolves the inside of a [tag]: named colour first, then hex. */
 export function parseColor(tag: string): PackedColor | null {
   if (!tag) return null;
-  const named = NAMED_COLORS[normalizeName(tag)];
-  if (named !== undefined) return clampAlpha(named);
-  return parseHexColor(tag);
+  const c = tag.charCodeAt(0) === 35 ? parseMarkupHex(tag) : NAMED_COLORS[tag];
+  return c === undefined || c === null ? null : clampAlpha(c);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -130,7 +120,7 @@ export interface Segment {
   color: PackedColor | null;
 }
 
-const MAX_TAG_LENGTH = 16; // longest real tag is '#rrggbbaa' (9); anything longer is just text
+const MAX_TAG_LENGTH = 10; // longest real tag is '#rrggbbaa' (9); anything longer is just text
 const MAX_STACK = 256;
 const CACHE_LIMIT = 500;
 
@@ -140,6 +130,8 @@ const parseCache = new Map<string, Segment[]>();
  * Splits markup into coloured runs. Adjacent runs with the same colour are merged.
  * Unknown tags such as [foo] are kept as literal text.
  * Results are cached; treat the returned array as read-only.
+ * 
+ * Spot-on with https://github.com/Anuken/Arc/blob/7445105cd2683daf5b9ac7033ebb07265d3e814d/arc-core/src/arc/graphics/g2d/GlyphLayout.java#L73
  */
 export function parseMindustry(src: string): Segment[] {
   const cached = parseCache.get(src);
