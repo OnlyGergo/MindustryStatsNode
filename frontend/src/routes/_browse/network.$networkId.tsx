@@ -7,7 +7,6 @@ import { fetchCustomisation } from "../../util/customisation.ts";
 import { NetworkDetails } from "../../../../common/models/serverData";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 import { docTitle } from "../../util/pageTitle.ts";
-import { useEffect } from "react";
 import { useBodyCustomisation } from "../../hooks/useBodyCustomisations.ts";
 
 const titleFor = (loaderData: unknown): string =>

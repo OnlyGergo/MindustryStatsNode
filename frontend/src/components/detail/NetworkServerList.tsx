@@ -3,7 +3,6 @@ import { ServerElement } from "../../../../common/models/serverData.ts";
 import { useNetworkServers } from "../../hooks/api/useNetworkServers.ts";
 import { SORT_OPTIONS, SortCriteria, SortDirection } from "../../hooks/useServerList.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
-import { formatUptime } from "./NetworkStatsRow.tsx";
 import ServerItem from "../server-list/ServerItem.tsx";
 
 const compare = (a: number | string | null, b: number | string | null, dir: SortDirection): number => {
