@@ -118,3 +118,6 @@ The backend often passes data through ApiPacker, which takes arrays of objects a
 `schema.sql` is currently empty, so `collector/migrations` is the only description of the schema until it is regenerated. Otherwise, do not attempt to read `collector/migrations` or especially `backend/migrations_legacy` (legacy means run manually, DB is out of sync with these). Latest schema is included in `schema.sql` at the root of the project. If you want to make changes, do it in `collector/migrations`. You can add "--no-tran" on first line for migrations if they need manual running (like certain CALL statements relating to TimescaleDB).
 
 Use EU Commit message format, like `feat: add ` or `fix: ` or `refactor: `
+
+When setting up, you won't have timescaledb, but most things will work fine on just the postgres you have.
+Ensure you are up to date with GitHub, pull, fetch and do anything reasonable to ensure you are closest as possible to latest, as someties the environment setup doesn't ensure this unfortunately, and it resuts in redoing work to merge...
