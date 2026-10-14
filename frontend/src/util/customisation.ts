@@ -42,7 +42,7 @@ export const customisationStyle = (c: PublicCustomisation | null): React.CSSProp
     style["backgroundImage"] = `linear-gradient(rgba(15, 15, 15, 0.82), rgba(15, 15, 15, 0.82)), url("${bg}")`;
     style["backgroundSize"] = "cover";
     style["backgroundPosition"] = "center";
-    style["backgroundAttachment"] = "local";
+    style["backgroundAttachment"] = "fixed";
     // Translucent cards so the image shows through but text stays readable.
     style["--color-surface-1"] = "rgba(22, 22, 22, 0.88)";
     style["--color-surface-2"] = "rgba(29, 29, 29, 0.9)";
