@@ -2,6 +2,15 @@ import type { AspectRatings, AspectSummaries } from './ratings.js';
 
 export type ReviewSort = 'newest' | 'highest' | 'lowest';
 export const REVIEW_BODY_MAX = 2000;
+export const REPLY_BODY_MAX = 2000;
+
+/** F5: the server's one public response to a review, from an owner (or an admin). Never anonymous. */
+export interface ReviewReply {
+  body: string;
+  createdAt: number;     // epoch ms
+  updatedAt: number;     // epoch ms
+  author: { name: string; avatarUrl: string; profileUrl: string };
+}
 
 /** Public payload. An anonymous review carries author: null and NOTHING else identifying. */
 export interface PublicReview {
@@ -11,6 +20,7 @@ export interface PublicReview {
   createdAt: number;     // epoch ms
   updatedAt: number;     // epoch ms
   author: { name: string; avatarUrl: string; profileUrl: string } | null;
+  reply: ReviewReply | null;
 }
 
 export interface ReviewPage {

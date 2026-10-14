@@ -82,6 +82,13 @@ interface ReviewPageRow {
   username: string | null;
   globalName: string | null;
   avatarHash: string | null;
+  replyBody: string | null;
+  replyCreatedAt: string | Date | null;
+  replyUpdatedAt: string | Date | null;
+  replyDiscordId: string | null;
+  replyUsername: string | null;
+  replyGlobalName: string | null;
+  replyAvatarHash: string | null;
   total: string | number;
 }
 
@@ -106,9 +113,17 @@ export async function getReviewPage(
        CASE WHEN fr.anonymous THEN NULL ELSE u.username     END AS username,
        CASE WHEN fr.anonymous THEN NULL ELSE u.global_name   END AS "globalName",
        CASE WHEN fr.anonymous THEN NULL ELSE u.avatar_hash   END AS "avatarHash",
+       -- F5: the owner's reply. Replies are never anonymous; a moderator-removed
+       -- one is simply not joined.
+       rp.body AS "replyBody",
+       rp.created_at AS "replyCreatedAt", rp.updated_at AS "replyUpdatedAt",
+       ru.discord_id AS "replyDiscordId", ru.username AS "replyUsername",
+       ru.global_name AS "replyGlobalName", ru.avatar_hash AS "replyAvatarHash",
        count(*) OVER () AS total
      FROM family_reviews fr
      LEFT JOIN users u ON u.id = fr.user_id
+     LEFT JOIN review_replies rp ON rp.review_id = fr.id AND rp.removed_at IS NULL
+     LEFT JOIN users ru ON ru.id = rp.author_user_id
      ORDER BY ${orderBy}
      LIMIT :perPage OFFSET :offset`,
     { replacements: { serverId, perPage, offset }, type: QueryTypes.SELECT },
@@ -136,6 +151,18 @@ export async function getReviewPage(
           name: row.globalName ?? row.username ?? 'Unknown',
           avatarUrl: discordAvatarUrl(row.discordId, row.avatarHash),
           profileUrl: discordProfileUrl(row.discordId),
+        }
+      : null,
+    reply: row.replyBody != null && row.replyDiscordId != null
+      ? {
+          body: row.replyBody,
+          createdAt: new Date(row.replyCreatedAt!).getTime(),
+          updatedAt: new Date(row.replyUpdatedAt!).getTime(),
+          author: {
+            name: row.replyGlobalName ?? row.replyUsername ?? 'Unknown',
+            avatarUrl: discordAvatarUrl(row.replyDiscordId, row.replyAvatarHash),
+            profileUrl: discordProfileUrl(row.replyDiscordId),
+          },
         }
       : null,
   }));
