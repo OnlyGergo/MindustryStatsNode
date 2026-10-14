@@ -13,7 +13,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Elysia, status, t } from 'elysia';
-import { authPlugin } from '../auth/plugin.js';
+import { authPlugin, type AuthUser } from '../auth/plugin.js';
 import { paginationKey, parsePagination } from '../lib/pagination.js';
 import { AspectsBody, IdParam, IntId, ReportReasonSchema, ReviewsQuery, StrictNoQuery } from '../lib/schemas.js';
 import { withCache, clearCaches } from '../middleware/cache.js';
@@ -22,8 +22,9 @@ import { deleteMyReview, getMyReview, upsertReview } from '../../repositories/us
 import { deleteReply, upsertReply } from '../../repositories/user/reviewReplyRepository.js';
 import { reportReview } from '../../repositories/user/reportRepository.js';
 import { normalizeReviewBody } from '../../repositories/user/reviewBody.js';
+import { notifyReviewPosted, notifyReviewReported } from '../lib/discordWebhooks.js';
 import { canManageServer } from '../../repositories/ownershipRepository.js';
-import { REPLY_BODY_MAX, REPORT_NOTE_MAX, REVIEW_BODY_MAX, type ReviewSort } from '../../../../common/models/reviews.js';
+import { REPLY_BODY_MAX, REPORT_NOTE_MAX, REVIEW_BODY_MAX, type MyReview, type ReviewSort } from '../../../../common/models/reviews.js';
 import { containsProfanity } from '../../../../common/profanity.js';
 
 const DEFAULT_PER_PAGE = 10;
@@ -34,6 +35,18 @@ const ReviewParams = t.Object({
   id: IntId(),
   reviewId: t.String({ pattern: '^[1-9][0-9]{0,17}$' }),
 });
+
+/** Fire-and-forget Discord post; the summary lookup is best-effort too. */
+async function announceReview(author: AuthUser, serverId: number, review: MyReview): Promise<void> {
+  const summary = await getReviewSummary(serverId).catch(() => null);
+  await notifyReviewPosted({
+    review,
+    author,
+    serverId,
+    averageRating: summary?.average,
+    ratingCount: summary?.count,
+  });
+}
 
 export const reviewRoutes = new Elysia({ prefix: '/api' })
   .use(authPlugin)
@@ -92,6 +105,11 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
     // The list and summary share the 'reviews' store name, so one clear drops
     // both. /mine is never cached, so it needs nothing.
     clearCaches('reviews');
+
+    // Only brand-new reviews: an edit keeps created_at, so the two differ.
+    if (result.review.createdAt === result.review.updatedAt) {
+      void announceReview(user, params.id, result.review);
+    }
     return result.review;
   }, {
     params: IdParam,
@@ -155,9 +173,20 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
   // Nothing public changes, so there is no cache to clear; the queue is
   // admin-only and uncached.
   .post('/servers/:id/reviews/:reviewId/report', async ({ params, user, body, set }) => {
-    const result = await reportReview(user.id, params.id, params.reviewId, body.reason, normalizeReviewBody(body.note));
+    const normalizedNote = normalizeReviewBody(body.note);
+    const result = await reportReview(user.id, params.id, params.reviewId, body.reason, normalizedNote);
     if (result === 'not_found') return status(404, { error: 'Review not found' });
     if (result === 'own_review') return status(403, { error: "You can't report your own review" });
+    if (typeof result === 'object') {
+      const { filed } = result;
+      void notifyReviewReported({
+        report: { id: filed.reportId, reason: body.reason, note: normalizedNote, createdAt: filed.createdAt },
+        review: filed.review,
+        author: filed.author,
+        reporter: user,
+        serverId: params.id,
+      });
+    }
     set.status = 204;
   }, {
     params: ReviewParams,

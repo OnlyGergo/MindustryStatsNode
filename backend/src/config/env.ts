@@ -36,6 +36,10 @@ const envSchema = z.object({
     USERDB_USER: z.string().optional(),
     USERDB_PASSWORD: z.string().optional(),
 
+    // Discord webhooks for moderation feeds. Both optional; unset = no notification.
+    DISCORD_REVIEWS_WEBHOOK_URL: z.string().url().optional(),
+    DISCORD_REPORTS_WEBHOOK_URL: z.string().url().optional(),
+
     // Owner image uploads (F4). The byte cap is also what the route's
     // pre-buffer Content-Length guard allows (plus multipart overhead).
     UPLOAD_DIR: z.string().default('./uploads'),
