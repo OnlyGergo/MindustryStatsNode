@@ -23,7 +23,7 @@ const TopBar: React.FC = () => {
     <div className="relative z-40 bg-linear-to-r from-surface-primary/60 to-surface-primary/40 backdrop-blur-md border-b border-default shrink-0 flex flex-col">
       <div className="h-11 split:h-12 px-3 split:px-4 flex items-center justify-between gap-2 split:gap-3 bg-surface-1">
         <Link to="/" className="hidden split:flex items-center gap-2.5 min-w-0">
-          <Icon className="w-4 h-4 shrink-0" />
+          <Icon className="w-8 h-8 shrink-0" />
           <h1 className="text-base font-bold text-primary leading-none whitespace-nowrap">
             Mindustry <span className="text-accent">Tracker</span>
           </h1>
