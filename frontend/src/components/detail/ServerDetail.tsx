@@ -27,6 +27,7 @@ const ServerDetail: React.FC<{
 }> = ({ serverDataElement, customisation }) => {
   const { me } = useAuth();
   const router = useRouter();
+  // Owners (and admins) can customise the page and reply to reviews; the API re-checks both.
   const canCustomise =
     !!me &&
     (me.isAdmin ||
@@ -228,6 +229,9 @@ const ServerDetail: React.FC<{
             />
           </div>
           <ReviewList
+            serverId={serverDataElement.id}
+            canReply={canCustomise}
+            onChanged={reviews.reload}
             reviews={reviews.reviews}
             total={reviews.total}
             page={reviews.page}
