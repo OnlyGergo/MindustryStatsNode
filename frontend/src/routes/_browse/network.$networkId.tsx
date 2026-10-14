@@ -19,8 +19,10 @@ export const Route = createFileRoute("/_browse/network/$networkId")({
         <LoadingSpinner showText={false} />
       </DetailShell>
   ),
-  // Pref changes (search params) keep the same match; only reload on entering/preloading.
-  shouldReload: ({ cause }) => cause !== "stay",
+  // Pref changes (search params) keep the same match, so never reload for those.
+  // Otherwise defer to the stale times (undefined, not true: true forces a reload
+  // and would refetch on every hover-preload and again on the click after it).
+  shouldReload: ({ cause }) => (cause === "stay" ? false : undefined),
   loader: async ({ params }) => {
     const { networkId } = params;
     try {

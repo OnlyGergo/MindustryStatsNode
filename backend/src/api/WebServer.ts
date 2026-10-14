@@ -15,6 +15,13 @@ const MINUTE = 60_000;
 
 /** Per-entity endpoints: one request per server/network/gamemode, so this is the crawl surface. */
 const ENTITY_PATH = /^\/api\/(servers\/[^/]+\/|networks\/|gamemodes\/[^/]+\/servers)/;
+/**
+ * Entity reads that are small and cached (a page fires several), so they get the
+ * looser API budget rather than eating the entity one meant for crawlers.
+ */
+const LIGHT_ENTITY_PATH = /^\/api\/(servers|networks)\/[^/]+\/(reviews|customisation)/;
+/** Chart series. They take arbitrary custom windows, so a miss can mean a 400-day aggregate scan. */
+const CHART_PATH = /^\/api\/.*(\/history|-history)(\/|$)/;
 /** Built assets — a single page load pulls a dozen, so they must not eat a page budget. */
 const STATIC_ASSET = /^\/assets\/|\.[a-z0-9]+$/i;
 
@@ -29,7 +36,8 @@ const rateLimitTiers: RateLimitTier[] = [
   // redirect/callback are GETs, so they land in 'auth'.
   { name: 'write', limit: 30, windowMs: MINUTE, match: (p, m) => p.startsWith('/api/') && m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS' },
   { name: 'auth', limit: 20, windowMs: MINUTE, match: (p) => p.startsWith('/api/auth/') },
-  { name: 'entity', limit: 40, windowMs: MINUTE, match: (p) => ENTITY_PATH.test(p) },
+  { name: 'chart', limit: 40, windowMs: MINUTE, match: (p) => CHART_PATH.test(p) },
+  { name: 'entity', limit: 40, windowMs: MINUTE, match: (p) => ENTITY_PATH.test(p) && !LIGHT_ENTITY_PATH.test(p) },
   { name: 'api', limit: 120, windowMs: MINUTE, match: (p) => p.startsWith('/api') || p === '/config' || p === '/sitemap.xml' },
   // Served images: immutable and long-cached, but a page with a gallery pulls several.
   { name: 'uploads', limit: 120, windowMs: MINUTE, match: (p) => p.startsWith('/uploads/') },

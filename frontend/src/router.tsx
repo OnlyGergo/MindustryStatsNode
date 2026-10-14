@@ -8,8 +8,12 @@ export function getRouter() {
       head: '',
     },
     defaultPreload: 'intent',
+    // Skip hovers that only pass over a link on the way somewhere else.
+    defaultPreloadDelay: 100,
     scrollRestoration: true,
-    defaultPreloadStaleTime: 0,
+    // A preloaded match stays usable this long, so repeated hovers and the click
+    // that follows reuse it instead of re-running the loader each time.
+    defaultPreloadStaleTime: 30_000,
     defaultErrorComponent: (error) => {
         // Log error on server terminal
         console.error('TanStack Router SSR Error:', error);
