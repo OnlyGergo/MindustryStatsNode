@@ -4,21 +4,33 @@
 // read connection); the PUT/DELETE mutations go through reviewRepository
 // (the user-content connection) -- same split as every other route that
 // touches user content.
+//
+// F5: owners (and admins) can post one public reply per review, under
+// /servers/:id/reviews/:reviewId/reply. Replies ride along on the cached
+// public list, so their writes clear the same 'reviews' store.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Elysia, status, t } from 'elysia';
 import { authPlugin } from '../auth/plugin.js';
 import { paginationKey, parsePagination } from '../lib/pagination.js';
-import { AspectsBody, IdParam, ReviewsQuery, StrictNoQuery } from '../lib/schemas.js';
+import { AspectsBody, IdParam, IntId, ReviewsQuery, StrictNoQuery } from '../lib/schemas.js';
 import { withCache, clearCaches } from '../middleware/cache.js';
 import { getReviewPage, getReviewSummary } from '../../repositories/reviewReadRepository.js';
 import { deleteMyReview, getMyReview, upsertReview } from '../../repositories/user/reviewRepository.js';
+import { deleteReply, upsertReply } from '../../repositories/user/reviewReplyRepository.js';
 import { normalizeReviewBody } from '../../repositories/user/reviewBody.js';
-import { REVIEW_BODY_MAX, type ReviewSort } from '../../../../common/models/reviews.js';
+import { canManageServer } from '../../repositories/ownershipRepository.js';
+import { REPLY_BODY_MAX, REVIEW_BODY_MAX, type ReviewSort } from '../../../../common/models/reviews.js';
 import { containsProfanity } from '../../../../common/profanity.js';
 
 const DEFAULT_PER_PAGE = 10;
 const MAX_PER_PAGE = 50;
+
+// Review ids are bigserial, so they stay strings end to end (PublicReview.id).
+const ReplyParams = t.Object({
+  id: IntId(),
+  reviewId: t.String({ pattern: '^[1-9][0-9]{0,17}$' }),
+});
 
 export const reviewRoutes = new Elysia({ prefix: '/api' })
   .use(authPlugin)
@@ -96,6 +108,43 @@ export const reviewRoutes = new Elysia({ prefix: '/api' })
     set.status = 204;
   }, {
     params: IdParam,
+    requireUser: true,
+    requireOrigin: true,
+  })
+
+  .put('/servers/:id/reviews/:reviewId/reply', async ({ params, user, body }) => {
+    if (!(await canManageServer(user, params.id))) return status(403, { error: 'Only owners of this server can reply' });
+
+    // Same normalisation as a review body; an empty reply is a delete, not a PUT.
+    const normalizedBody = normalizeReviewBody(body.body);
+    if (!normalizedBody) return status(422, { error: 'Your reply is empty.' });
+    if (containsProfanity(normalizedBody)) {
+      return status(422, { error: 'Please remove inappropriate language from your reply.' });
+    }
+
+    const result = await upsertReply(user.id, params.id, params.reviewId, normalizedBody);
+    if (result.kind === 'not_found') return status(404, { error: 'Review not found' });
+    if (result.kind === 'removed') return status(403, { error: 'This reply was removed by a moderator' });
+
+    clearCaches('reviews');
+    return { ok: true as const };
+  }, {
+    params: ReplyParams,
+    requireUser: true,
+    requireOrigin: true,
+    body: t.Object({
+      body: t.String({ minLength: 1, maxLength: REPLY_BODY_MAX }),
+    }, { additionalProperties: false }),
+  })
+
+  .delete('/servers/:id/reviews/:reviewId/reply', async ({ params, user, set }) => {
+    if (!(await canManageServer(user, params.id))) return status(403, { error: 'Only owners of this server can reply' });
+
+    await deleteReply(params.id, params.reviewId);
+    clearCaches('reviews');
+    set.status = 204;
+  }, {
+    params: ReplyParams,
     requireUser: true,
     requireOrigin: true,
   });

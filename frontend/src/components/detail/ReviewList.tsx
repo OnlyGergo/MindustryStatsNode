@@ -1,9 +1,15 @@
 import React from "react";
 import { StarRatingDisplay } from "./StarRating.tsx";
+import ReviewReply from "./ReviewReply.tsx";
 import { formatDate } from "../../util/general.ts";
 import type { PublicReview, ReviewSort } from "../../../../common/models/reviews.ts";
 
 interface ReviewListProps {
+  serverId: number;
+  /** The viewer manages this server, so can reply to reviews (F5). */
+  canReply: boolean;
+  /** Called after a reply is saved or deleted. */
+  onChanged: () => void;
   reviews: PublicReview[];
   total: number;
   page: number;
@@ -21,7 +27,7 @@ const SORT_LABELS: Record<ReviewSort, string> = {
 };
 
 const ReviewList: React.FC<ReviewListProps> = ({
-  reviews, total, page, perPage, sort, loading, onSortChange, onPageChange,
+  serverId, canReply, onChanged, reviews, total, page, perPage, sort, loading, onSortChange, onPageChange,
 }) => {
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
@@ -88,6 +94,14 @@ const ReviewList: React.FC<ReviewListProps> = ({
             {review.body && (
               <p className="text-sm text-secondary whitespace-pre-line wrap-break-word">{review.body}</p>
             )}
+
+            <ReviewReply
+              serverId={serverId}
+              reviewId={review.id}
+              reply={review.reply}
+              canReply={canReply}
+              onChanged={onChanged}
+            />
           </div>
         ))}
       </div>

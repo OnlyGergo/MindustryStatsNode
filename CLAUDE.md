@@ -24,7 +24,7 @@ Canonical-identity SQL fragments (used by every read that touches a server): `ba
 Bucket-width/tier maths shared by the chart queries: `backend/src/repositories/aggregateTiers.ts`
 Ownership (F3): admin-only writes `backend/src/repositories/user/ownerRepository.ts`, reads + `canManageServer` `backend/src/repositories/ownershipRepository.ts`, routes `backend/src/api/routes/admin.ts`, UI `/admin/owners`
 Customisation (F4): owner routes `backend/src/api/routes/owner.ts`, image serving `backend/src/api/routes/uploads.ts`, sniffing/stripping `backend/src/api/lib/imageValidation.ts`, writes `backend/src/repositories/user/{customisationRepository,imageRepository,uploadStorage}.ts`, reads `backend/src/repositories/customisationReadRepository.ts`, contracts `common/models/customisation.ts`, UI `components/detail/CustomisePanel.tsx` + `/admin/images`
-Reviews: write path `backend/src/repositories/user/reviewRepository.ts`, public reads `backend/src/repositories/reviewReadRepository.ts`, routes `backend/src/api/routes/reviews.ts`, shared contracts `common/models/reviews.ts` + aspect list `common/models/ratings.ts`
+Reviews: write path `backend/src/repositories/user/reviewRepository.ts` (owner replies: `reviewReplyRepository.ts`), public reads `backend/src/repositories/reviewReadRepository.ts`, routes `backend/src/api/routes/reviews.ts`, shared contracts `common/models/reviews.ts` + aspect list `common/models/ratings.ts`
 
 ## Libraries
 ### Backend
@@ -84,6 +84,7 @@ One review per user per server **family**, stored in `server_reviews` against th
 - Public list/summary use `withCache({ name: 'reviews' })`; every review write, and account deletion (its FK cascade removes reviews), calls `clearCaches('reviews')`. `/mine` is per-user and never cached.
 - Ranking: the server list carries `rating` (raw mean, for display), `ratingCount`, and `ratingScore` (Bayesian `(C·m + Σ)/(C + n)`, C = 5, m = site-wide mean, sort only) — see `reviewScoring.ts`.
 - Aspect ratings (F9) are fixed nullable columns (`rating_maps`, …). Their SQL, validation and UI are all derived from `REVIEW_ASPECTS` in `common/models/ratings.ts`, so a new aspect is a migration plus one line there — never hand-list the aspect columns.
+- Owner replies (F5): one per review in `review_replies` (PK `review_id`), written by `repositories/user/reviewReplyRepository.ts` via `PUT`/`DELETE /api/servers/:id/reviews/:reviewId/reply`. The route checks `canManageServer`; the SQL also scopes the review to the URL's family, so owning server A never lets you reply on server B. Replies are never anonymous and are returned inside the cached public list, so writes `clearCaches('reviews')`.
 - Review bodies are plain text (≤ 2000 chars, normalised by `reviewBody.ts`), rendered with React escaping and `whitespace-pre-line`; never `dangerouslySetInnerHTML`. `common/profanity.ts` is a stub until F7.
 
 ## Ownership + admin panel
