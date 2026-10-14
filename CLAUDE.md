@@ -85,7 +85,14 @@ One review per user per server **family**, stored in `server_reviews` against th
 - Ranking: the server list carries `rating` (raw mean, for display), `ratingCount`, and `ratingScore` (Bayesian `(C·m + Σ)/(C + n)`, C = 5, m = site-wide mean, sort only) — see `reviewScoring.ts`.
 - Aspect ratings (F9) are fixed nullable columns (`rating_maps`, …). Their SQL, validation and UI are all derived from `REVIEW_ASPECTS` in `common/models/ratings.ts`, so a new aspect is a migration plus one line there — never hand-list the aspect columns.
 - Owner replies (F5): one per review in `review_replies` (PK `review_id`), written by `repositories/user/reviewReplyRepository.ts` via `PUT`/`DELETE /api/servers/:id/reviews/:reviewId/reply`. The route checks `canManageServer`; the SQL also scopes the review to the URL's family, so owning server A never lets you reply on server B. Replies are never anonymous and are returned inside the cached public list, so writes `clearCaches('reviews')`.
-- Review bodies are plain text (≤ 2000 chars, normalised by `reviewBody.ts`), rendered with React escaping and `whitespace-pre-line`; never `dangerouslySetInnerHTML`. `common/profanity.ts` is a stub until F7.
+- Review bodies are plain text (≤ 2000 chars, normalised by `reviewBody.ts`), rendered with React escaping and `whitespace-pre-line`; never `dangerouslySetInnerHTML`. Every user-written public text (review bodies, owner replies, and F6's announcements) is checked with `containsProfanity` from `common/profanity.ts` and refused with a 422. It matches whole words/phrases only, over the vendored LDNOOBW list in `common/profanity/en.ts` (CC-BY-4.0, don't edit it; exceptions go in `ALLOWED`). The forms run the same check to warn before submitting.
+
+## Moderation (F7)
+- Reports: `review_reports`, one per (review, reporter), filed via `POST /api/servers/:id/reviews/:reviewId/report` (`repositories/user/reportRepository.ts`).
+- Queue and actions: the `/reports` and `/reviews/:id…` routes in `api/routes/admin.ts`, over `repositories/user/moderationRepository.ts`. That repository is the only place an anonymous review's author is selected.
+- Remove is a soft delete (`removed_at`/`removed_reason`/`removed_by`, on reviews and on replies); restore clears it. Remove/edit mark a review's open reports `actioned`; dismiss marks them `dismissed`. Every action that changes a public row calls `clearCaches('reviews')`.
+- An admin edit never bumps `updated_at`, because that column decides which alias row is the user's review.
+- UI: the `Reports` tab (`routes/admin/reports.tsx` → `components/admin/ReportsAdmin.tsx`), plus Report/Remove actions on review cards (`components/detail/ReviewActions.tsx`).
 
 ## Ownership + admin panel
 

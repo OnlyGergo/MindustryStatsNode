@@ -153,12 +153,25 @@ Covers the theme accent and background image.
 - **UI:** the reply renders under its review as "Response from the owner", with the owner's name shown. Managers get an inline reply box.
 
 ## F6: Announcements
-- **Migration `38_announcements.sql`:** `announcements(id, server_group_id null, server_id null, author_user_id, title, body, status pending|approved|rejected, starts_at, ends_at null, reviewed_by, created_at)`, with CHECK exactly-one-target.
+- **Migration `40_announcements.sql`** (F5 took 38 and F7 took 39 first): `announcements(id, server_group_id null, server_id null, author_user_id, title, body, status pending|approved|rejected, starts_at, ends_at null, reviewed_by, created_at)`, with CHECK exactly-one-target.
 - **Display:** a network announcement shows on **every server page in that network**, but never on the network page itself.
 - **Routes:** the owner can use `POST/DELETE /api/owner/announcements`. Admins get a queue with approve/reject. `GET /api/servers/:id/announcements` returns approved, currently active announcements (cached).
 - **UI:** `components/detail/AnnouncementBanner.tsx`, mounted in `ServerDetail.tsx` only. The body is plain text, with line breaks kept and no markdown or HTML, which avoids XSS.
 
 ## F7: Reports, moderation, profanity filter
+> **Done.** Migration `39_reports.sql`. Deviations:
+> - The list is vendored as `common/profanity/en.ts`: the `en` file verbatim as a string array, plus `LICENSE`. It isn't `en.txt`, so both Bun and Vite import it with no loader config.
+> - `ALLOWED` in `common/profanity.ts` drops entries that are ordinary words in a game review: `suck(s)`, `hardcore`, `domination`, `escort`, `snatch` and `xx`.
+> - Matching also folds diacritics. A word also matches with one trailing "s". Entries with no letters (the emoji) match as substrings.
+> - Review bodies and owner replies are checked; F6 must call `containsProfanity` on announcements. The review form and the reply box pre-warn and disable submit.
+> - Reasons/statuses are `text` + `CHECK`, not enum types. `server_reviews` and `review_replies` gained `removed_by`, with SET NULL so deleting an admin's account keeps the moderation record.
+> - Reporting your own review is a 403, and a review outside the URL's family is a 404. Reporting twice is a silent no-op.
+> - Dismissing is per review, not per report: `POST /api/admin/reviews/:id/reports/dismiss` dismisses all of its open reports, since the queue is grouped by review. Remove and edit mark the open reports `actioned`; restore leaves them alone.
+> - `GET /api/admin/reports?view=open|removed|dismissed` returns reviews, each with all of its reports, the real author, the remover and the owner reply.
+> - An admin edit does not bump `updated_at`, which decides the newest alias row.
+> - Owner replies can be removed or restored too (`PATCH /api/admin/reviews/:id/reply`), using the columns F5 reserved. A removed reply is hidden and can't be overwritten by the owner.
+> - Admins also get a Remove button on public review cards.
+> - Auto-hide at N reports is not implemented (still an open item).
 - **Word list:** vendor LDNOOBW `en` into `common/profanity/en.txt`, with its licence (CC-BY-4.0), and add `common/profanity.ts` so the client can pre-warn.
   - Matching lowercases the text, folds leetspeak (0→o, 1→i, 3→e, @→a, $→s), and checks **whole words** plus multi-word phrases. That avoids the Scunthorpe problem.
 - **Policy:** a match **rejects the write with 422** and a friendly message. This applies to review bodies, replies and announcements.
@@ -196,5 +209,5 @@ Opus reviews F0 and the F2 read/write SQL in depth, because the identity, dedupe
 - Security pass (`/security-review`) on F0, F1, F4 and F7 before merging.
 
 ## Open items (decide later; they don't block F0–F2)
-- Whether you want auto-hide at N reports (F7).
+- Whether you want auto-hide at N reports (F7 shipped without it).
 - Image size cap: the default is 2 MB and 3840×2160.
