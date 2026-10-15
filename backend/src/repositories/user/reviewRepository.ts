@@ -171,13 +171,18 @@ export async function getMyReview(userId: string, serverId: number): Promise<MyR
   return row ? toMyReview(row) : null;
 }
 
-/** Erases every row this user has in the family, removed ones included -- a user may always delete their own content. */
+/**
+ * Erases the user's non-removed rows in the family. A moderator-removed row is
+ * kept on purpose: it stays the newest row, so upsertReview keeps refusing,
+ * otherwise deleting it would let the user bypass the removal with a fresh PUT.
+ * A removed-only family therefore deletes nothing (returns 0).
+ */
 export async function deleteMyReview(userId: string, serverId: number): Promise<number> {
   // RETURNING id + QueryTypes.SELECT rather than QueryTypes.DELETE: pg's
   // driver doesn't surface a row count through Sequelize's DELETE query type
   // (it comes back as an empty array), so the deleted ids are counted instead.
   const rows = await userSequelize.query<{ id: number | string }>(
-    `DELETE FROM server_reviews WHERE user_id = :userId AND server_id IN (${serverFamilySql(':serverId')}) RETURNING id`,
+    `DELETE FROM server_reviews WHERE user_id = :userId AND server_id IN (${serverFamilySql(':serverId')}) AND removed_at IS NULL RETURNING id`,
     { replacements: { userId, serverId }, type: QueryTypes.SELECT },
   );
   return rows.length;

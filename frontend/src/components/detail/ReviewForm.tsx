@@ -99,15 +99,6 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
     return (
       <div className="flex flex-col gap-2 items-start">
         <div className="text-sm text-status-offline">Your review was removed by a moderator.</div>
-        <button
-          type="button"
-          className="button-secondary text-xs sm:text-sm px-2 sm:px-3 py-1"
-          disabled={deleting}
-          onClick={handleDelete}
-        >
-          Delete
-        </button>
-        {error && <div className="text-sm text-status-offline">{error}</div>}
       </div>
     );
   }
