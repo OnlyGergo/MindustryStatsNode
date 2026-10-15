@@ -78,6 +78,3 @@ export function containsProfanity(text: string): boolean {
   }
   return false;
 }
-
-/** The 422 message every write path returns for a match, so the wording stays consistent. */
-export const PROFANITY_MESSAGE = 'Please remove inappropriate language and try again.';
