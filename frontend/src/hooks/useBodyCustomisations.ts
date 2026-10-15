@@ -3,13 +3,13 @@ import { customisationStyle } from '../util/customisation';
 import { PublicCustomisation } from '../../../common/models/customisation';
 
 interface UseBodyCustomisationProps {
-  customisation: PublicCustomisation | null;
+  customisation: PublicCustomisation | null | undefined;
 }
 
 export function useBodyCustomisation({ customisation }: UseBodyCustomisationProps) {
   useEffect(() => {
     // 1. Get the dynamic styles object using your existing function
-    const styles = customisationStyle(customisation) as Record<string, string> | undefined;
+    const styles = customisationStyle(customisation ?? null) as Record<string, string> | undefined;
     
     if (!styles) return;
 

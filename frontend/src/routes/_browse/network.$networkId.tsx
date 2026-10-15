@@ -49,9 +49,7 @@ export const Route = createFileRoute("/_browse/network/$networkId")({
 function NetworkComponent() {
   const { details, customisation, error } = Route.useLoaderData();
   
-  if (customisation !== null && customisation !== undefined) {
-    useBodyCustomisation({ customisation });
-  }
+  useBodyCustomisation({ customisation });
   
   return (
       <DetailShell>

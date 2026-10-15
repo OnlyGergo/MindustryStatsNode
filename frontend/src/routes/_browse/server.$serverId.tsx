@@ -66,9 +66,7 @@ export const Route = createFileRoute("/_browse/server/$serverId")({
 function ServerComponent() {
   const { serverDataElement, customisation, error } = Route.useLoaderData();
 
-  if (customisation !== null && customisation !== undefined) {
-    useBodyCustomisation({ customisation });
-  }
+  useBodyCustomisation({ customisation });
   
   return (
     <DetailShell>
