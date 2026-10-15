@@ -132,7 +132,7 @@ export const adminRoutes = new Elysia({ prefix: '/api/admin' })
   // Also the takedown for an already-approved image: it is un-set everywhere and its file deleted.
   .post('/images/:id/reject', async ({ params, body, user, set }) => {
     set.headers['cache-control'] = 'no-store';
-    const reason = body?.reason?.trim() || null;
+    const reason = normalizeReviewBody(body?.reason);
     const result = await rejectImage(params.id, user.id, reason);
     if (result.kind !== 'ok') return moderationError(result, 'reject');
     clearCaches('customisation');
