@@ -378,13 +378,14 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
     const query = `
       SELECT MIN(gr.id) AS id,
         gr.clean_name,
-        gr.game_mode,
+        -- Mode of the representative row, so the icon matches the id handed out.
+        (ARRAY_AGG(gr.game_mode ORDER BY gr.id))[1] AS game_mode,
         COUNT(DISTINCT sc.canonical_id) AS server_count
       FROM gamemode_registry gr
         JOIN server_maps_registry smr ON smr.gamemode_id = gr.id
         JOIN server_maps_history smh ON smh.map_id = smr.id
         ${canonicalJoin('sc', 'smh')}
-      GROUP BY gr.clean_name, gr.game_mode
+      GROUP BY gr.clean_name
       ORDER BY server_count DESC;
     `;
 
