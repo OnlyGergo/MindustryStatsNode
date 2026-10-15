@@ -11,6 +11,7 @@
 
 import { env } from '../../config/env.js';
 import { createLogger } from '../../logger.js';
+import { discordAvatarUrl } from '../auth/discordAvatar.js';
 
 const logger = createLogger('DiscordWebhooks');
 
@@ -61,20 +62,6 @@ const discordProfileUrl = (user: DiscordUser) => `https://discord.com/users/${us
 /** Public page for a server, optionally deep-linked to the reviews. */
 export function serverUrl(serverId: number): string {
   return `${env.SITE_ORIGIN}/server/${serverId}`;
-}
-
-function avatarUrl(user: DiscordUser, size = 128): string {
-  if (user.avatarHash) {
-    const ext = user.avatarHash.startsWith('a_') ? 'gif' : 'png';
-    return `https://cdn.discordapp.com/avatars/${user.discordId}/${user.avatarHash}.${ext}?size=${size}`;
-  }
-  // Default avatar for the new username system: (id >> 22) % 6
-  try {
-    const index = Number((BigInt(user.discordId) >> 22n) % 6n);
-    return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
-  } catch {
-    return 'https://cdn.discordapp.com/embed/avatars/0.png';
-  }
 }
 
 interface DiscordPayload {
@@ -145,7 +132,7 @@ export async function notifyReviewPosted(input: ReviewPostedInput): Promise<void
       color: COLOR_REVIEW,
       author: {
         name: truncate(anonymous ? 'Anonymous' : displayName(author), LIMIT_AUTHOR_NAME),
-        ...(anonymous ? {} : { icon_url: avatarUrl(author), url: discordProfileUrl(author) }),
+        ...(anonymous ? {} : { icon_url: discordAvatarUrl(author.discordId, author.avatarHash, 128), url: discordProfileUrl(author) }),
       },
       description: truncate(review.body?.trim() || '*No comment provided.*', LIMIT_DESCRIPTION),
       fields: fields.map((f) => ({ ...f, value: truncate(f.value, LIMIT_FIELD_VALUE) })),
@@ -182,10 +169,10 @@ export async function notifyReviewReported(input: ReviewReportedInput): Promise<
       color: COLOR_REPORT,
       author: {
         name: truncate(`${displayName(author)} (@${author.username})`, LIMIT_AUTHOR_NAME),
-        icon_url: avatarUrl(author),
+        icon_url: discordAvatarUrl(author.discordId, author.avatarHash, 128),
         url: discordProfileUrl(author),
       },
-      thumbnail: { url: avatarUrl(author, 256) },
+      thumbnail: { url: discordAvatarUrl(author.discordId, author.avatarHash, 256) },
       description: truncate(review.body?.trim() || '*No comment provided.*', LIMIT_DESCRIPTION),
       fields: [
         { name: 'Rating', value: `${stars(review.rating)} (${review.rating}/5)`, inline: true },

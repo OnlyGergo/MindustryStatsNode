@@ -7,11 +7,12 @@
  * `avatarHash` is `users.avatar_hash` (null when the account has never set an
  * avatar, or Discord returned none). Animated avatars are given an `a_` hash
  * prefix by Discord, which is the documented way to tell a gif from a png.
+ * `size` only affects hashed avatars; default avatars have no size parameter.
  */
-export function discordAvatarUrl(discordId: string, avatarHash: string | null): string {
+export function discordAvatarUrl(discordId: string, avatarHash: string | null, size = 64): string {
   if (avatarHash) {
     const ext = avatarHash.startsWith('a_') ? 'gif' : 'png';
-    return `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.${ext}?size=64`;
+    return `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.${ext}?size=${size}`;
   }
 
   const defaultIndex = Number((BigInt(discordId) >> 22n) % 6n);

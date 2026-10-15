@@ -14,6 +14,13 @@ describe('discordAvatarUrl', () => {
     );
   });
 
+  test('honours an explicit size for hashed avatars and ignores it for defaults', () => {
+    expect(discordAvatarUrl('123456789012345678', 'abcdef0123456789abcdef0123456789', 256)).toBe(
+      'https://cdn.discordapp.com/avatars/123456789012345678/abcdef0123456789abcdef0123456789.png?size=256',
+    );
+    expect(discordAvatarUrl('250902435361226752', null, 256)).toBe(discordAvatarUrl('250902435361226752', null));
+  });
+
   test('falls back to a default avatar keyed on (id >> 22) % 6 when hash is null', () => {
     const id = '250902435361226752'; // a real-looking Discord snowflake
     const expectedIndex = Number((BigInt(id) >> 22n) % 6n);
