@@ -2,8 +2,8 @@
 // serverMergeRepository.ts
 // Write side of the admin merge page, on the user-content connection.
 //
-// app_user_rw has no write grant on server_canonical or server_events; the
-// identity layer stays collector-owned. Merges and unmerges go through the
+// app_user_rw has no write grant on server_canonical; the identity layer
+// stays collector-owned. Merges and unmerges go through the
 // two SECURITY DEFINER functions from 40_admin_server_merge.sql, which encode
 // the operator statements from 30_server_identity.sql and nothing else.
 // ─────────────────────────────────────────────────────────────────────────────

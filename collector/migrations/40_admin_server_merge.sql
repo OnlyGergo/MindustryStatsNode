@@ -1,8 +1,8 @@
 -- Admin merge UI: the merge/unmerge statements from the header of
 -- 30_server_identity.sql, wrapped so the backend can run them.
 --
--- server_canonical and server_events stay collector-owned tables:
--- app_user_rw gets NO write grant on either. Instead it may EXECUTE two
+-- server_canonical stays a collector-owned table: app_user_rw gets NO write
+-- grant on it. Instead it may EXECUTE two
 -- SECURITY DEFINER functions (running as the migration owner) that encode the
 -- exact operator statements and nothing else, so the backend can merge and
 -- unmerge but cannot write arbitrary rows into the identity layer.
@@ -12,14 +12,14 @@
 --     surviving root is the one with the oldest created_at (the root
 --     convention), whichever side the admin picked as the target, and the
 --     whole losing family is repointed in one UPDATE so depth stays at 1.
---     An address_change event is written at the absorbed root's first
---     sighting, which is where the address changed.
 --
 --   unmerge_server(id)
 --     Detaches one member back into a family of its own. Detaching the root
---     re-roots the remaining members onto their oldest row (still depth 1)
---     and moves the family's address_change events with it. The
---     address_change event the merge wrote for that member is removed.
+--     re-roots the remaining members onto their oldest row (still depth 1).
+--
+-- server_events is untouched by both: events stay on the raw server_id they
+-- were recorded against and a reader resolves them through server_canonical,
+-- like every other table, so merge/unmerge need no event bookkeeping.
 --
 -- Both serialise on one advisory lock, so two concurrent admin merges can
 -- never interleave and leave a member pointing at a non-root.
@@ -56,12 +56,6 @@ begin
 
     update server_canonical set canonical_id = keep_root where canonical_id = drop_root;
 
-    insert into server_events (server_id, kind, occurred_at, detail)
-    select keep_root, 'address_change', s.created_at,
-           jsonb_build_object('from_server_id', drop_root, 'host', s.host, 'port', s.port)
-    from servers s
-    where s.id = drop_root;
-
     return keep_root;
 end;
 $$;
@@ -97,20 +91,7 @@ begin
         end if;
         update server_canonical set canonical_id = new_root
         where canonical_id = member_id and server_id <> member_id;
-
-        -- The family's annotations hang off its root, so they follow it to
-        -- new_root; the one recording new_root's own arrival no longer means
-        -- anything once it is the root.
-        delete from server_events
-        where kind = 'address_change' and server_id = member_id
-          and detail ->> 'from_server_id' = new_root::text;
-        update server_events set server_id = new_root
-        where kind = 'address_change' and server_id = member_id;
     end if;
-
-    delete from server_events
-    where kind = 'address_change'
-      and detail ->> 'from_server_id' = member_id::text;
 end;
 $$;
 
