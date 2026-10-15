@@ -202,6 +202,7 @@ export const authRoutes = new Elysia({ prefix: '/api/auth' })
       try {
         const res = await fetch('https://discord.com/api/users/@me', {
           headers: { Authorization: `Bearer ${accessToken}` },
+          signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) throw new Error(`Discord /users/@me responded ${res.status}`);
         const json: unknown = await res.json();
