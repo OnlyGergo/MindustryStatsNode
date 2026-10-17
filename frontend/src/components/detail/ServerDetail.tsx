@@ -205,7 +205,7 @@ const ServerDetail: React.FC<{
           <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
             Player History
           </h2>
-          <div className="h-64 sm:h-96">
+          <div className="h-80 sm:h-96">
             <ServerHistoryChart {...serverDataElement} />
           </div>
         </div>

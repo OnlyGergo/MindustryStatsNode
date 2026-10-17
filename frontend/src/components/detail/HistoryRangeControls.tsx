@@ -1,4 +1,4 @@
-import { DATE_RANGE_OPTIONS, DateRangeOption } from "../../util/dateRangeConsts.ts";
+import { DATE_RANGE_OPTIONS, DateRangeOption } from "../../util/chartHelpers.ts";
 
 interface HistoryRangeControlsProps {
   idPrefix: string;

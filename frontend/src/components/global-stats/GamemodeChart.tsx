@@ -1,130 +1,76 @@
-import React, { useEffect, useRef } from "react";
-import uPlot from "uplot";
+import React, { useMemo } from "react";
+import type uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { GamemodeHistoryEntry } from "../../../../common/models/GlobalStatsTypes.js";
 import {
     buildGamemodeIndex,
     buildShareData,
     buildShareSeries,
+    buildTimeAxes,
     buildUPlotData,
-    formatTimestampLabel,
+    countTicks,
     getModeColor,
-    DateRangeOption,
     SHARE_Y_AXIS_VALUES,
     ViewMode,
     shareTooltipRows,
 } from "../../util/chartHelpers.ts";
-import { createChartTooltip } from "../../util/chartTooltip.ts";
-import { LoadingSpinner } from "../LoadingSpinner.tsx";
+import { useUPlot } from "../../hooks/useUPlot.ts";
+import { UPlotFrame } from "../UPlotFrame.tsx";
 
 interface GamemodeChartProps {
     data: GamemodeHistoryEntry[];
     loading: boolean;
     error: string | null;
-    selectedRange: DateRangeOption;
     viewMode: ViewMode;
     visibleModes: Set<string>;
 }
 
+const AGG_COLOR = "#f97316";
+
 // uPlot rendering half of GlobalStatsChart's gamemode graph - kept in its own
 // module so it's only fetched lazily on the client (see ChartSuspense.tsx).
-const GamemodeChart: React.FC<GamemodeChartProps> = ({
-                                                                data,
-                                                                loading,
-                                                                error,
-                                                                selectedRange,
-                                                                viewMode,
-                                                                visibleModes,
-                                                            }) => {
-    const outerRef = useRef<HTMLDivElement>(null);
-    const mountRef = useRef<HTMLDivElement>(null);
-    const uplotRef = useRef<uPlot | null>(null);
-    const lastSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
+const GamemodeChart: React.FC<GamemodeChartProps> = ({ data, loading, error, viewMode, visibleModes }) => {
+    const pivot = useMemo(() => ({
+        timestamps: [...new Set(data.map((d) => d.timestamp))].sort((a, b) => a - b),
+        gamemodes: [...new Set(data.map((d) => d.modeName))].sort(),
+        index: buildGamemodeIndex(data),
+    }), [data]);
 
-    useEffect(() => {
-        if (!outerRef.current || !mountRef.current || !data || data.length === 0) return;
+    const isShare = viewMode === "share";
+    const isAgg = viewMode === "aggregated";
+    const labels = isAgg ? ["Total Network Players"] : pivot.gamemodes;
+    const markers = pivot.timestamps.length <= 80;
 
-        uplotRef.current?.destroy();
-        uplotRef.current = null;
+    // Lines/aggregated data ignores visibility (toggles are setSeries calls);
+    // share folds hidden modes into "Other", so it rebuilds on toggle.
+    const plain = useMemo(
+        () => isShare ? null : buildUPlotData(pivot.timestamps, pivot.gamemodes, pivot.index, viewMode),
+        [pivot, viewMode, isShare],
+    );
+    const share = useMemo(
+        () => isShare ? buildShareData(pivot.timestamps, pivot.gamemodes, pivot.index, visibleModes) : null,
+        [pivot, visibleModes, isShare],
+    );
 
-        const timestamps = [...new Set(data.map((d) => d.timestamp))].sort((a, b) => a - b);
-        const gamemodes = [...new Set(data.map((d) => d.modeName))].sort();
-        const index = buildGamemodeIndex(data);
-
-        const isShare = viewMode === "share";
-        const isAgg = viewMode === "aggregated";
-        const labels = isAgg ? ["Total Network Players"] : gamemodes;
-        const share = isShare ? buildShareData(timestamps, gamemodes, index, visibleModes) : null;
-        const chartData = share ? share.data : buildUPlotData(timestamps, gamemodes, index, viewMode);
-
-        const series: uPlot.Series[] = share ? buildShareSeries(share) : [
-            { label: "Time" },
-            ...labels.map((label) => {
-                const color = isAgg ? "#f97316" : getModeColor(label);
-                return {
+    const { outerRef, mountRef } = useUPlot({
+        shape: share
+            ? `share|${share.labels.join("\u0000")}`
+            : `${viewMode}|${markers}|${labels.join("\u0000")}`,
+        data: (share ? share.data : plain) as uPlot.AlignedData | null,
+        show: isShare || isAgg ? undefined : labels.map((label) => visibleModes.has(label)),
+        options: ({ narrow }) => ({
+            series: share ? buildShareSeries(share) : [
+                { label: "Time" },
+                ...labels.map((label): uPlot.Series => ({
                     label,
-                    stroke: color,
+                    stroke: isAgg ? AGG_COLOR : getModeColor(label),
                     width: 2,
                     show: isAgg || visibleModes.has(label),
                     spanGaps: false,
-                    points: { show: timestamps.length <= 80, size: 5 },
-                } satisfies uPlot.Series;
-            }),
-        ];
-
-        const tooltip = createChartTooltip(mountRef.current);
-
-        function renderTooltip(u: uPlot, idx: number | null) {
-            tooltip.update(u, idx, () => {
-                if (idx == null) return null;
-                const ts = (u.data[0] as number[])[idx];
-                const title = new Date(ts * 1000).toLocaleString();
-                if (share) return { title, rows: shareTooltipRows(share, idx) };
-                const rows: { label: string; value: number; color: string }[] = [];
-
-                labels.forEach((label, si) => {
-                    const sIdx = si + 1;
-                    if (isAgg || u.series[sIdx].show) {
-                        const raw = (u.data[sIdx] as (number | null)[])[idx];
-                        if (raw != null && raw > 0) {
-                            rows.push({
-                                label,
-                                value: raw,
-                                color: isAgg ? "#f97316" : getModeColor(label),
-                            });
-                        }
-                    }
-                });
-
-                rows.sort((a, b) => b.value - a.value);
-                return { title, rows, isAgg };
-            });
-        }
-
-        const opts: uPlot.Options = {
-            width: outerRef.current.offsetWidth,
-            height: outerRef.current.offsetHeight,
-            series,
-            axes: [
-                {
-                    stroke: "#9ca3af",
-                    grid: { stroke: "rgba(255,255,255,0.03)" },
-                    ticks: { stroke: "rgba(255,255,255,0.03)" },
-                    values: (_u, splits) => splits.map((ts) => formatTimestampLabel(ts * 1000, selectedRange)),
-                    size: 30,
-                    font: "10px sans-serif",
-                },
-                {
-                    stroke: "#9ca3af",
-                    grid: { stroke: "rgba(255,255,255,0.03)" },
-                    ticks: { stroke: "rgba(255,255,255,0.03)" },
-                    values: share
-                        ? SHARE_Y_AXIS_VALUES
-                        : (_u, splits) => splits.map((v) => Math.round(v).toLocaleString()),
-                    size: 60,
-                    font: "10px sans-serif",
-                },
+                    points: { show: markers, size: 5 },
+                })),
             ],
+            axes: buildTimeAxes(narrow, share ? SHARE_Y_AXIS_VALUES : countTicks(narrow)),
             scales: {
                 x: { time: true },
                 y: { range: share ? [0, 100] : (_u, _min, max) => [0, max * 1.05] },
@@ -134,49 +80,27 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({
                 drag: { x: false, y: false },
                 sync: { key: "gamemode-chart" },
             },
-            hooks: {
-                setCursor: [(u) => renderTooltip(u, u.cursor.idx ?? null)],
-            },
-        };
-
-        uplotRef.current = new uPlot(opts, chartData as uPlot.AlignedData, mountRef.current);
-        lastSizeRef.current = { width: opts.width, height: opts.height };
-
-        const ro = new ResizeObserver((entries) => {
-            if (!uplotRef.current) return;
-            const { width, height } = entries[0].contentRect;
-            if (width <= 0 || height <= 0) return;
-
-            const last = lastSizeRef.current;
-            if (Math.abs(width - last.width) < 1 && Math.abs(height - last.height) < 1) return;
-            lastSizeRef.current = { width, height };
-
-            requestAnimationFrame(() => {
-                uplotRef.current?.setSize({ width, height });
-            });
-        });
-        ro.observe(outerRef.current);
-
-        return () => {
-            ro.disconnect();
-            tooltip.remove();
-            uplotRef.current?.destroy();
-            uplotRef.current = null;
-        };
-    }, [data, selectedRange, viewMode, visibleModes]);
+        }),
+        tooltip: (u, idx) => {
+            const title = new Date((u.data[0] as number[])[idx] * 1000).toLocaleString();
+            if (share) return { title, rows: shareTooltipRows(share, idx) };
+            const rows = labels
+                .map((label, si) => ({
+                    label,
+                    show: isAgg || u.series[si + 1].show,
+                    value: (u.data[si + 1] as (number | null)[])[idx],
+                    color: isAgg ? AGG_COLOR : getModeColor(label),
+                }))
+                .filter((r): r is typeof r & { value: number } => r.show === true && r.value != null && r.value > 0)
+                .map(({ label, value, color }) => ({ label, value, color }))
+                .sort((a, b) => b.value - a.value);
+            return { title, rows, isAgg };
+        },
+    });
 
     return (
         <div className="w-full h-full relative">
-            <div
-                ref={outerRef}
-                className={`absolute inset-0 block transition-opacity duration-300 ${
-                    loading ? "opacity-15 pointer-events-none" : "opacity-100"
-                }`}
-            >
-                <div ref={mountRef} className="absolute inset-0 block overflow-hidden" />
-            </div>
-
-            {loading && <LoadingSpinner />}
+            <UPlotFrame outerRef={outerRef} mountRef={mountRef} loading={loading} />
 
             {error && (
               <div className="absolute inset-0 flex items-center justify-center text-status-offline text-xs font-semibold z-20">

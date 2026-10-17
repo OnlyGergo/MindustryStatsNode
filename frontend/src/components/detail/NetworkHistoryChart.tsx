@@ -13,14 +13,13 @@ import HistoryRangeControls from "./HistoryRangeControls.tsx";
 const PlayerHistoryChart = lazy(() => import("./PlayerHistoryChart.tsx"));
 
 const NetworkHistoryChart = ({ network }: { network: NetworkDetails }) => {
-  const { chartData, loading, fetchError, selectedRange, ...range } =
+  const { chartData, loading, fetchError, ...range } =
     useHistory<ServerHistory>(network.id, HistoryType.Network);
 
   return (
     <div className="h-full w-full flex flex-col">
       <HistoryRangeControls
         idPrefix="network-history"
-        selectedRange={selectedRange}
         fetchError={fetchError}
         {...range}
       />
@@ -30,7 +29,6 @@ const NetworkHistoryChart = ({ network }: { network: NetworkDetails }) => {
           <PlayerHistoryChart
             data={chartData}
             loading={loading}
-            selectedRange={selectedRange}
           />
         </ChartSuspense>
       </div>

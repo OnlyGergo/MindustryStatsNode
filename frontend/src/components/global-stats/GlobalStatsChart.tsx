@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, lazy } from "react";
-import { DateRangeOption, ViewMode } from "../../util/chartHelpers.ts";
+import React, { useState, useMemo, lazy } from "react";
+import { PresetRange, ViewMode } from "../../util/chartHelpers.ts";
 import { useGamemodeHistory } from "../../hooks/api/useGamemodeHistory.ts";
 import { useServerShare } from "../../hooks/api/useServerShare.ts";
 import { ChartControls } from "../ChartControls.tsx";
@@ -17,12 +17,26 @@ interface GlobalStatsChartProps {
     gamemodeList: GamemodeInfo[];
 }
 
+/** Series shown by default: the eight busiest. */
+const DEFAULT_VISIBLE = 8;
+
+/**
+ * Legend selection derived from the current key list: the busiest few until the
+ * user picks, and the user's pick only for the list it was made on, so new data
+ * (a range change) falls back to the default without an extra render pass.
+ */
+function useVisibleSet(sortedKeys: string[]) {
+  const [pick, setPick] = useState<{ keys: string[]; set: Set<string> } | null>(null);
+  const fallback = useMemo(() => new Set(sortedKeys.slice(0, DEFAULT_VISIBLE)), [sortedKeys]);
+  const visible = pick?.keys === sortedKeys ? pick.set : fallback;
+  const setVisible = (set: Set<string>) => setPick({ keys: sortedKeys, set });
+  return [visible, setVisible] as const;
+}
+
 const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
-  const [selectedRange, setSelectedRange] = useState<DateRangeOption>("1d");
+  const [selectedRange, setSelectedRange] = useState<PresetRange>("1d");
   const [viewMode, setViewMode] = useState<ViewMode>("lines");
   const [selectedGamemode, setSelectedGamemode] = useState<GamemodeInfo | null>(null);
-  const [visibleModes, setVisibleModes] = useState<Set<string>>(new Set());
-  const [visibleServerGroups, setVisibleServerGroups] = useState<Set<string>>(new Set());
 
   const { data: gamemodeData, loading, error, peakPlayers } = useGamemodeHistory(selectedRange);
   const { data: serverShareData, loading: serverShareLoading, error: serverShareError } =
@@ -47,11 +61,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
     return unique.sort((a, b) => (computedPeaks[b] || 0) - (computedPeaks[a] || 0));
   }, [gamemodeData, computedPeaks]);
 
-  useEffect(() => {
-    if (sortedGamemodes.length > 0) {
-      setVisibleModes(new Set(sortedGamemodes.slice(0, 8)));
-    }
-  }, [sortedGamemodes]);
+  const [visibleModes, setVisibleModes] = useVisibleSet(sortedGamemodes);
 
   const computedServerGroupPeaks = useMemo(() => {
     const peaks: Record<string, number> = {};
@@ -72,11 +82,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
     return unique.sort((a, b) => (computedServerGroupPeaks[b] || 0) - (computedServerGroupPeaks[a] || 0));
   }, [serverShareData, computedServerGroupPeaks]);
 
-  useEffect(() => {
-    if (sortedServerGroups.length > 0) {
-      setVisibleServerGroups(new Set(sortedServerGroups.slice(0, 8)));
-    }
-  }, [sortedServerGroups]);
+  const [visibleServerGroups, setVisibleServerGroups] = useVisibleSet(sortedServerGroups);
 
   return (
       <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
@@ -147,13 +153,12 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
                     ? "Player Share by Gamemode"
                     : viewMode === "lines" ? "Playercounts by Gamemode" : "Aggregated Global Playercounts"}
               </h2>
-              <div className="relative w-full h-64 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
+              <div className="relative w-full h-72 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
                 <ChartSuspense>
                   <GamemodeChart
                       data={gamemodeData}
                       loading={loading}
                       error={error}
-                      selectedRange={selectedRange}
                       viewMode={viewMode}
                       visibleModes={visibleModes}
                   />
@@ -188,13 +193,12 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
                       {selectedGamemode.cleanModeName}
                     </span>
                   </h2>
-                  <div className="relative w-full h-64 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
+                  <div className="relative w-full h-72 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
                     <ChartSuspense>
                       <ServerShareChart
                           data={serverShareData}
                           loading={serverShareLoading}
                           error={serverShareError}
-                          selectedRange={selectedRange}
                           visibleGroups={visibleServerGroups}
                       />
                     </ChartSuspense>

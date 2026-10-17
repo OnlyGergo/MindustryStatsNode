@@ -1,15 +1,15 @@
 import React from "react";
 import {
-  DATE_RANGE_OPTIONS,
-  DateRangeOption,
+  PRESET_RANGE_OPTIONS,
+  PresetRange,
   ViewMode,
 } from "../util/chartHelpers.ts";
 import { GamemodeInfo } from "../../../common/models/GlobalStatsTypes.js";
 import { modeIdToIcon } from "../util/mindustry.ts";
 
 interface ChartControlsProps {
-  selectedRange: DateRangeOption;
-  onRangeChange: (range: DateRangeOption) => void;
+  selectedRange: PresetRange;
+  onRangeChange: (range: PresetRange) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   selectedGamemode: GamemodeInfo | null;
@@ -44,7 +44,7 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
           Timeframe
         </span>
         <div className="flex flex-wrap gap-1 p-1 rounded border border-default bg-surface-tertiary">
-          {DATE_RANGE_OPTIONS.map((option) => (
+          {PRESET_RANGE_OPTIONS.map((option) => (
             <button
               key={option.value}
               onClick={() => onRangeChange(option.value)}

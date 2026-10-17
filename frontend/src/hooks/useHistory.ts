@@ -1,20 +1,19 @@
-import { useState, useEffect } from "react";
-import { ApiPacker } from "../../../common/Packer";
-import { DateRangeOption } from "../util/dateRangeConsts";
-import { getBaseUrl } from "../util/getApi";
+import { useState } from "react";
+import { ApiPacker, type ApiResponsePacket } from "../../../common/Packer";
+import { DateRangeOption } from "../util/chartHelpers";
+import { useChartData } from "./useChartData";
 
 export enum HistoryType {
   Network = "network",
   Server = "server"
 }
 
-function getEndpointBaseUrl(id: number | string, type: HistoryType): string {
-  const endpointBaseUrl = getBaseUrl();
+function getEndpointPath(id: number | string, type: HistoryType): string {
   switch (type) {
     case HistoryType.Network:
-      return `${endpointBaseUrl}/api/networks/${id}/history`;
+      return `/api/networks/${id}/history`;
     case HistoryType.Server:
-      return `${endpointBaseUrl}/api/servers/${id}/history`;
+      return `/api/servers/${id}/history`;
     default:
       throw new Error(`Unknown history type: ${type}`);
   }
@@ -58,46 +57,20 @@ export function useHistoryRange() {
   };
 }
 
+const EMPTY: never[] = [];
+const unpackRows = (json: unknown) => ApiPacker.unpack(json as ApiResponsePacket);
+
 export function useHistory<T>(id: number | string, type: HistoryType) {
   const range = useHistoryRange();
   const { queryString } = range;
 
-  const [chartData, setChartData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
-  const endpointBaseUrl = getEndpointBaseUrl(id, type);
-
-  useEffect(() => {
-    if (queryString === null) return;
-
-    const fetchHistoryData = async () => {
-      setLoading(true);
-      setFetchError(null);
-
-      try {
-        const response = await fetch(`${endpointBaseUrl}?${queryString}`);
-        if (!response.ok) {
-          throw new Error(`Status ${response.status}: ${response.statusText}`);
-        }
-
-        const data = ApiPacker.unpack<T>(await response.json());
-        setChartData(data);
-      } catch (error) {
-        console.error("Error fetching history data:", error);
-        setFetchError("Unable to load history data. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHistoryData();
-  }, [queryString, endpointBaseUrl]);
+  const url = queryString === null ? null : `${getEndpointPath(id, type)}?${queryString}`;
+  const { data, loading, error } = useChartData(url, unpackRows, "Unable to load history data. Please try again later.");
 
   return {
-    chartData,
+    chartData: (data ?? EMPTY) as T[],
     loading,
-    fetchError,
+    fetchError: error,
     ...range,
   };
 }

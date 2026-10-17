@@ -48,7 +48,7 @@ ServerCollectorService does collections daily, but every few minutes it requeues
 ## Frontend
 Tanstack Start Router is used for routing and SSR.
 To get data hooks are used. A typed Eden Treaty client is available at `frontend/src/util/api.ts`; the existing hooks still hand-fetch against `common/models` types and can be migrated onto it incrementally.
-uPlot is used for graphs, Chart.js too, but moving away from it. For tooltips use `frontend/src/util/chartTooltip.ts` and a useful helper is at `frontend/src/util/chartHelpers.ts`.
+uPlot is the only chart library (Chart.js is gone). Every chart goes through `frontend/src/hooks/useUPlot.ts`: it builds one instance per `shape` key and hands new data/visibility over with `setData`/`setSeries` instead of rebuilding, and owns resize, the tooltip (`util/chartTooltip.ts`) and touch handling; render it in `components/UPlotFrame.tsx`. Axes, range options and series/share maths live in `util/chartHelpers.ts`. Chart data is fetched through `hooks/useChartData.ts` (per-URL in-memory cache with the server's 5 min TTL, shared in-flight requests, stale responses dropped, previous data kept while a new range loads); put per-response transforms in its `parse` so they run once per fetch.
 
 ## Server Identity (canonical IDs)
 

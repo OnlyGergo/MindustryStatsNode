@@ -95,7 +95,7 @@ const NetworkDetail: React.FC<{ details: NetworkDetails; }> = ({
         {/* Player History Chart */}
         <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
           <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">Player History</h2>
-          <div className="h-64 sm:h-96">
+          <div className="h-80 sm:h-96">
             <NetworkHistoryChart network={details} />
           </div>
         </div>

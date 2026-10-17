@@ -22,7 +22,6 @@ export const gamemodeRoutes = new Elysia({ prefix: '/api/gamemodes' })
     return ApiPacker.pack(serverShare.map((item): ServerShareEntry => ({
       ...item,
       groupName: removeColorsFromMindustry(item.groupName) ?? 'Null',
-      serverName: removeColorsFromMindustry(item.serverName) ?? 'Null',
     })));
   }, {
     params: ModeIdParam,

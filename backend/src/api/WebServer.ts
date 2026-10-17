@@ -20,8 +20,11 @@ const ENTITY_PATH = /^\/api\/(servers\/[^/]+\/|networks\/|gamemodes\/[^/]+\/serv
  * looser API budget rather than eating the entity one meant for crawlers.
  */
 const LIGHT_ENTITY_PATH = /^\/api\/(servers|networks)\/[^/]+\/(reviews|customisation)/;
-/** Chart series. They take arbitrary custom windows, so a miss can mean a 400-day aggregate scan. */
-const CHART_PATH = /^\/api\/.*(\/history|-history)(\/|$)/;
+/**
+ * Chart series. They take arbitrary custom windows, so a miss can mean a 400-day
+ * aggregate scan. A gamemode's per-group share is one too, despite its path.
+ */
+const CHART_PATH = /^\/api\/(.*(\/history|-history)(\/|$)|gamemodes\/[^/]+\/servers)/;
 /** Built assets — a single page load pulls a dozen, so they must not eat a page budget. */
 const STATIC_ASSET = /^\/assets\/|\.[a-z0-9]+$/i;
 
