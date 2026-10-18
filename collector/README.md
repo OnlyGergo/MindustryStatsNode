@@ -42,6 +42,9 @@ existing `.env`.
 | `MIGRATIONS_DIR` | first of `backend/migrations`, `../backend/migrations`, `migrations` | SQL migrations |
 | `GEOIP_MMDB_PATH` | `./geoip/country.mmdb` | Country database, refreshed out of band; re-opened at the end of every discovery cycle |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `LOG_DIR` | `./logs` | Daily files `collector-<date>.log` (all levels) and `collector-error-<date>.log` (errors only); `off` disables |
+| `LOG_RETAIN_DAYS` | `7` | Days of all-level logs kept |
+| `LOG_ERROR_RETAIN_DAYS` | `14` | Days of error logs kept |
 | `DRY_RUN` | `false` | See below |
 
 A migration whose first line is `--no-tran` has to be run by hand: the

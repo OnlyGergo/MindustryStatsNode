@@ -89,6 +89,12 @@ type GeoIPConfig struct {
 type Config struct {
 	NodeEnv  string
 	LogLevel string
+	// LogDir is LOG_DIR: where tiered log files go; "off" disables them.
+	LogDir string
+	// LogRetainDays / LogErrorRetainDays are how many days of all-level and
+	// error-only logs are kept.
+	LogRetainDays      int
+	LogErrorRetainDays int
 
 	DB            DBConfig
 	MigrationsDir string
@@ -112,6 +118,10 @@ func Load() (Config, error) {
 	cfg := Config{
 		NodeEnv:  str("NODE_ENV", "development"),
 		LogLevel: str("LOG_LEVEL", "info"),
+
+		LogDir:             logDir(),
+		LogRetainDays:      intVal("LOG_RETAIN_DAYS", 7),
+		LogErrorRetainDays: intVal("LOG_ERROR_RETAIN_DAYS", 14),
 
 		DB: DBConfig{
 			Host:     str("DB_HOST", "localhost"),
@@ -151,6 +161,9 @@ func Load() (Config, error) {
 }
 
 func (c Config) validate() error {
+	if c.LogDir != "" && (c.LogRetainDays < 1 || c.LogErrorRetainDays < 1) {
+		return fmt.Errorf("LOG_RETAIN_DAYS and LOG_ERROR_RETAIN_DAYS must be at least 1, got %d and %d", c.LogRetainDays, c.LogErrorRetainDays)
+	}
 	if c.Collector.Concurrency < 1 {
 		return fmt.Errorf("COLLECTION_CONCURRENCY must be at least 1, got %d", c.Collector.Concurrency)
 	}
@@ -169,6 +182,16 @@ func (c Config) validate() error {
 		}
 	}
 	return nil
+}
+
+// logDir returns LOG_DIR (default ./logs); "off" or "none" yields "" (disabled).
+func logDir() string {
+	dir := str("LOG_DIR", "./logs")
+	switch strings.ToLower(dir) {
+	case "off", "none", "false":
+		return ""
+	}
+	return dir
 }
 
 // getDefaultConcurrency() from index.ts.

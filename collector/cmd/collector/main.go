@@ -39,6 +39,12 @@ func run() error {
 	}
 	logging.Init(cfg.LogLevel)
 	log := logging.New("Main")
+	if err := logging.InitFiles(cfg.LogDir, cfg.LogRetainDays, cfg.LogErrorRetainDays); err != nil {
+		// Not fatal: stdout logging still works.
+		log.Error("File logging unavailable", "dir", cfg.LogDir, "err", err)
+	} else if cfg.LogDir != "" {
+		log.Info("File logging enabled", "dir", cfg.LogDir, "retain_days", cfg.LogRetainDays, "error_retain_days", cfg.LogErrorRetainDays)
+	}
 
 	log.Info("=========== Starting Mindustry Stats Collector ===========")
 	cwd, err := os.Getwd()

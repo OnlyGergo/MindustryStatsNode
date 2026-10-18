@@ -39,11 +39,12 @@ const (
 var (
 	root  *slog.Logger
 	level = new(slog.LevelVar)
+	files = &sinks{}
 )
 
 func init() {
 	level.Set(slog.LevelInfo)
-	root = slog.New(&handler{w: os.Stdout, mu: &sync.Mutex{}, level: level, color: isTerminal(os.Stdout)})
+	root = slog.New(&handler{w: os.Stdout, mu: &sync.Mutex{}, level: level, files: files, color: isTerminal(os.Stdout)})
 }
 
 // Init sets the global level from LOG_LEVEL.  Unknown values keep info, which
@@ -91,6 +92,7 @@ type handler struct {
 	mu    *sync.Mutex
 	level *slog.LevelVar
 	attrs []slog.Attr
+	files *sinks
 	color bool
 }
 
@@ -121,7 +123,30 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	})
 
 	var sb strings.Builder
+	plainOnly := false
 	isErr := r.Level >= slog.LevelError
+
+	// The uncoloured line is what files get, and what stdout gets when it
+	// isn't a terminal.
+	var pb strings.Builder
+	pb.WriteString(timestamp)
+	pb.WriteString(" ")
+	pb.WriteString(levelStr)
+	if component != "" {
+		pb.WriteString(" [")
+		pb.WriteString(component)
+		pb.WriteString("]")
+	}
+	pb.WriteString(" ")
+	pb.WriteString(r.Message)
+	for _, a := range attrs {
+		pb.WriteString(" ")
+		pb.WriteString(a.Key)
+		pb.WriteString("=")
+		pb.WriteString(quote(a.Value))
+	}
+	pb.WriteString("\n")
+	plain := pb.String()
 
 	switch {
 	case h.color && isErr:
@@ -180,28 +205,19 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 		}
 
 	default:
-		sb.WriteString(timestamp)
-		sb.WriteString(" ")
-		sb.WriteString(levelStr)
-		if component != "" {
-			sb.WriteString(" [")
-			sb.WriteString(component)
-			sb.WriteString("]")
-		}
-		sb.WriteString(" ")
-		sb.WriteString(r.Message)
-		for _, a := range attrs {
-			sb.WriteString(" ")
-			sb.WriteString(a.Key)
-			sb.WriteString("=")
-			sb.WriteString(quote(a.Value))
-		}
+		sb.WriteString(plain)
+		plainOnly = true
 	}
 
-	sb.WriteString("\n")
+	if !plainOnly {
+		sb.WriteString("\n")
+	}
 
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.files != nil {
+		h.files.write(isErr, plain)
+	}
 	_, err := io.WriteString(h.w, sb.String())
 	return err
 }
@@ -210,7 +226,7 @@ func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	merged := make([]slog.Attr, 0, len(h.attrs)+len(attrs))
 	merged = append(merged, h.attrs...)
 	merged = append(merged, attrs...)
-	return &handler{w: h.w, mu: h.mu, level: h.level, attrs: merged, color: h.color}
+	return &handler{w: h.w, mu: h.mu, level: h.level, attrs: merged, files: h.files, color: h.color}
 }
 
 // Groups are unused; keeping the handler flat keeps the lines readable.

@@ -11,4 +11,4 @@ dist
 /backend/public/
 TODO.md
 common/version_build.ts
-backend/uploads
+backend/uploads/collector/logs/
