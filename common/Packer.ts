@@ -15,8 +15,12 @@ export class ApiPacker {
             return [true, [], []]; // Return empty keys and values for empty data
         }
 
-        // Dynamically iterate keys from the first object
-        const keys = Object.keys(data[0]!) as Array<keyof T>;
+        // Union of every object's keys: optional fields (currentData on a server
+        // with no fresh stats) are simply absent, and taking only the first
+        // object's keys would drop that field from every row.
+        const keySet = new Set<string>();
+        for (const item of data) for (const key in item) keySet.add(key);
+        const keys = [...keySet] as Array<keyof T>;
 
         // Map objects to arrays of values matching the key order
         const values = data.map(item =>
