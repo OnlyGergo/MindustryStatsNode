@@ -84,4 +84,57 @@ describe('withCache', () => {
 
     expect(await (await get(app)).json()).toEqual({ n: 2 });
   });
+
+  test('a stale hit replays at once and refreshes in the background', async () => {
+    let calls = 0;
+    const handler = async () => {
+      calls++;
+      await Bun.sleep(40);
+      return { n: calls };
+    };
+    const app = new Elysia().get('/x', handler, {
+      ...withCache({ ttlMs: 30, staleWhileRevalidate: { staleMs: 60_000, refresh: handler } }),
+    });
+
+    expect(await (await get(app)).json()).toEqual({ n: 1 });
+    await Bun.sleep(40);
+
+    // Expired: three stale hits come back without waiting, and start one refresh.
+    const started = performance.now();
+    const stale = await Promise.all([get(app), get(app), get(app)]);
+    expect(performance.now() - started).toBeLessThan(30);
+    for (const r of stale) expect(await r.json()).toEqual({ n: 1 });
+
+    await Bun.sleep(60);
+    expect(calls).toBe(2);
+    const fresh = await get(app);
+    expect(fresh.headers.get('x-cache')).toBe('HIT');
+    expect(await fresh.json()).toEqual({ n: 2 });
+  });
+
+  test('a failed refresh keeps serving the stale entry', async () => {
+    let calls = 0;
+    const handler = () => {
+      if (++calls > 1) throw new Error('db down');
+      return { n: calls };
+    };
+    const app = new Elysia().get('/x', handler, {
+      ...withCache({ ttlMs: 20, staleWhileRevalidate: { staleMs: 60_000, refresh: handler } }),
+    });
+
+    await get(app);
+    await Bun.sleep(30);
+    expect(await (await get(app)).json()).toEqual({ n: 1 });
+    await Bun.sleep(10);
+    expect(await (await get(app)).json()).toEqual({ n: 1 });
+  });
+
+  test('without staleWhileRevalidate an expired entry is a plain miss', async () => {
+    let calls = 0;
+    const app = new Elysia().get('/x', () => ({ n: ++calls }), { ...withCache({ ttlMs: 20 }) });
+
+    await get(app);
+    await Bun.sleep(30);
+    expect(await (await get(app)).json()).toEqual({ n: 2 });
+  });
 });

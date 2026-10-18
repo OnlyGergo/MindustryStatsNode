@@ -11,26 +11,42 @@ import { withCache } from '../middleware/cache.js';
 import { getServerCustomisation } from '../../repositories/customisationReadRepository.js';
 const logger = createLogger('Api');
 
+/**
+ * How long past its TTL a list/details entry is still served while it refreshes
+ * in the background. Every SSR page waits on /api/servers, so without this
+ * whoever arrives just after the TTL pays the whole query.
+ */
+const STALE_MS = 30 * 60_000;
+const logRefreshError = (error: unknown, key: string) => logger.warn(`Background refresh of ${key} failed:`, error);
+
+const listServers = async () => {
+  const servers = await serverRepository.getAllServerElements();
+  logger.debug(`Served ${servers.length} servers from cache`);
+  return ApiPacker.pack(servers);
+};
+
+const serverDetails = async ({ params }: { params: { id: number } }) => {
+  const server = await serverRepository.getServer(params.id);
+  if (!server) return status(404, { error: 'Server not found' });
+  return server;
+};
+
 export const serverRoutes = new Elysia({ prefix: '/api' })
-  .get('/servers', async () => {
-    const servers = await serverRepository.getAllServerElements();
-    logger.debug(`Served ${servers.length} servers from cache`);
-    return ApiPacker.pack(servers);
-  }, {
+  .get('/servers', listServers, {
     query: StrictNoQuery,
-    ...withCache({ ttlMs: 180_000 }), // 3 minutes TTL
+    ...withCache({
+      ttlMs: 180_000, // 3 minutes TTL
+      staleWhileRevalidate: { staleMs: STALE_MS, refresh: listServers, onError: logRefreshError },
+    }),
   })
 
-  .get('/servers/:id/details', async ({ params }) => {
-    const server = await serverRepository.getServer(params.id);
-    if (!server) return status(404, { error: 'Server not found' });
-    return server;
-  }, {
+  .get('/servers/:id/details', serverDetails, {
     params: IdParam,
     query: StrictNoQuery,
     ...withCache({
       ttlMs: 180_000, // 3 minutes TTL
       getKey: ({ path, params }) => `${path}:${params.id}`,
+      staleWhileRevalidate: { staleMs: STALE_MS, refresh: serverDetails, onError: logRefreshError },
     }),
   })
 

@@ -8,7 +8,10 @@ type CacheEntry = {
   key: string
   headers: Record<string, string>
   status: number
+  /** Fresh until here; after it the entry is stale. */
   expiresAt: number
+  /** Served (stale) until here while a background refresh runs; then evicted. Equals expiresAt without SWR. */
+  staleUntil: number
 } & (
   | { kind: 'value'; body: unknown }
   /** The handler returned a real Response and we buffered its bytes. */
@@ -43,6 +46,21 @@ export interface CacheOptions<TQuery = any, TParams = any> {
   getKey?: (ctx: { query: TQuery; params: TParams; path: string; method: string }) => string
   /** Return true to skip the cache entirely for this request (read and write). */
   bypass?: (ctx: any) => boolean
+  /**
+   * Stale-while-revalidate. For `staleMs` after the TTL runs out, a hit still
+   * replays the expired entry at once and runs `refresh` in the background (one
+   * at a time per key) to replace it, so no visitor waits on the handler just
+   * because the TTL ticked over. `refresh` has to produce exactly what the
+   * handler returns; pass the handler itself. A refresh that throws or returns
+   * anything but a plain value leaves the stale entry in place until `staleMs`
+   * ends, after which the next request is an ordinary miss.
+   */
+  staleWhileRevalidate?: {
+    staleMs: number
+    refresh: (ctx: { params: TParams; query: TQuery }) => unknown
+    /** Told when a refresh throws (this module stays free of the env-bound logger). */
+    onError?: (error: unknown, key: string) => void
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -81,7 +99,7 @@ export const sweepCaches = (now = Date.now()): number => {
   let removed = 0
   for (const store of stores) {
     for (const [key, entry] of store.map) {
-      if (now >= entry.expiresAt) {
+      if (now >= entry.staleUntil) {
         store.map.delete(key)
         removed++
       }
@@ -218,6 +236,8 @@ export const withCache = <TQuery = any, TParams = any>(options: CacheOptions<TQu
   const getKey = options.getKey ?? defaultKey
   const methods = new Set((options.methods ?? ['GET', 'HEAD']).map((m) => m.toUpperCase()))
   const maxBodyBytes = options.maxBodyBytes ?? 1024 * 1024
+  const swr = options.staleWhileRevalidate
+  const staleMs = swr?.staleMs ?? 0
 
   // Key on the matched route pattern, not the raw URL path: `/api/servers/` and
   // `/api/servers` (Elysia matches both) are one resource, and must not be two entries.
@@ -280,10 +300,48 @@ export const withCache = <TQuery = any, TParams = any>(options: CacheOptions<TQu
     return cached.body
   }
 
+  /** Keys with a background refresh running, so a burst of stale hits starts only one. */
+  const refreshing = new Set<string>()
+
+  const revalidate = (ctx: any, stale: CacheEntry): void => {
+    if (!swr || refreshing.has(stale.key)) return
+    refreshing.add(stale.key)
+    const generation = store.generation
+    // Read now: the request's context is done with once its response is sent.
+    const input = { params: ctx.params as TParams, query: ctx.query as TQuery }
+
+    void (async () => {
+      try {
+        const value = await swr.refresh(input)
+        // Same rules as toEntry: never store an error, a status response or a
+        // stream, and drop the result if a clear ran while it was being built.
+        if (value === undefined || value === null || value instanceof ElysiaCustomStatusResponse
+          || value instanceof Error || value instanceof Response) return
+        if (generation !== store.generation) return
+        const now = Date.now()
+        write(stale.key, {
+          kind: 'value',
+          key: stale.key,
+          body: value,
+          headers: stale.headers,
+          status: 200,
+          expiresAt: now + store.ttlMs,
+          staleUntil: now + store.ttlMs + staleMs,
+        })
+      } catch (error) {
+        // The stale entry keeps being served until staleUntil, after which the
+        // next request misses and reports the error the normal way.
+        swr.onError?.(error, stale.key)
+      } finally {
+        refreshing.delete(stale.key)
+      }
+    })()
+  }
+
   const lookup = (key: string): CacheEntry | undefined => {
     const cached = store.map.get(key)
-    if (cached && Date.now() >= cached.expiresAt) {
-      // Evict on read so a stale entry can't be served or block the refill.
+    if (cached && Date.now() >= cached.staleUntil) {
+      // Evict on read so an entry past its stale window can't be served or block the refill.
       store.map.delete(key)
       return undefined
     }
@@ -308,7 +366,10 @@ export const withCache = <TQuery = any, TParams = any>(options: CacheOptions<TQu
 
       const key = keyOf(ctx)
       const cached = lookup(key)
-      if (cached) return replay(ctx, cached) as void
+      if (cached) {
+        if (Date.now() >= cached.expiresAt) revalidate(ctx, cached)
+        return replay(ctx, cached) as void
+      }
 
       const flight = inflight.get(key)
       if (flight) {
@@ -364,6 +425,7 @@ export const withCache = <TQuery = any, TParams = any>(options: CacheOptions<TQu
     if (value instanceof Error) return null
 
     const expiresAt = Date.now() + store.ttlMs
+    const staleUntil = expiresAt + staleMs
 
     if (value instanceof Response) {
       if (value.status !== 200 || value.bodyUsed) return null
@@ -381,6 +443,7 @@ export const withCache = <TQuery = any, TParams = any>(options: CacheOptions<TQu
           headers: pickResponseHeaders(value.headers),
           status: value.status,
           expiresAt,
+          staleUntil,
         }
       } catch {
         // Unclonable / already-consumed stream — just don't cache it.
@@ -397,6 +460,7 @@ export const withCache = <TQuery = any, TParams = any>(options: CacheOptions<TQu
       headers: pickHeaders(ctx.set.headers),
       status: 200,
       expiresAt,
+      staleUntil,
     }
   }
 }
