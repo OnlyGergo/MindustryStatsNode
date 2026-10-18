@@ -1,11 +1,11 @@
 import React from "react";
 import ServerItem from "./ServerItem";
-import { ServerElement } from "../../../../common/models/serverData.ts";
+import { ServerListItem } from "../../../../common/models/serverData.ts";
 import { Link } from "@tanstack/react-router";
 
 const ServerGroup: React.FC<{
   name: string;
-  servers: ServerElement[];
+  servers: ServerListItem[];
   expanded: boolean;
   onToggleExpand: () => void;
   selectedServerId: number;
@@ -87,17 +87,16 @@ const ServerGroup: React.FC<{
           </svg>
         </div>
       </div>
-      {expanded && (
-        <div className="divide-y divide-subtle">
-          {servers.map((server) => (
-            <ServerItem
-              key={`${server.host}-${server.port}`}
-              server={server}
-              isSelected={server.id == selectedServerId}
-            />
-          ))}
-        </div>
-      )}
+      {/* Rendered even when collapsed, so every server link is in the SSR HTML for crawlers. */}
+      <div className={expanded ? "divide-y divide-subtle" : "hidden"}>
+        {servers.map((server) => (
+          <ServerItem
+            key={`${server.host}-${server.port}`}
+            server={server}
+            isSelected={server.id == selectedServerId}
+          />
+        ))}
+      </div>
     </div>
   );
 };

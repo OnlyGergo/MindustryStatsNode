@@ -4,12 +4,10 @@ import type { SearchSchemaInput } from "@tanstack/react-router";
 import { BROWSE_SEARCH_DEFAULTS, parseBrowseSearch } from "./-browseSearch.ts";
 import type { BrowseSearch } from "./-browseSearch.ts";
 import ServerListPanel from "../components/server-list/ServerListPanel";
-import { fetchServers } from "../hooks/useApi.ts";
+import { fetchServers, unpackListItems } from "../hooks/useApi.ts";
 import { getSiteOrigin } from "../util/getApi.ts";
 import { ServerListProvider } from "../context/ServerListContext.tsx";
 import { BrowseLayoutProvider } from "../context/BrowseLayoutContext.tsx";
-import { ApiPacker } from "../../../common/Packer.ts";
-import { ServerElement } from "../../../common/models/serverData.ts";
 
 export const Route = createFileRoute("/_browse")({
   // SSR-fetched on first load; the client hook (useApi) takes over polling afterward.
@@ -50,7 +48,7 @@ const BrowseContent: React.FC = () => {
 };
 
 function BrowseLayout() {
-  const initialData = ApiPacker.unpack<ServerElement>(Route.useLoaderData().initialData);
+  const initialData = unpackListItems(Route.useLoaderData().initialData);
 
   return (
     <ServerListProvider initialData={initialData}>
