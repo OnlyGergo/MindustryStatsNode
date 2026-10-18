@@ -5,6 +5,7 @@ import { BROWSE_SEARCH_DEFAULTS, parseBrowseSearch } from "./-browseSearch.ts";
 import type { BrowseSearch } from "./-browseSearch.ts";
 import ServerListPanel from "../components/server-list/ServerListPanel";
 import { fetchServers } from "../hooks/useApi.ts";
+import { getSiteOrigin } from "../util/getApi.ts";
 import { ServerListProvider } from "../context/ServerListContext.tsx";
 import { BrowseLayoutProvider } from "../context/BrowseLayoutContext.tsx";
 import { ApiPacker } from "../../../common/Packer.ts";
@@ -16,8 +17,13 @@ export const Route = createFileRoute("/_browse")({
     parseBrowseSearch(input),
   search: {
     // Prefs follow every link inside _browse; defaults are stripped so `/` stays clean.
-    middlewares: [retainSearchParams(true), stripSearchParams(BROWSE_SEARCH_DEFAULTS)],
+    // Order matters: listed the other way round, retain re-adds the defaults strip removed.
+    middlewares: [stripSearchParams(BROWSE_SEARCH_DEFAULTS), retainSearchParams(true)],
   },
+  // List prefs are view state, not content: every variant points at the bare path.
+  head: ({ matches }) => ({
+    links: [{ rel: "canonical", href: getSiteOrigin() + (matches[matches.length - 1]?.pathname ?? "/") }],
+  }),
   // List prefs live in the search; changing them must never refetch /api/servers.
   staleTime: Infinity,
   shouldReload: false,
