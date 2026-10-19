@@ -200,3 +200,23 @@ func TestClampStatStringsBoundsVersionType(t *testing.T) {
 		t.Fatalf("caller's string was modified")
 	}
 }
+
+func TestBatchPeaks(t *testing.T) {
+	base := time.UnixMilli(1_700_000_000_000)
+
+	batch := []StatRow{
+		{ServerID: 1, Timestamp: base.Add(time.Minute), Players: int32p(5)},
+		{ServerID: 1, Timestamp: base, Players: int32p(5)}, // tie: the earlier sample wins
+		{ServerID: 1, Timestamp: base.Add(2 * time.Minute), Players: int32p(3)},
+		{ServerID: 2, Timestamp: base, Players: int32p(5000)}, // unrealistic, like server_stats_5m
+		{ServerID: 3, Timestamp: base, Players: nil},
+	}
+
+	rows := batchPeaks(batch)
+	if len(rows) != 1 {
+		t.Fatalf("batchPeaks() = %d rows, want 1", len(rows))
+	}
+	if rows[0].ServerID != 1 || rows[0].Peak != 5 || !rows[0].PeakAt.Equal(base) {
+		t.Errorf("batchPeaks() = %+v, want server 1 peaking at 5 at %v", rows[0], base)
+	}
+}

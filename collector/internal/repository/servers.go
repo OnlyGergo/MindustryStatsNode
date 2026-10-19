@@ -321,7 +321,10 @@ func (r *Repository) BulkSaveServerStats(ctx context.Context, batch []StatRow) e
 		if err != nil {
 			return err
 		}
-		return r.upsertServerCurrent(ctx, q, rows)
+		if err := r.upsertServerCurrent(ctx, q, rows); err != nil {
+			return err
+		}
+		return r.upsertServerPeaks(ctx, q, rows)
 	})
 }
 
@@ -409,6 +412,74 @@ func (r *Repository) upsertServerCurrent(ctx context.Context, q querier, batch [
 				motd_registry_id = EXCLUDED.motd_registry_id,
 				map_registry_id  = EXCLUDED.map_registry_id
 			WHERE server_current.timestamp <= EXCLUDED.timestamp
+	`, payload)
+	return err
+}
+
+// maxRealisticPlayerCount mirrors MAX_REALISTIC_PLAYERCOUNT: server_stats_5m
+// drops samples outside [0, 1000), so the all-time peak has to as well or it
+// would disagree with every chart.
+const maxRealisticPlayerCount = 1000
+
+// peakRow is upsertServerPeaks' payload: the batch's best sample per server.
+type peakRow struct {
+	ServerID int       `json:"server_id"`
+	Peak     int32     `json:"peak"`
+	PeakAt   time.Time `json:"peak_at"`
+}
+
+// batchPeaks reduces a batch to each server's highest realistic player count,
+// ties going to the earliest sample.
+func batchPeaks(batch []StatRow) []peakRow {
+	best := make(map[int]peakRow, len(batch))
+	for _, stat := range batch {
+		if stat.ServerID == 0 || stat.Timestamp.IsZero() || stat.Players == nil {
+			continue
+		}
+		p := *stat.Players
+		if p < 0 || p >= maxRealisticPlayerCount {
+			continue
+		}
+		cur, ok := best[stat.ServerID]
+		if !ok || p > cur.Peak || (p == cur.Peak && stat.Timestamp.Before(cur.PeakAt)) {
+			best[stat.ServerID] = peakRow{ServerID: stat.ServerID, Peak: p, PeakAt: stat.Timestamp}
+		}
+	}
+	rows := make([]peakRow, 0, len(best))
+	for _, row := range best {
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+// upsertServerPeaks keeps server_peaks' all-time maximum per server, so the
+// detail page reads it instead of scanning the server's whole history.
+//
+// A maximum only moves up, so unlike server_current there is no timestamp
+// guard: an out-of-order or replayed sample that beats the record still
+// counts.  Ties keep the earlier time, which also means a server sat at its
+// peak never rewrites the row.
+func (r *Repository) upsertServerPeaks(ctx context.Context, q querier, batch []StatRow) error {
+	rows := batchPeaks(batch)
+	if len(rows) == 0 {
+		return nil
+	}
+
+	payload, err := toJSON(rows)
+	if err != nil {
+		return &OperationError{Operation: "upsertServerPeaks", Err: err}
+	}
+
+	_, err = r.exec(ctx, q, "upsertServerPeaks", `
+		INSERT INTO server_peaks (server_id, all_time_peak, peak_at)
+		SELECT x.server_id, x.peak, x.peak_at
+		FROM jsonb_to_recordset($1::jsonb) AS x(server_id int, peak int, peak_at timestamptz)
+		ON CONFLICT (server_id) DO UPDATE
+			SET all_time_peak = EXCLUDED.all_time_peak,
+				peak_at       = EXCLUDED.peak_at
+			WHERE EXCLUDED.all_time_peak > server_peaks.all_time_peak
+			   OR (EXCLUDED.all_time_peak = server_peaks.all_time_peak
+			       AND EXCLUDED.peak_at < server_peaks.peak_at)
 	`, payload)
 	return err
 }
