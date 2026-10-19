@@ -42,7 +42,25 @@ export interface ServerElement {
   consecutiveFailures?: number;
   countryCode?: string | null;
   aggregateExclude: boolean;
+  /** Raw mean rating across the server's family (F2), for display. `null`/absent when unrated. */
+  rating?: number | null;
+  /** How many reviews fed `rating`/`ratingScore`. 0 when unrated. */
+  ratingCount?: number;
+  /** Bayesian-shrunk rating, sort-only -- pulls a low-review-count server toward the sitewide mean so one 5-star review can't outrank an established server. `null` when unrated. */
+  ratingScore?: number | null;
+  /** 24h uptime in percent (0-100); only on network member lists. `null` = no samples. */
+  uptime24h?: number | null;
 }
+
+/**
+ * What the sidebar reads of a server, and all the SSR payload embeds for it (see
+ * `fetchServers`). A full ServerElement satisfies it, so the client poll's data drops in.
+ */
+export type ServerListItem = Pick<ServerElement,
+  'id' | 'name' | 'groupId' | 'host' | 'port' | 'online' | 'lastSeen' | 'countryCode' | 'aggregateExclude' | 'ratingScore'
+> & {
+  currentData?: Pick<ServerData, 'serverName' | 'description' | 'mapName' | 'ping' | 'players' | 'playerLimit'>;
+};
 
 export interface ServerMotdData {
   id: number;
@@ -86,20 +104,45 @@ export interface ServerDetails {
 export interface NetworkDetails {
   id: number;
   name: string;
+  /** Players online right now: SUM over member families of the per-family MAX. */
+  playersNow: number;
+  /** Member families currently answering. */
+  onlineServers: number;
+  /** Fraction (0-1) of the site's players right now that are on this network. */
+  siteShare: number;
+  /** Mean network concurrency over the last 24h. Peaks below are network concurrency too (sum across servers per instant), not a single server's max. */
+  avg24h: number;
   playerPeaks: {
     allTime: number;
+    /** Hour bucket the all-time peak fell in; null when the network has no stats. */
+    allTimeDate: Date | string | null;
     daily: number;
     weekly: number;
   };
+  /** Percent 0-100 of polls the network's servers answered; `null` when there are no samples. */
+  uptime: {
+    last24h: number | null;
+    last7d: number | null;
+  };
   topServer: {
     id: number;
-    host: string;
-    port: number;
     players: number;
     name: string;
   } | null;
   activeServers: number;
   totalServers: number;
+  /** Mean of the network's newest, non-removed reviews (one per reviewer per family). `average` is null when `count` is 0. */
+  rating: {
+    average: number | null;
+    count: number;
+  };
+  /** Mean network concurrency over the last 7 days, and over the 7 days before. Null when the window has no hourly data. */
+  trend: {
+    avgPlayers7d: number | null;
+    avgPlayersPrev7d: number | null;
+  };
+  /** Server lists the network's servers appear on, busiest first. `servers` counts distinct families. */
+  sources: { name: string; url: string; servers: number }[];
 }
 
 export interface ServerListStats {
@@ -109,4 +152,13 @@ export interface ServerListStats {
   total_servers: number;
   active_servers: number;
   active_percentage: number;
+}
+/** Columnar per-server history of a network (uPlot-shaped). */
+export interface NetworkServerHistory {
+  /** Top families by peak, then "Other" (id null) when anything is left over. */
+  series: { id: number | null; name: string }[];
+  /** Bucket starts, ms epoch. */
+  timestamps: number[];
+  /** One array per series, aligned to `timestamps`; null where the network had no data. Stacking them gives the main network chart's value. */
+  values: (number | null)[][];
 }

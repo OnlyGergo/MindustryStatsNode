@@ -1,21 +1,25 @@
-import {useMemo, useState} from 'react';
-import {ServerElement} from '../../../common/models/serverData';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {getRouteApi, useNavigate} from '@tanstack/react-router';
+import {ServerListItem} from '../../../common/models/serverData';
 import {removeColors} from '../util/mindustry';
+import type {BrowseSearch} from '../routes/-browseSearch';
 
-// NOTE: This hook is purely client-side derived state (search/sort/group UI
-// preferences) over data that's already fetched by `useApi`/the route loader.
-// It doesn't perform its own network fetching, so no server function is
-// needed here for the TanStack Start migration -- it keeps working as-is
-// against whatever `rawServers` (SSR-hydrated or polled) is passed in.
+// NOTE: Sort/filter/group preferences live in the `_browse` route's search params
+// (see routes/-browseSearch.ts), so they survive navigation and reloads and
+// render correctly during SSR. This hook derives the displayed list from
+// `rawServers` (already fetched by `useApi`/the route loader) and does no
+// network fetching of its own.
 
-export type SortCriteria = 'playerCount' | 'ping' | 'name';
+const browseRoute = getRouteApi('/_browse');
+
+export type SortCriteria = 'playerCount' | 'ping' | 'name' | 'rating';
 export type SortDirection = 'asc' | 'desc';
 
 /** One network's servers, in display order. An array keeps the order explicit --
  * a Record would silently reorder integer-like group names. */
 export interface ServerGroupEntry {
   name: string;
-  servers: ServerElement[];
+  servers: ServerListItem[];
 }
 
 export interface SortOption {
@@ -31,12 +35,12 @@ export interface SortOption {
   /** One-line explanation of how the value is aggregated when grouped */
   groupHint: string;
   /** Value for a single server row. `null` means "unknown", which always sorts last. */
-  getValue: (server: ServerElement) => number | string | null;
+  getValue: (server: ServerListItem) => number | string | null;
   /** Aggregated value for a whole group (network). `null` means "unknown", which always sorts last. */
-  getGroupValue: (servers: ServerElement[], groupName: string) => number | string | null;
+  getGroupValue: (servers: ServerListItem[], groupName: string) => number | string | null;
 }
 
-const getServerDisplayName = (server: ServerElement): string => {
+const getServerDisplayName = (server: ServerListItem): string => {
   const cleaned = removeColors(server.currentData?.serverName ?? null)?.trim();
   return cleaned ? cleaned : server.name;
 };
@@ -87,6 +91,24 @@ export const SORT_OPTIONS: SortOption[] = [
     groupHint: 'Network name',
     getValue: (server) => getServerDisplayName(server),
     getGroupValue: (_servers, groupName) => groupName
+  },
+  {
+    key: 'rating',
+    label: 'Rating',
+    defaultDirection: 'desc',
+    directionLabels: { desc: 'Top rated first', asc: 'Lowest rated first' },
+    serverHint: 'Review score (weighted by number of reviews)',
+    groupHint: 'Best-rated server in each network',
+    // Bayesian score, not the raw average: sorting on a raw 5.0 average from
+    // one review would rank it above an established server with hundreds of
+    // consistently-4-star reviews. Unrated servers are null, which the
+    // shared compareSortValues logic below always sinks to the bottom.
+    getValue: (server) => server.ratingScore ?? null,
+    getGroupValue: (servers) => servers.reduce(
+      (best: number | null, server) =>
+        server.ratingScore != null && (best === null || server.ratingScore > best) ? server.ratingScore : best,
+      null
+    )
   }
 ];
 
@@ -118,7 +140,7 @@ const compareSortValues = (
 };
 
 const makeServerComparator = (sortOption: SortOption, direction: SortDirection) =>
-  (a: ServerElement, b: ServerElement): number => {
+  (a: ServerListItem, b: ServerListItem): number => {
     if (a.online !== b.online) return a.online ? -1 : 1;
 
     const comparison = compareSortValues(sortOption.getValue(a), sortOption.getValue(b), direction);
@@ -128,7 +150,7 @@ const makeServerComparator = (sortOption: SortOption, direction: SortDirection) 
   };
 
 const makeGroupComparator = (sortOption: SortOption, direction: SortDirection) =>
-  (a: [string, ServerElement[]], b: [string, ServerElement[]]): number => {
+  (a: [string, ServerListItem[]], b: [string, ServerListItem[]]): number => {
     const aHasOnline = a[1].some(server => server.online);
     const bHasOnline = b[1].some(server => server.online);
     if (aHasOnline !== bHasOnline) return aHasOnline ? -1 : 1;
@@ -143,16 +165,46 @@ const makeGroupComparator = (sortOption: SortOption, direction: SortDirection) =
     return compareStrings(a[0], b[0]);
   };
 
-export const useServerList = (rawServers: ServerElement[]) => {
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [isGrouped, setIsGrouped] = useState<boolean>(true);
-  const [hideInactiveEnabled, setHideInactiveEnabled] = useState<boolean>(true);
-  const [sortCriteria, setSortCriteria] = useState<SortCriteria>('playerCount');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+export const useServerList = (rawServers: ServerListItem[]) => {
+  const { q, sort: sortCriteria, dir: sortDirection, grouped: isGrouped, inactive } = browseRoute.useSearch();
+  const hideInactiveEnabled = !inactive;
+  const navigate = useNavigate();
+
+  const patchSearch = (patch: Partial<BrowseSearch>) => {
+    void navigate({ to: '.', search: (prev) => ({ ...prev, ...patch }), replace: true });
+  };
+
+  // Local input state keeps typing instant; the URL is written debounced.
+  const [searchTerm, setSearchInput] = useState<string>(q);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastWritten = useRef<string>(q);
+
+  useEffect(() => {
+    // `q` changed from outside (Back/Forward, a link): resync, unless it's our own write
+    // or the user is mid-debounce.
+    if (q === lastWritten.current || timer.current !== null) return;
+    lastWritten.current = q;
+    setSearchInput(q);
+  }, [q]);
+
+  useEffect(() => () => {
+    if (timer.current !== null) clearTimeout(timer.current);
+  }, []);
+
+  const setSearchTerm = (value: string) => {
+    setSearchInput(value);
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      const next = value.trim().slice(0, 200);
+      lastWritten.current = next;
+      patchSearch({ q: next });
+    }, 300);
+  };
 
   const processedData = useMemo(() => {
     if (!rawServers || !Array.isArray(rawServers)) {
-      return { serverGroups: [] as ServerGroupEntry[], flatServers: [] as ServerElement[] };
+      return { serverGroups: [] as ServerGroupEntry[], flatServers: [] as ServerListItem[] };
     }
 
     // Step 1: Apply search filter
@@ -174,7 +226,9 @@ export const useServerList = (rawServers: ServerElement[]) => {
       const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
       filteredServers = filteredServers.filter(server => {
         if (server.online) return true;
-        return server.lastSeen && server.lastSeen > oneWeekAgo;
+        // lastSeen arrives as an ISO string, whatever the type says; compared raw
+        // against a number it was never greater, so every offline server was hidden.
+        return server.lastSeen != null && new Date(server.lastSeen).getTime() > oneWeekAgo;
       });
     }
 
@@ -183,7 +237,7 @@ export const useServerList = (rawServers: ServerElement[]) => {
     const serverComparator = makeServerComparator(sortOption, sortDirection);
 
     if (isGrouped) {
-      const groups: Record<string, ServerElement[]> = {};
+      const groups: Record<string, ServerListItem[]> = {};
       filteredServers.forEach(server => {
         if (!groups[server.name]) {
           groups[server.name] = [];
@@ -198,26 +252,25 @@ export const useServerList = (rawServers: ServerElement[]) => {
         .sort(groupComparator)
         .map(([name, servers]) => ({ name, servers }));
 
-      return { serverGroups: sortedGroups, flatServers: [] as ServerElement[] };
+      return { serverGroups: sortedGroups, flatServers: [] as ServerListItem[] };
     } else {
       return { serverGroups: [] as ServerGroupEntry[], flatServers: [...filteredServers].sort(serverComparator) };
     }
   }, [rawServers, searchTerm, isGrouped, hideInactiveEnabled, sortCriteria, sortDirection]);
 
-  const toggleGrouping = () => setIsGrouped(!isGrouped);
-  const toggleHideInactive = () => setHideInactiveEnabled(!hideInactiveEnabled);
+  const toggleGrouping = () => patchSearch({ grouped: !isGrouped });
+  const toggleHideInactive = () => patchSearch({ inactive: hideInactiveEnabled });
 
   const handleSortChange = (criteria: SortCriteria, direction?: SortDirection) => {
-    setSortCriteria(criteria);
     if (direction) {
-      setSortDirection(direction);
+      patchSearch({ sort: criteria, dir: direction });
     } else if (criteria === sortCriteria) {
       // Toggle direction if same criteria selected
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      patchSearch({ sort: criteria, dir: sortDirection === 'asc' ? 'desc' : 'asc' });
     } else {
       // Default direction for new criteria
       const newOption = SORT_OPTIONS.find(option => option.key === criteria);
-      setSortDirection(newOption ? newOption.defaultDirection : 'desc');
+      patchSearch({ sort: criteria, dir: newOption ? newOption.defaultDirection : 'desc' });
     }
   };
 

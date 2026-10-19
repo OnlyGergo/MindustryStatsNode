@@ -1,0 +1,4 @@
+[install]
+# One shared node_modules at the repo root (like npm/yarn workspaces), so the
+# backend and frontend resolve the exact same elysia/tanstack copies.
+linker = "hoisted"

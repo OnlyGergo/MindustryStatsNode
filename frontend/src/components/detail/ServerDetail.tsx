@@ -1,18 +1,36 @@
 import React from "react";
+import { useRouter } from "@tanstack/react-router";
 import ServerHistoryChart from "./ServerHistoryChart.tsx";
 import MapHistoryTable from "./table/MapHistoryTable.tsx";
 import MotdHistoryTable from "./table/MotdHistoryTable.tsx";
-import { removeColors } from "../../util/mindustry.ts";
+import ReviewSummary from "./ReviewSummary.tsx";
+import ReviewForm from "./ReviewForm.tsx";
+import ReviewList from "./ReviewList.tsx";
 import { formatDate } from "../../util/general.ts";
 import CopyButton from "../CopyButton.tsx";
 import ShareButton from "../ShareButton.tsx";
+import { useServerReviews } from "../../hooks/api/useServerReviews.ts";
 import {
   ServerDetails,
   ServerElement,
 } from "../../../../common/models/serverData.ts";
+import CustomisePanel from "./CustomisePanel.tsx";
+import { useAuth } from "../../context/AuthContext.tsx";
 import { getModeName } from "../../../../common/Gamemode.ts";
+import { MindustryText } from "../MindustryText.tsx";
+import { removeColors } from "../../util/mindustry.ts";
 
-const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement }> = ({ serverDataElement }) => {
+const ServerDetail: React.FC<{
+  serverDataElement: ServerDetails & ServerElement;
+}> = ({ serverDataElement }) => {
+  const { me } = useAuth();
+  const router = useRouter();
+  // Owners (and admins) can customise the page and reply to reviews; the API re-checks both.
+  const canCustomise =
+    !!me &&
+    (me.isAdmin ||
+      me.owns.servers.includes(serverDataElement.id) ||
+      me.owns.networks.includes(serverDataElement.groupId));
   const serverData = serverDataElement.currentData;
   const serverStatus = serverDataElement.online
     ? "Online"
@@ -28,6 +46,8 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
     return `${percentage.toFixed(1)}%`;
   };
 
+  const reviews = useServerReviews(serverDataElement.id);
+
   return (
     <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
       <div className="max-w-6xl mx-auto">
@@ -37,12 +57,12 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
             <div className="flex-1 min-w-0">
               {serverData?.serverName && (
                 <h1 className="text-xl sm:text-2xl font-bold text-primary mb-2 wrap-break-word">
-                  {String(removeColors(serverData.serverName))}
+                  <MindustryText text={serverData.serverName}/>
                 </h1>
               )}
               {serverData?.description && (
                 <p className="text-secondary mb-4 text-sm sm:text-base wrap-break-word">
-                  {String(removeColors(serverData.description))}
+                  <MindustryText text={serverData.description}/>
                 </p>
               )}
 
@@ -93,7 +113,7 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
               <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
                 <span className="text-tertiary">Map: </span>
                 <span className="font-medium text-primary wrap-break-word">
-                  {String(removeColors(serverData.mapName)) || "Unknown"}
+                  <MindustryText text={serverData.mapName || "Unknown"}/>
                 </span>
               </div>
               <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
@@ -119,6 +139,13 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
             </div>
           )}
         </div>
+
+        {canCustomise && (
+          <CustomisePanel
+            target={{ serverId: serverDataElement.id }}
+            onSaved={() => void router.invalidate()}
+          />
+        )}
 
         {/* Player Peaks and Uptime */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
@@ -178,9 +205,40 @@ const ServerDetail: React.FC<{ serverDataElement: ServerDetails & ServerElement 
           <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
             Player History
           </h2>
-          <div className="h-64 sm:h-96">
+          <div className="h-80 sm:h-96">
             <ServerHistoryChart {...serverDataElement} />
           </div>
+        </div>
+
+        {/* Reviews */}
+        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+            Reviews
+          </h2>
+          <div className="mb-4 sm:mb-6">
+            <ReviewSummary summary={reviews.summary} loading={reviews.summaryLoading} />
+          </div>
+          <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-subtle">
+            <ReviewForm
+              serverId={serverDataElement.id}
+              mine={reviews.mine}
+              mineLoading={reviews.mineLoading}
+              onChanged={reviews.reload}
+            />
+          </div>
+          <ReviewList
+            serverId={serverDataElement.id}
+            canReply={canCustomise}
+            onChanged={reviews.reload}
+            reviews={reviews.reviews}
+            total={reviews.total}
+            page={reviews.page}
+            perPage={reviews.perPage}
+            sort={reviews.sort}
+            loading={reviews.listLoading}
+            onSortChange={reviews.setSort}
+            onPageChange={reviews.setPage}
+          />
         </div>
 
         {/* Map History Table */}

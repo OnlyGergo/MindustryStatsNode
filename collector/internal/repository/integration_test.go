@@ -43,7 +43,7 @@ func newTestRepo(t *testing.T) (*repository.Repository, *pgxpool.Pool) {
 func truncate(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	_, err := pool.Exec(context.Background(), `
-		TRUNCATE server_stats, server_current, server_maps_history, server_motds_history,
+		TRUNCATE server_stats, server_current, server_peaks, server_maps_history, server_motds_history,
 				 server_source_list, server_maps_registry, server_motds_registry,
 				 gamemode_registry, servers, server_groups, serverlists
 		RESTART IDENTITY CASCADE
@@ -367,6 +367,25 @@ func TestBulkSaveServerStats(t *testing.T) {
 	}
 	if got := scalar[int64](t, pool, `SELECT count(*) FROM server_stats`); got != 3 {
 		t.Errorf("server_stats = %d rows, want 3", got)
+	}
+
+	// server_peaks keeps the running maximum: 9 beat 7, and the older 1 did not.
+	if got := scalar[int32](t, pool, `SELECT all_time_peak FROM server_peaks WHERE server_id = $1`, id); got != 9 {
+		t.Errorf("server_peaks.all_time_peak = %d, want 9", got)
+	}
+
+	// An out-of-order sample that beats the record still counts.
+	record := int32(20)
+	if err := repo.BulkSaveServerStats(ctx, []repository.StatRow{
+		{ServerID: id, Timestamp: at.Add(-time.Hour), Players: &record, Online: true},
+	}); err != nil {
+		t.Fatalf("BulkSaveServerStats (old record): %v", err)
+	}
+	if got := scalar[int32](t, pool, `SELECT all_time_peak FROM server_peaks WHERE server_id = $1`, id); got != 20 {
+		t.Errorf("server_peaks.all_time_peak = %d, want 20", got)
+	}
+	if got := scalar[time.Time](t, pool, `SELECT peak_at FROM server_peaks WHERE server_id = $1`, id); !got.Equal(at.Add(-time.Hour)) {
+		t.Errorf("server_peaks.peak_at = %v, want %v", got, at.Add(-time.Hour))
 	}
 }
 

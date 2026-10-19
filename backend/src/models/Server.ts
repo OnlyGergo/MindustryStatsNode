@@ -12,6 +12,10 @@ class Server extends Model {
   declare last_seen: Date | null;
   declare country_code: string | null;
   declare inactivity_excluded: boolean;
+  // Non-NULL = this row is retired history (address changed / re-registered)
+  // and is never polled again. See collector/migrations/30_server_identity.sql.
+  declare retired_at: Date | null;
+
 }
 
 Server.init({
@@ -56,6 +60,10 @@ Server.init({
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
+  },
+  retired_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   sequelize,
@@ -63,12 +71,11 @@ Server.init({
   timestamps: true,
   createdAt: 'created_at',
   updatedAt: 'updated_at',
-  indexes: [
-    {
-      unique: true,
-      fields: ['host', 'port']
-    }
-  ]
+  // No `indexes` here anymore: (host, port) is now only unique among live
+  // rows (`uq_server_address_active`, a partial index Sequelize can't
+  // express since it has no `where` for index defs on init), and this model
+  // is never used to sync/migrate schema anyway. See
+  // collector/migrations/30_server_identity.sql.
 });
 
 // Define association with ServerGroup

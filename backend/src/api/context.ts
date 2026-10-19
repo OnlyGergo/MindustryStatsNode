@@ -8,7 +8,6 @@ import { type ApiServiceConfig, loadBaseConfig } from '../shared/config.js';
 export const apiConfig: ApiServiceConfig = {
   ...loadBaseConfig(),
   PORT: parseInt(process.env.PORT || '3000'),
-  CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
   GRAPH_MAX_POINTS: parseInt(process.env.GRAPH_MAX_POINTS || '168'),
   DATA_COLLECTION_INTERVAL_MS: parseInt(process.env.DATA_COLLECTION_INTERVAL_MS || '300000'),
 };

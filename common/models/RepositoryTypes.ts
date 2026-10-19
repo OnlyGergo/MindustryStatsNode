@@ -13,24 +13,7 @@ export interface ServerInput {
     port: number;
 }
 
-export interface NetworkDetails {
-    id: number;
-    name: string;
-    playerPeaks: {
-        allTime: number;
-        daily: number;
-        weekly: number;
-    };
-    topServer: {
-        id: number;
-        host: string;
-        port: number;
-        players: number;
-        name: string;
-    } | null;
-    activeServers: number;
-    totalServers: number;
-}
+export type { NetworkDetails } from './serverData.js';
 
 export interface ServerListInfo {
     id: number;

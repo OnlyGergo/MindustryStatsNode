@@ -1,14 +1,15 @@
 import React from "react";
 import {
-  DATE_RANGE_OPTIONS,
-  DateRangeOption,
+  PRESET_RANGE_OPTIONS,
+  PresetRange,
   ViewMode,
 } from "../util/chartHelpers.ts";
 import { GamemodeInfo } from "../../../common/models/GlobalStatsTypes.js";
+import { modeIdToIcon } from "../util/mindustry.ts";
 
 interface ChartControlsProps {
-  selectedRange: DateRangeOption;
-  onRangeChange: (range: DateRangeOption) => void;
+  selectedRange: PresetRange;
+  onRangeChange: (range: PresetRange) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   selectedGamemode: GamemodeInfo | null;
@@ -31,7 +32,7 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
       onGamemodeChange(null);
       return;
     }
-    const gamemode = gamemodeList.find((gm) => gm.modeId === selected) || null;
+    const gamemode = gamemodeList.find((gm) => gm.registryId === selected) || null;
     onGamemodeChange(gamemode);
   };
 
@@ -43,7 +44,7 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
           Timeframe
         </span>
         <div className="flex flex-wrap gap-1 p-1 rounded border border-default bg-surface-tertiary">
-          {DATE_RANGE_OPTIONS.map((option) => (
+          {PRESET_RANGE_OPTIONS.map((option) => (
             <button
               key={option.value}
               onClick={() => onRangeChange(option.value)}
@@ -65,7 +66,7 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
           View
         </span>
         <div className="flex flex-wrap gap-1 p-1 rounded border border-default bg-surface-tertiary">
-          {(["lines", "aggregated"] as ViewMode[]).map((mode) => (
+          {(["share", "lines", "aggregated"] as ViewMode[]).map((mode) => (
             <button
               key={mode}
               onClick={() => onViewModeChange(mode)}
@@ -84,16 +85,15 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
       {/* Gamemode Filter */}
       <div className="relative w-full sm:w-auto max-w-full min-w-0">
         <select
-          value={selectedGamemode?.modeId ?? ""}
+          value={selectedGamemode?.registryId ?? ""}
           onChange={handleGamemodeChange}
           className="appearance-none truncate w-full sm:w-auto max-w-full border border-default text-primary text-xs sm:text-sm rounded pl-3 pr-8 py-1 focus-ring-accent focus:border-accent bg-surface-tertiary transition-all cursor-pointer"
         >
           <option value="">🌐 All Gamemodes</option>
           {[...gamemodeList]
-            .sort((a, b) => b.serverCount - a.serverCount)
             .map((gm) => (
-              <option key={gm.modeId} value={gm.modeId}>
-                {gm.cleanModeName} ({gm.serverCount} servers)
+              <option key={gm.registryId} value={gm.registryId}>
+                {modeIdToIcon(gm.gamemodeId)} {gm.cleanModeName} ({gm.serverCount} servers)
               </option>
             ))}
         </select>

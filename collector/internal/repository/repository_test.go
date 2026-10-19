@@ -170,3 +170,53 @@ func TestCondense(t *testing.T) {
 }
 
 func int32p(v int32) *int32 { return &v }
+
+func TestTruncateRunesCountsCharacters(t *testing.T) {
+	if got := truncateRunes("abc", 5); got != "abc" {
+		t.Fatalf("short string changed: %q", got)
+	}
+	if got := truncateRunes("abcdef", 3); got != "abc" {
+		t.Fatalf("got %q, want %q", got, "abc")
+	}
+	// 4 two-byte runes: 8 bytes, but only 4 characters, so it fits in 4.
+	if got := truncateRunes("éééé", 4); got != "éééé" {
+		t.Fatalf("multi-byte string cut early: %q", got)
+	}
+	if got := truncateRunes("éééé", 2); got != "éé" {
+		t.Fatalf("got %q, want %q", got, "éé")
+	}
+}
+
+func TestClampStatStringsBoundsVersionType(t *testing.T) {
+	long := strings.Repeat("x", 255)
+	batch := []StatRow{{ServerID: 1, VersionType: &long}}
+	rows := dedupeStatsByPrimaryKey(batch)
+	clampStatStrings(rows)
+
+	if n := len([]rune(*rows[0].VersionType)); n != maxVersionTypeLen {
+		t.Fatalf("version_type has %d characters, want %d", n, maxVersionTypeLen)
+	}
+	if len(long) != 255 {
+		t.Fatalf("caller's string was modified")
+	}
+}
+
+func TestBatchPeaks(t *testing.T) {
+	base := time.UnixMilli(1_700_000_000_000)
+
+	batch := []StatRow{
+		{ServerID: 1, Timestamp: base.Add(time.Minute), Players: int32p(5)},
+		{ServerID: 1, Timestamp: base, Players: int32p(5)}, // tie: the earlier sample wins
+		{ServerID: 1, Timestamp: base.Add(2 * time.Minute), Players: int32p(3)},
+		{ServerID: 2, Timestamp: base, Players: int32p(5000)}, // unrealistic, like server_stats_5m
+		{ServerID: 3, Timestamp: base, Players: nil},
+	}
+
+	rows := batchPeaks(batch)
+	if len(rows) != 1 {
+		t.Fatalf("batchPeaks() = %d rows, want 1", len(rows))
+	}
+	if rows[0].ServerID != 1 || rows[0].Peak != 5 || !rows[0].PeakAt.Equal(base) {
+		t.Errorf("batchPeaks() = %+v, want server 1 peaking at 5 at %v", rows[0], base)
+	}
+}

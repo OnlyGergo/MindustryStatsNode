@@ -45,10 +45,14 @@ type StatRow struct {
 // serverRepository.ts read both tables and joined them in JS; one LEFT JOIN is
 // the same result set with one round trip.
 func (r *Repository) GetServers(ctx context.Context) ([]ServerRecord, error) {
+	// A retired row is closed history for an address that may since have been
+	// reassigned to a new row -- polling it would hit whatever now answers on
+	// that host/port and misattribute the response to the old row's stats.
 	rows, err := r.pool.Query(ctx, `
 		SELECT s.id, s.host, s.port, COALESCE(g.name, 'Unknown') AS name
 		FROM servers s
 		LEFT JOIN server_groups g ON g.id = s.server_group_id
+		WHERE s.retired_at IS NULL
 		ORDER BY s.id
 	`)
 	if err != nil {
@@ -137,7 +141,11 @@ func (r *Repository) BatchUpsertServers(ctx context.Context, servers []ServerInp
 			SELECT sd.host, sd.port, g.id
 			FROM server_data sd
 			LEFT JOIN server_groups g ON g.name = sd.name
-			ON CONFLICT (host, port) DO UPDATE
+			-- (host, port) is only unique among live rows now (uq_server_address_active);
+			-- the predicate has to match that partial index exactly for Postgres to
+			-- infer it as the conflict target, and a retired row must never be updated
+			-- by rediscovering its old address.
+			ON CONFLICT (host, port) WHERE retired_at IS NULL DO UPDATE
 				SET server_group_id = EXCLUDED.server_group_id,
 					updated_at      = NOW()
 		`, serversJSON)
@@ -222,6 +230,41 @@ func dedupeStatsByPrimaryKey(batch []StatRow) []StatRow {
 	return rows
 }
 
+// maxVersionTypeLen is the width of version_type (varchar(50)) on server_stats
+// and server_current.  The wire format allows up to 255 bytes, and Postgres
+// rejects an over-long value instead of truncating it, which would abort the
+// whole batch -- one misbehaving server would drop every server's samples.
+const maxVersionTypeLen = 50
+
+// truncateRunes cuts s to at most n characters (varchar counts characters,
+// not bytes), never splitting a multi-byte rune.
+func truncateRunes(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	count := 0
+	for i := range s {
+		if count == n {
+			return s[:i]
+		}
+		count++
+	}
+	return s
+}
+
+// clampStatStrings bounds every length-limited column in place.  The pointers
+// are replaced rather than written through, since they may be shared with the
+// caller's batch.
+func clampStatStrings(rows []StatRow) {
+	for i := range rows {
+		if vt := rows[i].VersionType; vt != nil {
+			if cut := truncateRunes(*vt, maxVersionTypeLen); cut != *vt {
+				rows[i].VersionType = &cut
+			}
+		}
+	}
+}
+
 // BulkSaveServerStats writes the samples and keeps server_current in step.
 func (r *Repository) BulkSaveServerStats(ctx context.Context, batch []StatRow) error {
 	if len(batch) == 0 {
@@ -229,6 +272,7 @@ func (r *Repository) BulkSaveServerStats(ctx context.Context, batch []StatRow) e
 	}
 
 	rows := dedupeStatsByPrimaryKey(batch)
+	clampStatStrings(rows)
 	if len(rows) != len(batch) {
 		r.log.Warn(
 			"bulkSaveServerStats: dropped sample(s) colliding on (server_id, timestamp) -- the collector queued a server twice",
@@ -277,7 +321,10 @@ func (r *Repository) BulkSaveServerStats(ctx context.Context, batch []StatRow) e
 		if err != nil {
 			return err
 		}
-		return r.upsertServerCurrent(ctx, q, rows)
+		if err := r.upsertServerCurrent(ctx, q, rows); err != nil {
+			return err
+		}
+		return r.upsertServerPeaks(ctx, q, rows)
 	})
 }
 
@@ -365,6 +412,74 @@ func (r *Repository) upsertServerCurrent(ctx context.Context, q querier, batch [
 				motd_registry_id = EXCLUDED.motd_registry_id,
 				map_registry_id  = EXCLUDED.map_registry_id
 			WHERE server_current.timestamp <= EXCLUDED.timestamp
+	`, payload)
+	return err
+}
+
+// maxRealisticPlayerCount mirrors MAX_REALISTIC_PLAYERCOUNT: server_stats_5m
+// drops samples outside [0, 1000), so the all-time peak has to as well or it
+// would disagree with every chart.
+const maxRealisticPlayerCount = 1000
+
+// peakRow is upsertServerPeaks' payload: the batch's best sample per server.
+type peakRow struct {
+	ServerID int       `json:"server_id"`
+	Peak     int32     `json:"peak"`
+	PeakAt   time.Time `json:"peak_at"`
+}
+
+// batchPeaks reduces a batch to each server's highest realistic player count,
+// ties going to the earliest sample.
+func batchPeaks(batch []StatRow) []peakRow {
+	best := make(map[int]peakRow, len(batch))
+	for _, stat := range batch {
+		if stat.ServerID == 0 || stat.Timestamp.IsZero() || stat.Players == nil {
+			continue
+		}
+		p := *stat.Players
+		if p < 0 || p >= maxRealisticPlayerCount {
+			continue
+		}
+		cur, ok := best[stat.ServerID]
+		if !ok || p > cur.Peak || (p == cur.Peak && stat.Timestamp.Before(cur.PeakAt)) {
+			best[stat.ServerID] = peakRow{ServerID: stat.ServerID, Peak: p, PeakAt: stat.Timestamp}
+		}
+	}
+	rows := make([]peakRow, 0, len(best))
+	for _, row := range best {
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+// upsertServerPeaks keeps server_peaks' all-time maximum per server, so the
+// detail page reads it instead of scanning the server's whole history.
+//
+// A maximum only moves up, so unlike server_current there is no timestamp
+// guard: an out-of-order or replayed sample that beats the record still
+// counts.  Ties keep the earlier time, which also means a server sat at its
+// peak never rewrites the row.
+func (r *Repository) upsertServerPeaks(ctx context.Context, q querier, batch []StatRow) error {
+	rows := batchPeaks(batch)
+	if len(rows) == 0 {
+		return nil
+	}
+
+	payload, err := toJSON(rows)
+	if err != nil {
+		return &OperationError{Operation: "upsertServerPeaks", Err: err}
+	}
+
+	_, err = r.exec(ctx, q, "upsertServerPeaks", `
+		INSERT INTO server_peaks (server_id, all_time_peak, peak_at)
+		SELECT x.server_id, x.peak, x.peak_at
+		FROM jsonb_to_recordset($1::jsonb) AS x(server_id int, peak int, peak_at timestamptz)
+		ON CONFLICT (server_id) DO UPDATE
+			SET all_time_peak = EXCLUDED.all_time_peak,
+				peak_at       = EXCLUDED.peak_at
+			WHERE EXCLUDED.all_time_peak > server_peaks.all_time_peak
+			   OR (EXCLUDED.all_time_peak = server_peaks.all_time_peak
+			       AND EXCLUDED.peak_at < server_peaks.peak_at)
 	`, payload)
 	return err
 }

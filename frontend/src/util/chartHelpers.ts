@@ -1,15 +1,19 @@
+import type uPlot from "uplot";
 import { GamemodeHistoryEntry, ServerShareEntry } from "../../../common/models/GlobalStatsTypes.js";
 
-export type DateRangeOption = "1d" | "7d" | "14d" | "3m" | "12m";
-// Note: Changed from "stacked" to "lines" based on the request to remove stacking
-export type ViewMode = "lines" | "aggregated";
+/** Ranges the API knows by name; "custom" sends explicit start/end dates instead. */
+export type PresetRange = "1d" | "7d" | "14d" | "3m" | "12m";
+export type DateRangeOption = PresetRange | "custom";
+// "share" is the market-share view: a 100% stacked area of each series' slice
+// of the total at every instant (see buildShareData).
+export type ViewMode = "share" | "lines" | "aggregated";
 
-export interface DateRange {
+export interface DateRange<T extends DateRangeOption = DateRangeOption> {
     label: string;
-    value: DateRangeOption;
+    value: T;
 }
 
-export const DATE_RANGE_OPTIONS: DateRange[] = [
+export const PRESET_RANGE_OPTIONS: DateRange<PresetRange>[] = [
     { label: "1 Day", value: "1d" },
     { label: "7 Days", value: "7d" },
     { label: "14 Days", value: "14d" },
@@ -17,13 +21,21 @@ export const DATE_RANGE_OPTIONS: DateRange[] = [
     { label: "12 Months", value: "12m" },
 ];
 
-function stringToColor(str: string): string {
+export const DATE_RANGE_OPTIONS: DateRange[] = [
+    ...PRESET_RANGE_OPTIONS,
+    { label: "Custom", value: "custom" },
+];
+
+function stringToHue(str: string): number {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const h = Math.abs(hash) % 360;
-    return `hsl(${h}, 75%, 60%)`;
+    return Math.abs(hash) % 360;
+}
+
+function stringToColor(str: string): string {
+    return `hsl(${stringToHue(str)}, 75%, 60%)`;
 }
 
 export function getModeColor(modeName: string | null): string {
@@ -35,14 +47,50 @@ export function getModeColor(modeName: string | null): string {
     return stringToColor(modeName);
 }
 
-export function formatTimestampLabel(timestampMs: number, range: DateRangeOption): string {
-    const date = new Date(timestampMs);
-    if (range === "1d") {
-        return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    } else if (range === "7d" || range === "14d") {
-        return date.toLocaleDateString([], { weekday: "short", hour: "2-digit" });
-    }
-    return date.toLocaleDateString([], { month: "short", day: "numeric" });
+/** Solid, slightly darker fill of getModeColor, for stacked areas. */
+export function getModeFill(modeName: string | null): string {
+    if (!modeName) return "#525252";
+    return `hsl(${stringToHue(modeName)}, 60%, 42%)`;
+}
+
+export const SHARE_OTHER_LABEL = "Other";
+
+const DAY_SECONDS = 86_400;
+
+/**
+ * X-axis tick labels, chosen from the visible span rather than the selected
+ * preset, so custom ranges get sensible labels too.
+ */
+export function formatTimeTicks(u: uPlot, splits: number[]): string[] {
+    const span = (u.scales.x.max ?? 0) - (u.scales.x.min ?? 0);
+    const opts: Intl.DateTimeFormatOptions =
+        span <= 2 * DAY_SECONDS ? { hour: "2-digit", minute: "2-digit" }
+        : span <= 8 * DAY_SECONDS ? { weekday: "short", hour: "2-digit" }
+        : { month: "short", day: "numeric" };
+    return splits.map((ts) => {
+        const date = new Date(ts * 1000);
+        return "minute" in opts ? date.toLocaleTimeString([], opts) : date.toLocaleDateString([], opts);
+    });
+}
+
+const compactCount = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
+
+/** Y-axis player counts; compact ("1.2K") on narrow charts where the gutter is tight. */
+export const countTicks = (narrow: boolean) => (_u: uPlot, splits: number[]) =>
+    splits.map((v) => narrow ? compactCount.format(Math.round(v)) : Math.round(v).toLocaleString());
+
+/** Shared axis styling for every time-series chart; narrow charts get bigger labels and fewer ticks. */
+export function buildTimeAxes(
+    narrow: boolean,
+    yValues: uPlot.Axis["values"],
+    gridColor = "rgba(255,255,255,0.03)",
+): uPlot.Axis[] {
+    const font = narrow ? "11px sans-serif" : "10px sans-serif";
+    const line = { stroke: gridColor };
+    return [
+        { stroke: "#9ca3af", grid: line, ticks: line, values: formatTimeTicks, size: 30, font, space: narrow ? 70 : 50 },
+        { stroke: "#9ca3af", grid: line, ticks: line, values: yValues, size: narrow ? 44 : 60, font, space: narrow ? 36 : 30 },
+    ];
 }
 
 /**
@@ -74,7 +122,9 @@ export function buildServerShareIndex(
             tsMap = new Map();
             index.set(entry.timestamp, tsMap);
         }
-        tsMap.set(entry.groupName, entry.players ?? 0);
+        // A group can have several servers live at the same instant; they are
+        // distinct canonical servers, so summing them is the group's total.
+        tsMap.set(entry.groupName, (tsMap.get(entry.groupName) ?? 0) + (entry.players ?? 0));
     }
     return index;
 }
@@ -118,3 +168,154 @@ export function buildUPlotData(
     // This perfectly matches uPlot's required AlignedData format
     return [xs, ...rows];
 }
+
+export interface ShareData {
+    /** Stack order, bottom first. Hidden keys are folded into SHARE_OTHER_LABEL. */
+    labels: string[];
+    /**
+     * uPlot AlignedData. data[1..n] are CUMULATIVE percentages, stored top of
+     * stack first so each opaque area filled down to 0 is painted before the
+     * ones beneath it and never covers them.
+     */
+    data: (number | null)[][];
+    /** Per label (same order as `labels`): raw players at each timestamp. */
+    players: (number | null)[][];
+    /** Per timestamp: total players across every key, hidden ones included. */
+    totals: (number | null)[];
+}
+
+/**
+ * Build a market-share (100% stacked area) view of an index.
+ *
+ * Shares are always of the whole total, so hiding a series in the legend moves
+ * it into "Other" rather than inflating everyone else's share.  A timestamp with
+ * no players at all is a gap (null), not an even split of nothing; within a
+ * timestamp that has players, a key with no value is simply 0%.
+ *
+ * Bottom-to-top order is by total players over the period, so the biggest
+ * slice sits on the flat baseline where its size is easiest to read.
+ */
+export function buildShareData(
+    timestamps: number[],          // milliseconds
+    keys: string[],
+    index: Map<number, Map<string, number>>,
+    visible: Set<string>,
+): ShareData {
+    const xs = timestamps.map((ts) => ts / 1000);
+
+    const volume = new Map<string, number>();
+    for (const tsMap of index.values()) {
+        tsMap.forEach((v, k) => volume.set(k, (volume.get(k) ?? 0) + v));
+    }
+
+    const shown = keys
+        .filter((k) => visible.has(k))
+        .sort((a, b) => (volume.get(b) ?? 0) - (volume.get(a) ?? 0));
+    const hidden = keys.filter((k) => !visible.has(k));
+
+    const totals = timestamps.map((ts) => {
+        const tsMap = index.get(ts);
+        if (!tsMap) return null;
+        let sum = 0;
+        tsMap.forEach((v) => (sum += v));
+        return sum > 0 ? sum : null;
+    });
+
+    const players: (number | null)[][] = shown.map((k) =>
+        timestamps.map((ts, i) => (totals[i] == null ? null : (index.get(ts)?.get(k) ?? 0))),
+    );
+    const labels = [...shown];
+
+    const other = timestamps.map((ts, i) => {
+        if (totals[i] == null) return null;
+        const tsMap = index.get(ts)!;
+        let sum = 0;
+        for (const k of hidden) sum += tsMap.get(k) ?? 0;
+        return sum;
+    });
+    if (other.some((v) => v != null && v > 0)) {
+        labels.push(SHARE_OTHER_LABEL);
+        players.push(other);
+    }
+
+    const cumulative: (number | null)[][] = [];
+    const running = timestamps.map(() => 0);
+    for (const row of players) {
+        cumulative.push(row.map((v, i) => {
+            const total = totals[i];
+            if (total == null || v == null) return null;
+            running[i] += v;
+            return (running[i] / total) * 100;
+        }));
+    }
+
+    return { labels, data: [xs, ...cumulative.reverse()], players, totals };
+}
+
+/**
+ * Absolute-value stacked view: same ShareData shape as buildShareData (so
+ * buildShareSeries and the tooltip helpers work unchanged) but `data` holds
+ * cumulative player counts instead of percentages.  `players` rows are given
+ * bottom of stack first; the stack height at each timestamp is their sum, and a
+ * timestamp where `totals` is null (every row null) stays a gap.
+ */
+export function buildStackedData(
+    timestamps: number[],          // milliseconds
+    labels: string[],
+    players: (number | null)[][],
+): ShareData {
+    const xs = timestamps.map((ts) => ts / 1000);
+    const totals = timestamps.map((_, i) => {
+        if (players.every((row) => row[i] == null)) return null;
+        let sum = 0;
+        for (const row of players) sum += row[i] ?? 0;
+        return sum;
+    });
+
+    const running = timestamps.map(() => 0);
+    const cumulative = players.map((row) =>
+        row.map((v, i) => {
+            if (totals[i] == null) return null;
+            running[i] += v ?? 0;
+            return running[i];
+        }),
+    );
+
+    return { labels, data: [xs, ...cumulative.reverse()], players, totals };
+}
+
+function shareColor(label: string): string {
+    return label === SHARE_OTHER_LABEL ? "#a3a3a3" : getModeColor(label);
+}
+
+/** uPlot series for a ShareData, matching its top-of-stack-first data order. */
+export function buildShareSeries(share: ShareData): uPlot.Series[] {
+    return [
+        { label: "Time" },
+        ...[...share.labels].reverse().map((label): uPlot.Series => ({
+            label,
+            stroke: shareColor(label),
+            fill: getModeFill(label === SHARE_OTHER_LABEL ? null : label),
+            width: 1,
+            spanGaps: false,
+            points: { show: false },
+        })),
+    ];
+}
+
+/** Tooltip rows for one instant of a ShareData: "12.3% (45)", biggest first. */
+export function shareTooltipRows(share: ShareData, idx: number) {
+    const total = share.totals[idx];
+    if (total == null) return [];
+    return share.labels
+        .map((label, i) => ({ label, value: share.players[i][idx] ?? 0 }))
+        .filter((r) => r.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .map((r) => ({
+            ...r,
+            color: shareColor(r.label),
+            display: `${((r.value / total) * 100).toFixed(1)}% (${r.value.toLocaleString()})`,
+        }));
+}
+
+export const SHARE_Y_AXIS_VALUES = (_u: uPlot, splits: number[]) => splits.map((v) => `${Math.round(v)}%`);

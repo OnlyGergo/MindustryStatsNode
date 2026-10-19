@@ -10,13 +10,6 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    // The backend is type-imported for the Eden Treaty client. Resolve elysia to the
-    // backend's copy so both sides share one nominal identity — two installs of it
-    // produce structurally identical but incompatible types.
-    "paths": {
-      "elysia": ["../backend/node_modules/elysia"],
-      "elysia/*": ["../backend/node_modules/elysia/*"]
-    },
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,

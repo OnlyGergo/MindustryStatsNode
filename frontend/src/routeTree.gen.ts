@@ -9,130 +9,295 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as GlobalRouteImport } from './routes/global'
-import { Route as InactiveRouteImport } from './routes/inactive'
-import { Route as NetworkNetworkIdRouteImport } from './routes/network.$networkId'
-import { Route as ServerServerIdRouteImport } from './routes/server.$serverId'
+import { Route as BrowseRouteImport } from './routes/_browse'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as BrowseIndexRouteImport } from './routes/_browse/index'
+import { Route as BrowseGlobalRouteImport } from './routes/_browse/global'
+import { Route as BrowseInactiveRouteImport } from './routes/_browse/inactive'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminImagesRouteImport } from './routes/admin/images'
+import { Route as AdminMergesRouteImport } from './routes/admin/merges'
+import { Route as AdminOwnersRouteImport } from './routes/admin/owners'
+import { Route as AdminReportsRouteImport } from './routes/admin/reports'
+import { Route as BrowseNetworkNetworkIdRouteImport } from './routes/_browse/network.$networkId'
+import { Route as BrowseServerServerIdRouteImport } from './routes/_browse/server.$serverId'
 
-const IndexRoute = IndexRouteImport.update({
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/_browse',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrowseIndexRoute = BrowseIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
-const GlobalRoute = GlobalRouteImport.update({
+const BrowseGlobalRoute = BrowseGlobalRouteImport.update({
   id: '/global',
   path: '/global',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
-const InactiveRoute = InactiveRouteImport.update({
+const BrowseInactiveRoute = BrowseInactiveRouteImport.update({
   id: '/inactive',
   path: '/inactive',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
-const NetworkNetworkIdRoute = NetworkNetworkIdRouteImport.update({
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminImagesRoute = AdminImagesRouteImport.update({
+  id: '/images',
+  path: '/images',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMergesRoute = AdminMergesRouteImport.update({
+  id: '/merges',
+  path: '/merges',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOwnersRoute = AdminOwnersRouteImport.update({
+  id: '/owners',
+  path: '/owners',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReportsRoute = AdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AdminRoute,
+} as any)
+const BrowseNetworkNetworkIdRoute = BrowseNetworkNetworkIdRouteImport.update({
   id: '/network/$networkId',
   path: '/network/$networkId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
-const ServerServerIdRoute = ServerServerIdRouteImport.update({
+const BrowseServerServerIdRoute = BrowseServerServerIdRouteImport.update({
   id: '/server/$serverId',
   path: '/server/$serverId',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => BrowseRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/global': typeof GlobalRoute
-  '/inactive': typeof InactiveRoute
-  '/network/$networkId': typeof NetworkNetworkIdRoute
-  '/server/$serverId': typeof ServerServerIdRoute
+  '/': typeof BrowseIndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/global': typeof BrowseGlobalRoute
+  '/inactive': typeof BrowseInactiveRoute
+  '/admin/images': typeof AdminImagesRoute
+  '/admin/merges': typeof AdminMergesRoute
+  '/admin/owners': typeof AdminOwnersRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/admin/': typeof AdminIndexRoute
+  '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
+  '/server/$serverId': typeof BrowseServerServerIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/global': typeof GlobalRoute
-  '/inactive': typeof InactiveRoute
-  '/network/$networkId': typeof NetworkNetworkIdRoute
-  '/server/$serverId': typeof ServerServerIdRoute
+  '/global': typeof BrowseGlobalRoute
+  '/inactive': typeof BrowseInactiveRoute
+  '/admin/images': typeof AdminImagesRoute
+  '/admin/merges': typeof AdminMergesRoute
+  '/admin/owners': typeof AdminOwnersRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/': typeof BrowseIndexRoute
+  '/admin': typeof AdminIndexRoute
+  '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
+  '/server/$serverId': typeof BrowseServerServerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/global': typeof GlobalRoute
-  '/inactive': typeof InactiveRoute
-  '/network/$networkId': typeof NetworkNetworkIdRoute
-  '/server/$serverId': typeof ServerServerIdRoute
+  '/_browse': typeof BrowseRouteWithChildren
+  '/admin': typeof AdminRouteWithChildren
+  '/_browse/global': typeof BrowseGlobalRoute
+  '/_browse/inactive': typeof BrowseInactiveRoute
+  '/admin/images': typeof AdminImagesRoute
+  '/admin/merges': typeof AdminMergesRoute
+  '/admin/owners': typeof AdminOwnersRoute
+  '/admin/reports': typeof AdminReportsRoute
+  '/_browse/': typeof BrowseIndexRoute
+  '/admin/': typeof AdminIndexRoute
+  '/_browse/network/$networkId': typeof BrowseNetworkNetworkIdRoute
+  '/_browse/server/$serverId': typeof BrowseServerServerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/global' | '/inactive' | '/network/$networkId' | '/server/$serverId'
-  fileRoutesByTo: FileRoutesByTo
-  to:
-    '/' | '/global' | '/inactive' | '/network/$networkId' | '/server/$serverId'
-  id:
-    | '__root__'
     | '/'
+    | '/admin'
     | '/global'
     | '/inactive'
+    | '/admin/images'
+    | '/admin/merges'
+    | '/admin/owners'
+    | '/admin/reports'
+    | '/admin/'
     | '/network/$networkId'
     | '/server/$serverId'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/global'
+    | '/inactive'
+    | '/admin/images'
+    | '/admin/merges'
+    | '/admin/owners'
+    | '/admin/reports'
+    | '/'
+    | '/admin'
+    | '/network/$networkId'
+    | '/server/$serverId'
+  id:
+    | '__root__'
+    | '/_browse'
+    | '/admin'
+    | '/_browse/global'
+    | '/_browse/inactive'
+    | '/admin/images'
+    | '/admin/merges'
+    | '/admin/owners'
+    | '/admin/reports'
+    | '/_browse/'
+    | '/admin/'
+    | '/_browse/network/$networkId'
+    | '/_browse/server/$serverId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  GlobalRoute: typeof GlobalRoute
-  InactiveRoute: typeof InactiveRoute
-  NetworkNetworkIdRoute: typeof NetworkNetworkIdRoute
-  ServerServerIdRoute: typeof ServerServerIdRoute
+  BrowseRoute: typeof BrowseRouteWithChildren
+  AdminRoute: typeof AdminRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_browse': {
+      id: '/_browse'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof BrowseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_browse/': {
+      id: '/_browse/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseIndexRouteImport
+      parentRoute: typeof BrowseRoute
     }
-    '/global': {
-      id: '/global'
+    '/_browse/global': {
+      id: '/_browse/global'
       path: '/global'
       fullPath: '/global'
-      preLoaderRoute: typeof GlobalRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseGlobalRouteImport
+      parentRoute: typeof BrowseRoute
     }
-    '/inactive': {
-      id: '/inactive'
+    '/_browse/inactive': {
+      id: '/_browse/inactive'
       path: '/inactive'
       fullPath: '/inactive'
-      preLoaderRoute: typeof InactiveRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseInactiveRouteImport
+      parentRoute: typeof BrowseRoute
     }
-    '/network/$networkId': {
-      id: '/network/$networkId'
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/images': {
+      id: '/admin/images'
+      path: '/images'
+      fullPath: '/admin/images'
+      preLoaderRoute: typeof AdminImagesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/merges': {
+      id: '/admin/merges'
+      path: '/merges'
+      fullPath: '/admin/merges'
+      preLoaderRoute: typeof AdminMergesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/owners': {
+      id: '/admin/owners'
+      path: '/owners'
+      fullPath: '/admin/owners'
+      preLoaderRoute: typeof AdminOwnersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/reports': {
+      id: '/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_browse/network/$networkId': {
+      id: '/_browse/network/$networkId'
       path: '/network/$networkId'
       fullPath: '/network/$networkId'
-      preLoaderRoute: typeof NetworkNetworkIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseNetworkNetworkIdRouteImport
+      parentRoute: typeof BrowseRoute
     }
-    '/server/$serverId': {
-      id: '/server/$serverId'
+    '/_browse/server/$serverId': {
+      id: '/_browse/server/$serverId'
       path: '/server/$serverId'
       fullPath: '/server/$serverId'
-      preLoaderRoute: typeof ServerServerIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof BrowseServerServerIdRouteImport
+      parentRoute: typeof BrowseRoute
     }
   }
 }
 
+interface BrowseRouteChildren {
+  BrowseGlobalRoute: typeof BrowseGlobalRoute
+  BrowseInactiveRoute: typeof BrowseInactiveRoute
+  BrowseIndexRoute: typeof BrowseIndexRoute
+  BrowseNetworkNetworkIdRoute: typeof BrowseNetworkNetworkIdRoute
+  BrowseServerServerIdRoute: typeof BrowseServerServerIdRoute
+}
+
+const BrowseRouteChildren: BrowseRouteChildren = {
+  BrowseGlobalRoute: BrowseGlobalRoute,
+  BrowseInactiveRoute: BrowseInactiveRoute,
+  BrowseIndexRoute: BrowseIndexRoute,
+  BrowseNetworkNetworkIdRoute: BrowseNetworkNetworkIdRoute,
+  BrowseServerServerIdRoute: BrowseServerServerIdRoute,
+}
+
+const BrowseRouteWithChildren =
+  BrowseRoute._addFileChildren(BrowseRouteChildren)
+
+interface AdminRouteChildren {
+  AdminImagesRoute: typeof AdminImagesRoute
+  AdminMergesRoute: typeof AdminMergesRoute
+  AdminOwnersRoute: typeof AdminOwnersRoute
+  AdminReportsRoute: typeof AdminReportsRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminImagesRoute: AdminImagesRoute,
+  AdminMergesRoute: AdminMergesRoute,
+  AdminOwnersRoute: AdminOwnersRoute,
+  AdminReportsRoute: AdminReportsRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  GlobalRoute: GlobalRoute,
-  InactiveRoute: InactiveRoute,
-  NetworkNetworkIdRoute: NetworkNetworkIdRoute,
-  ServerServerIdRoute: ServerServerIdRoute,
+  BrowseRoute: BrowseRouteWithChildren,
+  AdminRoute: AdminRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
