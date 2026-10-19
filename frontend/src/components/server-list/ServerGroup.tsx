@@ -29,6 +29,7 @@ const ServerGroup: React.FC<{
 
   return (
     <div
+      data-group={name}
       className={`card-base backdrop-blur-md overflow-hidden transition-all ${
         isSelected ? "border-accent" : "border-default"
       }`}

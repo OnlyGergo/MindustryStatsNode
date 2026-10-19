@@ -1,9 +1,10 @@
-import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
+import type { RouterContext } from "../router.tsx";
 import AppShell from "../components/layout/AppShell.tsx";
 import { AuthProvider } from "../context/AuthContext.tsx";
 import appCss from "../index.css?url";
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },

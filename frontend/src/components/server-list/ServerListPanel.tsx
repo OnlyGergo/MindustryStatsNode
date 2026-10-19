@@ -8,6 +8,7 @@ import { useServerList } from "../../hooks/useServerList.ts";
 import ServerStatsSummary from "../navbar/ServerStatsSummary.tsx";
 import { useServerListData } from "../../context/ServerListContext.tsx";
 import { useBrowseLayout } from "../../context/BrowseLayoutContext.tsx";
+import StaticServerList, { topOfList } from "./StaticServerList.tsx";
 
 interface ServerListPanelProps {
   /** Below `split` the list is only shown on the index route; at `split`+ it is always shown. */
@@ -20,7 +21,7 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
     totalServers,
     onlineServers,
     totalPlayers,
-    loading,
+    staticList,
     error,
     lastUpdated,
   } = useServerListData();
@@ -55,6 +56,27 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
     handleSortChange,
     sortOptions,
   } = useServerList(rawServers);
+
+  const renderList = ({ groups, flat }: ReturnType<typeof topOfList>) =>
+    isGrouped ? (
+      groups.map(({ name: groupName, servers }) => {
+        const groupId = servers.length > 0 ? servers[0].groupId : 0;
+        return (
+          <ServerGroup
+            key={groupName}
+            name={groupName}
+            servers={servers}
+            expanded={expandedGroups.has(groupName)}
+            onToggleExpand={() => onToggleGroup(groupName)}
+            isSelected={selectedNetworkId === groupId}
+            networkId={groupId}
+            selectedServerId={selectedServerId}
+          />
+        );
+      })
+    ) : (
+      <FlatServerList servers={flat} selectedServerId={selectedServerId} />
+    );
 
   // Collapse only exists at split+: below it the panel always renders as normal.
   let visibility: string;
@@ -97,41 +119,19 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
 
         {/* Server List */}
         <div className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
-          {loading && (
-              <div className="text-center p-4 bg-surface-secondary backdrop-blur-md border border-default rounded mb-2">
-                <div className="inline-block animate-spin rounded h-5 w-5 border-2 border-accent border-t-transparent"></div>
-                <p className="mt-2 text-sm text-secondary">Loading server data...</p>
-              </div>
-          )}
-
           {error && (
               <div className="bg-red-500/20 border border-red-500 text-red-400 px-3 py-2 text-sm rounded backdrop-blur-sm mb-2">
                 Failed to load server data. Please try again later.
               </div>
           )}
 
-          {!loading && !error && (
+          {staticList ? (
+              <StaticServerList searchTerm={searchTerm}>
+                {renderList(topOfList(processedServerGroups, flatServers))}
+              </StaticServerList>
+          ) : (
               <div className="space-y-1.5">
-                {isGrouped ? (
-                    processedServerGroups.map(({ name: groupName, servers }) => {
-                      const groupId = servers.length > 0 ? servers[0].groupId : 0;
-                      const isNetworkSelected = selectedNetworkId === groupId;
-                      return (
-                          <ServerGroup
-                              key={groupName}
-                              name={groupName}
-                              servers={servers}
-                              expanded={expandedGroups.has(groupName)}
-                              onToggleExpand={() => onToggleGroup(groupName)}
-                              isSelected={isNetworkSelected}
-                              networkId={groupId}
-                              selectedServerId={selectedServerId}
-                          />
-                      );
-                    })
-                ) : (
-                    <FlatServerList servers={flatServers} selectedServerId={selectedServerId} />
-                )}
+                {renderList({ groups: processedServerGroups, flat: flatServers })}
               </div>
           )}
         </div>

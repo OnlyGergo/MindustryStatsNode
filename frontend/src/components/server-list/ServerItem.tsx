@@ -22,6 +22,9 @@ const ServerItem: React.FC<{
     <Link
       to="/server/$serverId"
       params={{ serverId: String(server.id) }}
+      // Read by StaticServerList's search, which only has the markup.
+      data-server={`${server.host}:${server.port}`}
+      data-network={server.name}
       className={`p-4 cursor-pointer transition-colors flex items-start justify-between ${
         isSelected
           ? "bg-accent-muted border-l-4 border-default"
