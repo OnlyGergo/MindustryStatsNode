@@ -94,9 +94,7 @@ export interface ServerDetails {
     last7d: number;
   };
 
-  allMaps: ServerMapData[];
-  allMotds: ServerMotdData[];
-  // Keep single current records for convenience
+  // Newest open records; the full history is paginated (/map-history, /motd-history)
   currentMotd: ServerMotdData | null;
   currentMap: ServerMapData | null;
 }

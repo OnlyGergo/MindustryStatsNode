@@ -256,28 +256,27 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
 
     if (!result) return undefined;
 
-    const allMaps: ServerMapData[] = (result.detail_all_maps ?? []).map((m: any) => ({
-        id:        m.id,
-        serverId:  m.serverId,
-        validFrom: new Date(m.validFrom),
-        validTo:   m.validTo ? new Date(m.validTo) : null,
-        mapName:   m.mapName,
-        gameMode:  m.gameMode as GameMode,
-        modeName:  m.modeName,
-    }));
+    // The newest open MOTD/map of the family; the full history is paginated
+    // separately (/motd-history, /map-history) so the page doesn't wait on it.
+    const currentMotd: ServerMotdData | null = result.detail_motd_id == null ? null : {
+        id:          result.detail_motd_id,
+        serverId:    result.detail_motd_server_id,
+        validFrom:   result.detail_motd_valid_from,
+        validTo:     result.detail_motd_valid_to,
+        serverName:  result.detail_motd_server_name,
+        description: result.detail_motd_description,
+        modeName:    result.detail_mode_name,
+    };
 
-    const allMotds: ServerMotdData[] = (result.detail_all_motds ?? []).map((m: any) => ({
-        id:          m.id,
-        serverId:    m.serverId,
-        validFrom:   new Date(m.validFrom),
-        validTo:     m.validTo ? new Date(m.validTo) : null,
-        serverName:  m.serverName,
-        description: m.description,
-        modeName:    m.modeName,
-    }));
-
-    const currentMotd = allMotds.find(m => m.validTo === null) ?? allMotds[0] ?? null;
-    const currentMap  = allMaps.find(m => m.validTo === null)  ?? allMaps[0]  ?? null;
+    const currentMap: ServerMapData | null = result.detail_map_id == null ? null : {
+        id:        result.detail_map_id,
+        serverId:  result.detail_map_server_id,
+        validFrom: result.detail_map_valid_from,
+        validTo:   result.detail_map_valid_to,
+        mapName:   result.detail_map_map_name,
+        gameMode:  result.detail_map_game_mode as GameMode,
+        modeName:  result.detail_motd_mode_name,
+    };
 
     const detail: ServerElement & ServerDetails = {
         id:          result.detail_id,
@@ -297,8 +296,6 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
             last24h: parseFloat(result.detail_24h_uptime) || 0,
             last7d:  parseFloat(result.detail_7d_uptime)  || 0,
         },
-        allMaps,
-        allMotds,
         currentMotd,
         currentMap,
         aggregateExclude: result.detail_aggregate_exclude,
@@ -329,64 +326,77 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
 
 // ─── Map / MOTD history reads ─────────────────────────────────────────────────
 
+/**
+ * The newest `offset + perPage` rows of each family member (one index probe on
+ * (server_id, valid_from DESC) apiece), then merged and paged. serverId is a
+ * canonical id; history has to be read across the whole family or an address
+ * change would silently truncate a server's past.
+ */
+function familyHistorySql(table: string, columns: string): string {
+    return `SELECT h.*
+            FROM (${serverFamilySql(':serverId')}) f
+            CROSS JOIN LATERAL (
+                SELECT ${columns}
+                FROM ${table}
+                WHERE server_id = f.server_id
+                ORDER BY valid_from DESC
+                LIMIT :fetch
+            ) h`;
+}
+
 export async function getMapHistory(
     serverId: number,
     page: number    = 1,
     perPage: number = 20
-): Promise<{ data: any[]; total: number }> {
+): Promise<ServerMapData[]> {
     const offset = (page - 1) * perPage;
-    // serverId is a canonical id; history has to be read across the whole
-    // family or an address change would silently truncate a server's past
-    // (the old rows are still there, just under a different raw server_id).
-    const family = serverFamilySql(':serverId');
+    const rows: any[] = await sequelize.query(
+        `SELECT h.id, h.server_id, h.valid_from, h.valid_to,
+                r.map_name, r.game_mode, r.mode_name
+         FROM (${familyHistorySql('server_maps_history', 'id, server_id, map_id, valid_from, valid_to')}) h
+         JOIN server_maps_registry r ON h.map_id = r.id
+         ORDER BY h.valid_from DESC
+         LIMIT :perPage OFFSET :offset`,
+        { replacements: { serverId, perPage, offset, fetch: offset + perPage }, type: QueryTypes.SELECT }
+    );
 
-    const [[{ count }], data]: any = await Promise.all([
-        sequelize.query(
-            `SELECT COUNT(*) AS count FROM server_maps_history WHERE server_id IN (${family})`,
-            { replacements: { serverId }, type: QueryTypes.SELECT }
-        ),
-        sequelize.query(
-            `SELECT h.id, h.server_id, h.valid_from, h.valid_to,
-                    r.map_name, r.game_mode, r.mode_name
-             FROM server_maps_history h
-             JOIN server_maps_registry r ON h.map_id = r.id
-             WHERE h.server_id IN (${family})
-             ORDER BY h.valid_from DESC
-             LIMIT :perPage OFFSET :offset`,
-            { replacements: { serverId, perPage, offset }, type: QueryTypes.SELECT }
-        ),
-    ]);
-
-    return { data, total: parseInt(count, 10) };
+    return rows.map(row => ({
+        id:        row.id,
+        serverId:  row.server_id,
+        validFrom: row.valid_from,
+        validTo:   row.valid_to,
+        mapName:   row.map_name,
+        gameMode:  row.game_mode as GameMode,
+        modeName:  row.mode_name,
+    }));
 }
 
+/** No mode name: nothing displays it, and it cost a map lookup per row. */
 export async function getMotdHistory(
     serverId: number,
     page: number    = 1,
     perPage: number = 20
-): Promise<{ data: any[]; total: number }> {
+): Promise<ServerMotdData[]> {
     const offset = (page - 1) * perPage;
-    // Same family-wide reasoning as getMapHistory.
-    const family = serverFamilySql(':serverId');
+    const rows: any[] = await sequelize.query(
+        `SELECT h.id, h.server_id, h.valid_from, h.valid_to,
+                r.server_name, r.description
+         FROM (${familyHistorySql('server_motds_history', 'id, server_id, motd_id, valid_from, valid_to')}) h
+         JOIN server_motds_registry r ON h.motd_id = r.id
+         ORDER BY h.valid_from DESC
+         LIMIT :perPage OFFSET :offset`,
+        { replacements: { serverId, perPage, offset, fetch: offset + perPage }, type: QueryTypes.SELECT }
+    );
 
-    const [[{ count }], data]: any = await Promise.all([
-        sequelize.query(
-            `SELECT COUNT(*) AS count FROM server_motds_history WHERE server_id IN (${family})`,
-            { replacements: { serverId }, type: QueryTypes.SELECT }
-        ),
-        sequelize.query(
-            `SELECT h.id, h.server_id, h.valid_from, h.valid_to,
-                    r.server_name, r.description
-             FROM server_motds_history h
-             JOIN server_motds_registry r ON h.motd_id = r.id
-             WHERE h.server_id IN (${family})
-             ORDER BY h.valid_from DESC
-             LIMIT :perPage OFFSET :offset`,
-            { replacements: { serverId, perPage, offset }, type: QueryTypes.SELECT }
-        ),
-    ]);
-
-    return { data, total: parseInt(count, 10) };
+    return rows.map(row => ({
+        id:          row.id,
+        serverId:    row.server_id,
+        validFrom:   row.valid_from,
+        validTo:     row.valid_to,
+        serverName:  row.server_name,
+        description: row.description,
+        modeName:    null,
+    }));
 }
 
 // ─── Network (server group) ───────────────────────────────────────────────────

@@ -53,8 +53,7 @@ export const serverRoutes = new Elysia({ prefix: '/api' })
   .get('/servers/:id/motd-history', async ({ params, query }) => {
     const { page, perPage } = parsePagination(query, 20, 100);
 
-    const result = await getMotdHistory(params.id, page, perPage);
-    return result.data;
+    return getMotdHistory(params.id, page, perPage);
   }, {
     params: IdParam,
     query: StrictPaginationQuery,
@@ -67,8 +66,7 @@ export const serverRoutes = new Elysia({ prefix: '/api' })
   .get('/servers/:id/map-history', async ({ params, query }) => {
     const { page, perPage } = parsePagination(query, 20, 100);
 
-    const result = await getMapHistory(params.id, page, perPage);
-    return result.data;
+    return getMapHistory(params.id, page, perPage);
   }, {
     params: IdParam,
     query: StrictPaginationQuery,

@@ -1,12 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { removeColors } from "../../../util/mindustry.ts";
 import { formatDateTimeHuman } from "../../../util/general.ts";
+import { LoadingSpinner } from "../../LoadingSpinner.tsx";
 import { ServerMotdData } from "../../../../../common/models/serverData.ts";
 
 const ITEMS_PER_PAGE = 10;
 
-const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[] }> = ({
+const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: boolean; error?: string | null }> = ({
   motdHistory,
+  loading = false,
+  error = null,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -190,9 +193,13 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[] }> = ({
             </div>
           )}
         </>
+      ) : loading ? (
+        <div className="py-6 sm:py-8">
+          <LoadingSpinner showText={false} size="small" />
+        </div>
       ) : (
         <p className="text-tertiary text-center py-6 sm:py-8 text-sm">
-          No MOTD history available or matching your search.
+          {error ?? "No MOTD history available or matching your search."}
         </p>
       )}
     </div>

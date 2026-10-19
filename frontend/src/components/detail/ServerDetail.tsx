@@ -10,15 +10,24 @@ import { formatDate } from "../../util/general.ts";
 import CopyButton from "../CopyButton.tsx";
 import ShareButton from "../ShareButton.tsx";
 import { useServerReviews } from "../../hooks/api/useServerReviews.ts";
+import { useChartData } from "../../hooks/useChartData.ts";
 import {
   ServerDetails,
   ServerElement,
+  ServerMapData,
+  ServerMotdData,
 } from "../../../../common/models/serverData.ts";
 import CustomisePanel from "./CustomisePanel.tsx";
 import { useAuth } from "../../context/AuthContext.tsx";
 import { getModeName } from "../../../../common/Gamemode.ts";
 import { MindustryText } from "../MindustryText.tsx";
 import { removeColors } from "../../util/mindustry.ts";
+
+// Below the fold, so fetched after hydration rather than holding up SSR.
+// The tables search client-side, so take the newest 100 of each in one go.
+const HISTORY_LIMIT = 100;
+const parseMaps = (json: unknown) => json as ServerMapData[];
+const parseMotds = (json: unknown) => json as ServerMotdData[];
 
 const ServerDetail: React.FC<{
   serverDataElement: ServerDetails & ServerElement;
@@ -47,6 +56,16 @@ const ServerDetail: React.FC<{
   };
 
   const reviews = useServerReviews(serverDataElement.id);
+  const maps = useChartData(
+    `/api/servers/${serverDataElement.id}/map-history?perPage=${HISTORY_LIMIT}`,
+    parseMaps,
+    "Failed to load map history",
+  );
+  const motds = useChartData(
+    `/api/servers/${serverDataElement.id}/motd-history?perPage=${HISTORY_LIMIT}`,
+    parseMotds,
+    "Failed to load MOTD history",
+  );
 
   return (
     <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
@@ -246,7 +265,7 @@ const ServerDetail: React.FC<{
           <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
             Map History
           </h2>
-          <MapHistoryTable mapHistory={serverDataElement?.allMaps ?? []} />
+          <MapHistoryTable mapHistory={maps.data ?? []} loading={maps.loading} error={maps.error} />
         </div>
 
         {/* MOTD History Table */}
@@ -254,7 +273,7 @@ const ServerDetail: React.FC<{
           <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
             MOTD History
           </h2>
-          <MotdHistoryTable motdHistory={serverDataElement?.allMotds ?? []} />
+          <MotdHistoryTable motdHistory={motds.data ?? []} loading={motds.loading} error={motds.error} />
         </div>
       </div>
     </div>
