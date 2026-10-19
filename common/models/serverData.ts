@@ -52,6 +52,16 @@ export interface ServerElement {
   uptime24h?: number | null;
 }
 
+/**
+ * What the sidebar reads of a server, and all the SSR payload embeds for it (see
+ * `fetchServers`). A full ServerElement satisfies it, so the client poll's data drops in.
+ */
+export type ServerListItem = Pick<ServerElement,
+  'id' | 'name' | 'groupId' | 'host' | 'port' | 'online' | 'lastSeen' | 'countryCode' | 'aggregateExclude' | 'ratingScore'
+> & {
+  currentData?: Pick<ServerData, 'serverName' | 'description' | 'mapName' | 'ping' | 'players' | 'playerLimit'>;
+};
+
 export interface ServerMotdData {
   id: number;
   serverId: number;

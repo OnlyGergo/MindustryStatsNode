@@ -1,13 +1,13 @@
 import React from "react";
 import { formatTextLines } from "../../util/mindustry.ts";
 import { countryCodeToFlag } from "../../util/general.ts";
-import { ServerElement } from "../../../../common/models/serverData.ts";
+import { ServerListItem } from "../../../../common/models/serverData.ts";
 import { Link } from "@tanstack/react-router";
 import { CompactStarRatingDisplay } from "../detail/StarRating.tsx";
 import { MindustryText } from "../MindustryText.tsx";
 
 const ServerItem: React.FC<{
-  server: ServerElement;
+  server: ServerListItem;
   isSelected: boolean;
 }> = ({ server, isSelected }) => {
   const serverData = server.currentData;

@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { ServerElement } from "../../../common/models/serverData";
+import { ServerListItem } from "../../../common/models/serverData";
 import useApi from "../hooks/useApi.ts";
 
 interface ServerListContextValue {
-  serverGroups: Record<string, ServerElement[]>;
+  serverGroups: Record<string, ServerListItem[]>;
   totalServers: number;
   onlineServers: number;
   totalPlayers: number;
@@ -23,12 +23,12 @@ export const useServerListData = (): ServerListContextValue => {
 };
 
 interface ServerListProviderProps {
-  initialData: ServerElement[] | null;
+  initialData: ServerListItem[] | null;
   children: React.ReactNode;
 }
 
-const buildServerGroups = (servers: ServerElement[]): Record<string, ServerElement[]> => {
-  const groups: Record<string, ServerElement[]> = {};
+const buildServerGroups = (servers: ServerListItem[]): Record<string, ServerListItem[]> => {
+  const groups: Record<string, ServerListItem[]> = {};
   servers.forEach((server) => {
     if (!groups[server.name]) groups[server.name] = [];
     groups[server.name].push(server);
@@ -36,7 +36,7 @@ const buildServerGroups = (servers: ServerElement[]): Record<string, ServerEleme
   return groups;
 };
 
-const computeTotalPlayers = (servers: ServerElement[]): number =>
+const computeTotalPlayers = (servers: ServerListItem[]): number =>
   servers.reduce((sum, s) => sum + (s.aggregateExclude ? 0 : s.currentData?.players || 0), 0);
 
 export const ServerListProvider: React.FC<ServerListProviderProps> = ({

@@ -41,7 +41,7 @@ const rateLimitTiers: RateLimitTier[] = [
   { name: 'auth', limit: 20, windowMs: MINUTE, match: (p) => p.startsWith('/api/auth/') },
   { name: 'chart', limit: 40, windowMs: MINUTE, match: (p) => CHART_PATH.test(p) },
   { name: 'entity', limit: 40, windowMs: MINUTE, match: (p) => ENTITY_PATH.test(p) && !LIGHT_ENTITY_PATH.test(p) },
-  { name: 'api', limit: 120, windowMs: MINUTE, match: (p) => p.startsWith('/api') || p === '/config' || p === '/sitemap.xml' },
+  { name: 'api', limit: 120, windowMs: MINUTE, match: (p) => p.startsWith('/api') || p === '/config' || p === '/sitemap.xml' || p === '/robots.txt' },
   // Served images: immutable and long-cached, but a page with a gallery pulls several.
   { name: 'uploads', limit: 120, windowMs: MINUTE, match: (p) => p.startsWith('/uploads/') },
   // SSR pages embed the same data the API serves (/server/:id renders its details

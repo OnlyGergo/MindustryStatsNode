@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {getRouteApi, useNavigate} from '@tanstack/react-router';
-import {ServerElement} from '../../../common/models/serverData';
+import {ServerListItem} from '../../../common/models/serverData';
 import {removeColors} from '../util/mindustry';
 import type {BrowseSearch} from '../routes/-browseSearch';
 
@@ -19,7 +19,7 @@ export type SortDirection = 'asc' | 'desc';
  * a Record would silently reorder integer-like group names. */
 export interface ServerGroupEntry {
   name: string;
-  servers: ServerElement[];
+  servers: ServerListItem[];
 }
 
 export interface SortOption {
@@ -35,12 +35,12 @@ export interface SortOption {
   /** One-line explanation of how the value is aggregated when grouped */
   groupHint: string;
   /** Value for a single server row. `null` means "unknown", which always sorts last. */
-  getValue: (server: ServerElement) => number | string | null;
+  getValue: (server: ServerListItem) => number | string | null;
   /** Aggregated value for a whole group (network). `null` means "unknown", which always sorts last. */
-  getGroupValue: (servers: ServerElement[], groupName: string) => number | string | null;
+  getGroupValue: (servers: ServerListItem[], groupName: string) => number | string | null;
 }
 
-const getServerDisplayName = (server: ServerElement): string => {
+const getServerDisplayName = (server: ServerListItem): string => {
   const cleaned = removeColors(server.currentData?.serverName ?? null)?.trim();
   return cleaned ? cleaned : server.name;
 };
@@ -140,7 +140,7 @@ const compareSortValues = (
 };
 
 const makeServerComparator = (sortOption: SortOption, direction: SortDirection) =>
-  (a: ServerElement, b: ServerElement): number => {
+  (a: ServerListItem, b: ServerListItem): number => {
     if (a.online !== b.online) return a.online ? -1 : 1;
 
     const comparison = compareSortValues(sortOption.getValue(a), sortOption.getValue(b), direction);
@@ -150,7 +150,7 @@ const makeServerComparator = (sortOption: SortOption, direction: SortDirection) 
   };
 
 const makeGroupComparator = (sortOption: SortOption, direction: SortDirection) =>
-  (a: [string, ServerElement[]], b: [string, ServerElement[]]): number => {
+  (a: [string, ServerListItem[]], b: [string, ServerListItem[]]): number => {
     const aHasOnline = a[1].some(server => server.online);
     const bHasOnline = b[1].some(server => server.online);
     if (aHasOnline !== bHasOnline) return aHasOnline ? -1 : 1;
@@ -165,7 +165,7 @@ const makeGroupComparator = (sortOption: SortOption, direction: SortDirection) =
     return compareStrings(a[0], b[0]);
   };
 
-export const useServerList = (rawServers: ServerElement[]) => {
+export const useServerList = (rawServers: ServerListItem[]) => {
   const { q, sort: sortCriteria, dir: sortDirection, grouped: isGrouped, inactive } = browseRoute.useSearch();
   const hideInactiveEnabled = !inactive;
   const navigate = useNavigate();
@@ -204,7 +204,7 @@ export const useServerList = (rawServers: ServerElement[]) => {
 
   const processedData = useMemo(() => {
     if (!rawServers || !Array.isArray(rawServers)) {
-      return { serverGroups: [] as ServerGroupEntry[], flatServers: [] as ServerElement[] };
+      return { serverGroups: [] as ServerGroupEntry[], flatServers: [] as ServerListItem[] };
     }
 
     // Step 1: Apply search filter
@@ -226,7 +226,9 @@ export const useServerList = (rawServers: ServerElement[]) => {
       const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
       filteredServers = filteredServers.filter(server => {
         if (server.online) return true;
-        return server.lastSeen && server.lastSeen > oneWeekAgo;
+        // lastSeen arrives as an ISO string, whatever the type says; compared raw
+        // against a number it was never greater, so every offline server was hidden.
+        return server.lastSeen != null && new Date(server.lastSeen).getTime() > oneWeekAgo;
       });
     }
 
@@ -235,7 +237,7 @@ export const useServerList = (rawServers: ServerElement[]) => {
     const serverComparator = makeServerComparator(sortOption, sortDirection);
 
     if (isGrouped) {
-      const groups: Record<string, ServerElement[]> = {};
+      const groups: Record<string, ServerListItem[]> = {};
       filteredServers.forEach(server => {
         if (!groups[server.name]) {
           groups[server.name] = [];
@@ -250,7 +252,7 @@ export const useServerList = (rawServers: ServerElement[]) => {
         .sort(groupComparator)
         .map(([name, servers]) => ({ name, servers }));
 
-      return { serverGroups: sortedGroups, flatServers: [] as ServerElement[] };
+      return { serverGroups: sortedGroups, flatServers: [] as ServerListItem[] };
     } else {
       return { serverGroups: [] as ServerGroupEntry[], flatServers: [...filteredServers].sort(serverComparator) };
     }

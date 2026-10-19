@@ -24,16 +24,22 @@ import { bayesianScore } from './reviewScoring.js';
 
 // ─── Servers ─────────────────────────────────────────────────────────────────
 
-/** Returns all server and network/group IDs, for sitemap generation. */
+/** Servers unseen for longer than this are left out of the sitemap: a dead page isn't worth a crawl. */
+const SITEMAP_MAX_OFFLINE_DAYS = 14;
+
+/** Returns recently seen server IDs and all network/group IDs, for sitemap generation. */
 export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds: number[] }> {
     const [servers, serverGroups] = await Promise.all([
-        // One row per real server, not per observation: server_canonical has
-        // exactly one row per servers row, but many of those share a
-        // canonical_id, and the sitemap must list a server once regardless of
-        // how many address changes it has been through.
+        // One row per real server, not per observation: grouped on canonical_id
+        // so a server is listed once however many address changes it has been
+        // through, and seen recently if any of its addresses was.
         sequelize.query(
-            `SELECT DISTINCT canonical_id FROM server_canonical`,
-            { type: QueryTypes.SELECT }
+            `SELECT sc.canonical_id
+             FROM server_canonical sc
+             JOIN servers s ON s.id = sc.server_id
+             GROUP BY sc.canonical_id
+             HAVING MAX(s.last_seen) >= NOW() - make_interval(days => CAST(:days AS integer))`,
+            { type: QueryTypes.SELECT, replacements: { days: SITEMAP_MAX_OFFLINE_DAYS } }
         ),
         ServerGroup.findAll({ raw: true, attributes: ['id'] }),
     ]);
