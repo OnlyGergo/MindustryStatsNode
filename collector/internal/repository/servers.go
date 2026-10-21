@@ -483,3 +483,20 @@ func (r *Repository) upsertServerPeaks(ctx context.Context, q querier, batch []S
 	`, payload)
 	return err
 }
+
+// RefreshNetworkPeaks recomputes network_peaks from server_stats_1h through
+// refresh_network_peaks (44_network_peaks.sql).  A nil since is the full
+// rebuild, which also lowers peaks that membership changes invalidated;
+// otherwise only buckets from since on are read and a row only moves up.
+// It reports how many rows changed.
+func (r *Repository) RefreshNetworkPeaks(ctx context.Context, since *time.Time) (int64, error) {
+	if r.dryRun {
+		r.log.Info("[dry-run] skipping write", "operation", "RefreshNetworkPeaks", "since", since)
+		return 0, nil
+	}
+	var changed int64
+	if err := r.pool.QueryRow(ctx, `SELECT refresh_network_peaks($1)`, since).Scan(&changed); err != nil {
+		return 0, &OperationError{Operation: "RefreshNetworkPeaks", Err: err}
+	}
+	return changed, nil
+}

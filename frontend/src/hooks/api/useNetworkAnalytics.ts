@@ -8,11 +8,15 @@ interface State<T> {
     error: string | null;
 }
 
-/** Client-side fetch of one JSON endpoint; refetches whenever `path` changes. */
-function useJson<T>(path: string): State<T> {
+/**
+ * Client-side fetch of one JSON endpoint; refetches whenever `path` changes.
+ * A null `path` waits (still "loading") without fetching.
+ */
+function useJson<T>(path: string | null): State<T> {
     const [state, setState] = useState<State<T>>({ data: null, loading: true, error: null });
 
     useEffect(() => {
+        if (path === null) return;
         let cancelled = false;
         setState((s) => ({ ...s, loading: true, error: null }));
 
@@ -31,8 +35,9 @@ function useJson<T>(path: string): State<T> {
     return state;
 }
 
-export const useNetworkActivity = (networkId: number, days: 7 | 28 | 90) =>
-    useJson<NetworkActivityCell[]>(`/api/networks/${networkId}/activity?days=${days}`);
+/** `enabled: false` holds the request back, e.g. until the section is near the viewport. */
+export const useNetworkActivity = (networkId: number, days: 7 | 28 | 90, enabled = true) =>
+    useJson<NetworkActivityCell[]>(enabled ? `/api/networks/${networkId}/activity?days=${days}` : null);
 
-export const useNetworkBreakdown = (networkId: number) =>
-    useJson<NetworkBreakdown>(`/api/networks/${networkId}/breakdown`);
+export const useNetworkBreakdown = (networkId: number, enabled = true) =>
+    useJson<NetworkBreakdown>(enabled ? `/api/networks/${networkId}/breakdown` : null);
