@@ -1,9 +1,8 @@
 import React, { useMemo } from "react";
 import type uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
-import { GamemodeHistoryEntry } from "../../../../common/models/GlobalStatsTypes.js";
+import type { GamemodePivot } from "../../hooks/api/useGamemodeHistory.ts";
 import {
-    buildGamemodeIndex,
     buildShareData,
     buildShareSeries,
     buildTimeAxes,
@@ -18,7 +17,7 @@ import { useUPlot } from "../../hooks/useUPlot.ts";
 import { UPlotFrame } from "../UPlotFrame.tsx";
 
 interface GamemodeChartProps {
-    data: GamemodeHistoryEntry[];
+    pivot: GamemodePivot;
     loading: boolean;
     error: string | null;
     viewMode: ViewMode;
@@ -29,13 +28,7 @@ const AGG_COLOR = "#f97316";
 
 // uPlot rendering half of GlobalStatsChart's gamemode graph - kept in its own
 // module so it's only fetched lazily on the client (see ChartSuspense.tsx).
-const GamemodeChart: React.FC<GamemodeChartProps> = ({ data, loading, error, viewMode, visibleModes }) => {
-    const pivot = useMemo(() => ({
-        timestamps: [...new Set(data.map((d) => d.timestamp))].sort((a, b) => a - b),
-        gamemodes: [...new Set(data.map((d) => d.modeName))].sort(),
-        index: buildGamemodeIndex(data),
-    }), [data]);
-
+const GamemodeChart: React.FC<GamemodeChartProps> = ({ pivot, loading, error, viewMode, visibleModes }) => {
     const isShare = viewMode === "share";
     const isAgg = viewMode === "aggregated";
     const labels = isAgg ? ["Total Network Players"] : pivot.gamemodes;

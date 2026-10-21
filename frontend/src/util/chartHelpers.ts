@@ -1,5 +1,5 @@
 import type uPlot from "uplot";
-import { GamemodeHistoryEntry, ServerShareEntry } from "../../../common/models/GlobalStatsTypes.js";
+import { ServerShareEntry } from "../../../common/models/GlobalStatsTypes.js";
 
 /** Ranges the API knows by name; "custom" sends explicit start/end dates instead. */
 export type PresetRange = "1d" | "7d" | "14d" | "3m" | "12m";
@@ -96,22 +96,6 @@ export function buildTimeAxes(
 /**
  * Build an O(n) lookup map: { timestamp -> { modeName -> players } }
  */
-export function buildGamemodeIndex(
-    data: GamemodeHistoryEntry[],
-): Map<number, Map<string, number>> {
-    const index = new Map<number, Map<string, number>>();
-    for (const entry of data) {
-        let tsMap = index.get(entry.timestamp);
-        if (!tsMap) {
-            tsMap = new Map();
-            index.set(entry.timestamp, tsMap);
-        }
-        const existing = tsMap.get(entry.modeName) ?? 0;
-        tsMap.set(entry.modeName, existing + (entry.players ?? 0));
-    }
-    return index;
-}
-
 export function buildServerShareIndex(
     data: ServerShareEntry[],
 ): Map<number, Map<string, number>> {

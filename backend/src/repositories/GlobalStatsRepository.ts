@@ -1,6 +1,6 @@
 import sequelize from '../config/database.js';
 import { QueryTypes } from 'sequelize';
-import { type GamemodeHistoryEntry, type GamemodeInfo, type ServerShareEntry } from '../../../common/models/GlobalStatsTypes.js';
+import { type GamemodeHistory, type GamemodeInfo, type ServerShareEntry } from '../../../common/models/GlobalStatsTypes.js';
 import {
     COARSE_OF,
     PLAYER_FILTER_REPLACEMENTS,
@@ -10,12 +10,7 @@ import {
     rangeBounds,
 } from './aggregateTiers.js';
 import { aggregateExcludeSql, canonicalJoin } from './canonicalIdentity.js';
-
-interface RawGamemodeHistoryRow {
-    timestamp: number;
-    clean_name: string;
-    players: number | null;
-}
+import { pivotGamemodeHistory, type RawGamemodeHistoryRow } from './gamemodePivot.js';
 
 interface RawGamemodeListRow {
   id: number;
@@ -328,14 +323,14 @@ function buildServerShareQuery(
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Get global player history grouped by mode_name
+ * Get global player history grouped by mode_name, pivoted into columns.
  */
 export async function getGlobalGamemodeHistory(
     hoursBack: number = 24,
     bucketMinutes: number = 1,
     startDate?: number,
     endDate?: number
-): Promise<GamemodeHistoryEntry[]> {
+): Promise<GamemodeHistory> {
     if (bucketMinutes < 1) {
         bucketMinutes = 1;
     }
@@ -352,14 +347,7 @@ export async function getGlobalGamemodeHistory(
         type: QueryTypes.SELECT
     }) as RawGamemodeHistoryRow[];
 
-    // clean_name is stored already stripped and already backed off to the
-    // vanilla name, so there is nothing left to do per row here.
-    return rows.map(r => ({
-        timestamp: Number(r.timestamp),
-        modeName:  r.clean_name || 'Unknown',
-        cleanName: r.clean_name || 'Unknown',
-        players:   r.players == null ? null : Number(r.players)
-    }));
+    return pivotGamemodeHistory(rows);
 }
 
 /**
@@ -375,16 +363,24 @@ export async function getGamemodeList(): Promise<GamemodeInfo[]> {
     //
     // Counting distinct on canonical_id, not the raw server_id, is what keeps a
     // merged server (two raw ids, one real server) as one entry in the count.
+    //
+    // `pairs` collapses the history to distinct (server, map) first.  Joining
+    // every history row and leaving COUNT(DISTINCT) to sort them all spilled
+    // the whole table to disk (~4.5 s on 5M rows vs ~0.3 s this way); the
+    // global page's SSR waits on this list.
     const query = `
+      WITH pairs AS (
+        SELECT DISTINCT server_id, map_id FROM server_maps_history
+      )
       SELECT MIN(gr.id) AS id,
         gr.clean_name,
         -- Mode of the representative row, so the icon matches the id handed out.
         (ARRAY_AGG(gr.game_mode ORDER BY gr.id))[1] AS game_mode,
         COUNT(DISTINCT sc.canonical_id) AS server_count
-      FROM gamemode_registry gr
-        JOIN server_maps_registry smr ON smr.gamemode_id = gr.id
-        JOIN server_maps_history smh ON smh.map_id = smr.id
-        ${canonicalJoin('sc', 'smh')}
+      FROM pairs p
+        JOIN server_maps_registry smr ON smr.id = p.map_id
+        JOIN gamemode_registry gr ON gr.id = smr.gamemode_id
+        ${canonicalJoin('sc', 'p')}
       GROUP BY gr.clean_name
       ORDER BY server_count DESC;
     `;

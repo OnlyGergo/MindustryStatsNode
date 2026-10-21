@@ -6,6 +6,7 @@ import { ChartControls } from "../ChartControls.tsx";
 import { ChartSidebarLegend } from "./ChartSidebarLegend.tsx";
 import { ChartSuspense } from "../ChartSuspense.tsx";
 import { GamemodeInfo } from "../../../../common/models/GlobalStatsTypes.ts";
+import type { InitialChartData } from "../../hooks/useChartData.ts";
 
 // uPlot touches the DOM at render time and isn't SSR-safe without extra
 // native deps, so these charts live in their own modules, loaded lazily
@@ -15,7 +16,14 @@ const ServerShareChart = lazy(() => import("./ServerShareChart.tsx"));
 
 interface GlobalStatsChartProps {
     gamemodeList: GamemodeInfo[];
+    /** The default range's history, fetched by the route loader during SSR. */
+    initialHistory?: InitialChartData | null;
 }
+
+export const DEFAULT_RANGE: PresetRange = "1d";
+
+// Fixed locale: the tiles are server-rendered, and the browser's must not differ.
+const nf = new Intl.NumberFormat("en-US");
 
 /** Series shown by default: the eight busiest. */
 const DEFAULT_VISIBLE = 8;
@@ -33,33 +41,19 @@ function useVisibleSet(sortedKeys: string[]) {
   return [visible, setVisible] as const;
 }
 
-const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
-  const [selectedRange, setSelectedRange] = useState<PresetRange>("1d");
+const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initialHistory}) => {
+  const [selectedRange, setSelectedRange] = useState<PresetRange>(DEFAULT_RANGE);
   const [viewMode, setViewMode] = useState<ViewMode>("lines");
   const [selectedGamemode, setSelectedGamemode] = useState<GamemodeInfo | null>(null);
 
-  const { data: gamemodeData, loading, error, peakPlayers } = useGamemodeHistory(selectedRange);
+  const { pivot, loading, error } = useGamemodeHistory(selectedRange, initialHistory);
   const { data: serverShareData, loading: serverShareLoading, error: serverShareError } =
       useServerShare(selectedGamemode?.registryId, selectedRange);
 
-  const computedPeaks = useMemo(() => {
-    const peaks: Record<string, number> = {};
-    if (!gamemodeData) return peaks;
-
-    gamemodeData.forEach((d) => {
-      if (d.modeName === null || d.players === null) return;
-      if (!peaks[d.modeName] || d.players > peaks[d.modeName]) {
-        peaks[d.modeName] = d.players;
-      }
-    });
-    return peaks;
-  }, [gamemodeData]);
-
-  const sortedGamemodes = useMemo(() => {
-    if (!gamemodeData) return [];
-    const unique = [...new Set(gamemodeData.map((d) => d.modeName))];
-    return unique.sort((a, b) => (computedPeaks[b] || 0) - (computedPeaks[a] || 0));
-  }, [gamemodeData, computedPeaks]);
+  const sortedGamemodes = useMemo(
+      () => [...pivot.gamemodes].sort((a, b) => (pivot.peaks[b] || 0) - (pivot.peaks[a] || 0)),
+      [pivot],
+  );
 
   const [visibleModes, setVisibleModes] = useVisibleSet(sortedGamemodes);
 
@@ -117,7 +111,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
                   Period Peak High
                 </div>
                 <div className="text-xl sm:text-2xl font-bold text-accent wrap-break-word">
-                  {loading ? "..." : (peakPlayers?.toLocaleString() ?? "0")}
+                  {loading ? "..." : nf.format(pivot.peakPlayers)}
                 </div>
               </div>
               <div className="shrink-0 bg-accent-muted text-accent border border-accent rounded p-2 sm:p-3">
@@ -156,7 +150,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
               <div className="relative w-full h-72 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
                 <ChartSuspense>
                   <GamemodeChart
-                      data={gamemodeData}
+                      pivot={pivot}
                       loading={loading}
                       error={error}
                       viewMode={viewMode}
@@ -174,7 +168,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList}) => {
                   <div className="flex-1 min-h-0">
                     <ChartSidebarLegend
                         gamemodes={sortedGamemodes}
-                        peaks={computedPeaks}
+                        peaks={pivot.peaks}
                         visibleModes={visibleModes}
                         onChange={setVisibleModes}
                     />

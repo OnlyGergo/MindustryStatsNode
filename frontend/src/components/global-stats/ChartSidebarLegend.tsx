@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { getModeColor } from "../../util/chartHelpers.ts";
 
+// Fixed locale: the legend is server-rendered, and the browser's must not differ.
+const nf = new Intl.NumberFormat("en-US");
+
 interface ChartSidebarLegendProps {
     gamemodes: string[];
     peaks: Record<string, number>;
@@ -93,7 +96,7 @@ export const ChartSidebarLegend: React.FC<ChartSidebarLegendProps> = ({
                                     <span className="truncate text-xs font-medium">{mode}</span>
                                 </div>
                                 <span className="text-xs font-mono text-secondary shrink-0 bg-surface-tertiary px-1.5 py-0.5 rounded border border-subtle">
-                                  {peak.toLocaleString()}
+                                  {nf.format(peak)}
                                 </span>
                             </label>
                         );
