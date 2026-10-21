@@ -20,7 +20,7 @@ import { clearCaches } from '../middleware/cache.js';
 import { ModerationQuery } from '../lib/schemas.js';
 import { REMOVED_REASON_MAX, REVIEW_BODY_MAX } from '../../../../common/models/reviews.js';
 import { UPLOAD_ID_RE } from '../../../../common/models/customisation.js';
-import { getMergedFamilies, getMergeFamily, getMergeSuggestions } from '../../repositories/adminMergeRepository.js';
+import { getAllMergeFamilies, getMergedFamilies, getMergeSuggestions } from '../../repositories/adminMergeRepository.js';
 import { dismissMergeSuggestion, mergeServers, unmergeServer, type MergeResult } from '../../repositories/user/serverMergeRepository.js';
 
 /** bigserial ids travel as strings; reject anything that is not a plain positive integer. */
@@ -235,13 +235,12 @@ export const adminRoutes = new Elysia({ prefix: '/api/admin' })
     requireAdmin: true,
   })
 
-  // Any member id works; the preview for the manual merge form.
-  .get('/families/:id', async ({ params, set }) => {
+  // Every family, for the manual merge picker's client-side search.
+  .get('/families', async ({ set }) => {
     set.headers['cache-control'] = 'no-store';
-    return (await getMergeFamily(params.id)) ?? status(404, { error: 'Server not found' });
+    return getAllMergeFamilies();
   }, {
     requireAdmin: true,
-    params: t.Object({ id: t.Numeric({ minimum: 1, maximum: 2_147_483_647 }) }),
   })
 
   .post('/merges', async ({ body }) => {
