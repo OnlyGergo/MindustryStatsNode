@@ -94,7 +94,7 @@ export function buildTimeAxes(
 }
 
 /**
- * Build an O(n) lookup map: { timestamp -> { modeName -> players } }
+ * Build an O(n) lookup map: { timestamp -> { groupName -> players } }
  */
 export function buildServerShareIndex(
     data: ServerShareEntry[],
