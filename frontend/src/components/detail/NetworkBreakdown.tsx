@@ -3,6 +3,7 @@ import { useNetworkBreakdown } from "../../hooks/api/useNetworkAnalytics.ts";
 import { countryCodeToFlag } from "../../util/general.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
 import { MindustryText } from "../MindustryText.tsx";
+import { useNearViewport } from "../../hooks/useNearViewport.ts";
 
 const nf = new Intl.NumberFormat("en-US");
 
@@ -97,10 +98,11 @@ const Content = ({ data }: { data: Breakdown }) => {
 };
 
 const NetworkBreakdown = ({ networkId }: { networkId: number }) => {
-  const { data, loading, error } = useNetworkBreakdown(networkId);
+  const [ref, near] = useNearViewport<HTMLDivElement>();
+  const { data, loading, error } = useNetworkBreakdown(networkId, near);
 
   return (
-    <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
+    <div ref={ref} className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
       <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">Breakdown</h2>
       <div className="relative min-h-24">
         {loading && <LoadingSpinner showText={false} />}

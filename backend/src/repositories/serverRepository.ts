@@ -520,7 +520,9 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
         fam_1h AS (
             -- Hourly tier, per family: same MAX-across-aliases collapse as
             -- get_server_details' family_stats_1h. This view has no map key,
-            -- so one row per raw server and bucket already.
+            -- so one row per raw server and bucket already. Bounded to the
+            -- 14 days the trend needs: the all-time peak comes from
+            -- network_peaks, so nothing here walks the whole history.
             SELECT gs.canonical_id, st.bucket,
                    MAX(st.max_players)    AS players,
                    MAX(st.samples)        AS samples,
@@ -529,6 +531,7 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
                    MAX(st.sum_players::float8 / NULLIF(st.samples, 0)) AS mean_players
             FROM server_stats_1h st
             JOIN group_servers gs ON gs.server_id = st.server_id
+            WHERE st.bucket > NOW() - INTERVAL '14 days'
             GROUP BY gs.canonical_id, st.bucket
         ),
         inst_1h AS (
@@ -551,10 +554,20 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
                     FROM fam_1h) AS uptime_7d
         ),
         peak_bucket AS (
-            -- The hour of the all-time peak (ties: most recent) and its value.
+            -- The hour of the all-time peak and its value. The collector keeps
+            -- it in network_peaks (44_network_peaks.sql, same busiest-hourly-
+            -- instant rule as inst_1h); the best hour of the last 14 days is
+            -- folded in so the refresh lag can never put it below the weekly
+            -- peak. Ties: earliest hour, like server_peaks.
             SELECT bucket AS peak_date, total AS all_time_peak
-            FROM inst_1h
-            ORDER BY total DESC NULLS LAST, bucket DESC
+            FROM (
+                SELECT np.peak_at AS bucket, np.all_time_peak AS total
+                FROM network_peaks np
+                WHERE np.server_group_id = :groupId
+                UNION ALL
+                SELECT bucket, total FROM inst_1h WHERE total IS NOT NULL
+            ) candidates
+            ORDER BY total DESC, bucket ASC
             LIMIT 1
         ),
         trend_1h AS (

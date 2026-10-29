@@ -78,6 +78,18 @@ type ProcessorConfig struct {
 	QueuePollTimeout time.Duration
 }
 
+type PeaksConfig struct {
+	// RefreshInterval is NETWORK_PEAKS_REFRESH_INTERVAL_MS: how often recent
+	// hours are folded into network_peaks.
+	RefreshInterval time.Duration
+	// Lookback is NETWORK_PEAKS_LOOKBACK_MS: how far back each refresh reads.
+	// It has to cover the still-open hour plus any continuous aggregate lag.
+	Lookback time.Duration
+	// RebuildInterval is NETWORK_PEAKS_REBUILD_INTERVAL_MS: how often every
+	// network's peak is recomputed from all history.
+	RebuildInterval time.Duration
+}
+
 type GeoIPConfig struct {
 	// Path is the .mmdb file, refreshed out of band by whatever updates it.
 	Path string
@@ -103,6 +115,7 @@ type Config struct {
 	Collector CollectorConfig
 	Processor ProcessorConfig
 	GeoIP     GeoIPConfig
+	Peaks     PeaksConfig
 
 	// DryRun runs every loop and every read, but skips the statements that would
 	// change data, logging what they would have written instead.  This is
@@ -154,6 +167,12 @@ func Load() (Config, error) {
 			ReloadInterval: msVal("GEOIP_RELOAD_INTERVAL_MS", 86_400_000),
 		},
 
+		Peaks: PeaksConfig{
+			RefreshInterval: msVal("NETWORK_PEAKS_REFRESH_INTERVAL_MS", 600_000),
+			Lookback:        msVal("NETWORK_PEAKS_LOOKBACK_MS", 10_800_000),
+			RebuildInterval: msVal("NETWORK_PEAKS_REBUILD_INTERVAL_MS", 86_400_000),
+		},
+
 		DryRun: boolVal("DRY_RUN", false),
 	}
 
@@ -171,11 +190,14 @@ func (c Config) validate() error {
 		return fmt.Errorf("RAW_QUEUE_CAPACITY must be at least 1, got %d", c.Collector.RawQueueCapacity)
 	}
 	for name, d := range map[string]time.Duration{
-		"SERVER_LIST_INTERVAL_MS":       c.Discovery.ServerListInterval,
-		"MINDUSTRY_TIMEOUT_MS":          c.Collector.MindustryTimeout,
-		"DATA_COLLECTION_INTERVAL_MS":   c.Collector.DataCollectionInterval,
-		"SERVER_COLLECTION_INTERVAL_MS": c.Collector.ServerCollectionInterval,
-		"QUEUE_POLL_TIMEOUT_MS":         c.Processor.QueuePollTimeout,
+		"SERVER_LIST_INTERVAL_MS":           c.Discovery.ServerListInterval,
+		"MINDUSTRY_TIMEOUT_MS":              c.Collector.MindustryTimeout,
+		"DATA_COLLECTION_INTERVAL_MS":       c.Collector.DataCollectionInterval,
+		"SERVER_COLLECTION_INTERVAL_MS":     c.Collector.ServerCollectionInterval,
+		"QUEUE_POLL_TIMEOUT_MS":             c.Processor.QueuePollTimeout,
+		"NETWORK_PEAKS_REFRESH_INTERVAL_MS": c.Peaks.RefreshInterval,
+		"NETWORK_PEAKS_LOOKBACK_MS":         c.Peaks.Lookback,
+		"NETWORK_PEAKS_REBUILD_INTERVAL_MS": c.Peaks.RebuildInterval,
 	} {
 		if d <= 0 {
 			return fmt.Errorf("%s must be positive, got %s", name, d)
