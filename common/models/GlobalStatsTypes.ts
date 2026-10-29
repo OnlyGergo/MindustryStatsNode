@@ -1,9 +1,10 @@
-// Gamemode history entry - player count per mode per time bucket
-export interface GamemodeHistoryEntry {
-    timestamp: number;
-    modeName: string;
-    players: number | null;
-    cleanName: string;
+// Gamemode history, columnar: players[m][t] is modes[m] at timestamps[t].
+// One row per (bucket, mode) repeated the mode name thousands of times; this is
+// a fraction of the size, small enough to ride along in the SSR page.
+export interface GamemodeHistory {
+    timestamps: number[];
+    modes: string[];
+    players: (number | null)[][];
 }
 
 // Server share entry - player count per server with group info
