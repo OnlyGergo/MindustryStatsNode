@@ -7,6 +7,7 @@ import { serverRoutes } from './routes/servers.js';
 import { reviewRoutes } from './routes/reviews.js';
 import { networkRoutes } from './routes/networks.js';
 import { globalRoutes } from './routes/global.js';
+import { leaderboardRoutes } from './routes/leaderboard.js';
 import { gamemodeRoutes } from './routes/gamemodes.js';
 import { serverListRoutes } from './routes/serverLists.js';
 import { adminRoutes } from './routes/admin.js';
@@ -39,6 +40,7 @@ export const api = new Elysia({ name: 'api' })
   .use(reviewRoutes)
   .use(networkRoutes)
   .use(globalRoutes)
+  .use(leaderboardRoutes)
   .use(gamemodeRoutes)
   .use(serverListRoutes)
   .use(adminRoutes)

@@ -16,6 +16,7 @@ import { listImagesForAdmin } from '../../repositories/customisationReadReposito
 import { approveImage, rejectImage, type ModerateImageResult } from '../../repositories/user/imageRepository.js';
 import { dismissReports, getModerationQueue, moderateReply, moderateReview } from '../../repositories/user/moderationRepository.js';
 import { normalizeReviewBody } from '../../repositories/user/reviewBody.js';
+import { rebuildLeaderboard, requestLeaderboardRebuild } from '../../services/leaderboardScheduler.js';
 import { clearCaches } from '../middleware/cache.js';
 import { ModerationQuery } from '../lib/schemas.js';
 import { REMOVED_REASON_MAX, REVIEW_BODY_MAX } from '../../../../common/models/reviews.js';
@@ -40,6 +41,7 @@ function mergeResponse(result: MergeResult) {
   if (result.kind === 'not_found') return status(404, { error: 'Server not found' });
   if (result.kind === 'conflict') return status(409, { error: result.message });
   clearCaches();
+  requestLeaderboardRebuild();
   return { rootId: result.rootId };
 }
 
@@ -268,4 +270,16 @@ export const adminRoutes = new Elysia({ prefix: '/api/admin' })
     requireAdmin: true,
     requireOrigin: true,
     body: t.Object({ a: PositiveInt, b: PositiveInt }, { additionalProperties: false }),
+  })
+
+  .post('/leaderboard/rebuild', async () => {
+    try {
+      const report = await rebuildLeaderboard();
+      return { generatedAt: report.generatedAt, nextRefreshAt: report.nextRefreshAt };
+    } catch {
+      return status(500, { error: 'Leaderboard rebuild failed' });
+    }
+  }, {
+    requireAdmin: true,
+    requireOrigin: true,
   });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { nextSlot, rebuildLeaderboard, getLeaderboard } from './leaderboardScheduler.js';
+import { nextSlot, rebuildLeaderboard, getLeaderboard, requestLeaderboardRebuild } from './leaderboardScheduler.js';
 import type { LeaderboardSections } from '../../../common/models/leaderboard.js';
 
 const at = (iso: string) => new Date(iso);
@@ -45,5 +45,38 @@ describe('rebuildLeaderboard', () => {
     const deps = { log: () => {}, now: () => new Date(), build: async () => { throw new Error('db down'); } };
     await expect(rebuildLeaderboard(deps)).rejects.toThrow('db down');
     expect(getLeaderboard()).toBe(good);
+  });
+});
+
+describe('requestLeaderboardRebuild', () => {
+  const empty = {} as LeaderboardSections;
+  const settle = () => new Promise((r) => setTimeout(r, 20));
+
+  test('while idle, builds once', async () => {
+    let calls = 0;
+    const deps = { log: () => {}, now: () => new Date(), build: async () => { calls++; return empty; } };
+    requestLeaderboardRebuild(deps);
+    await settle();
+    expect(calls).toBe(3); // one build = one call per window
+  });
+
+  test('requests during an in-flight build cause exactly one extra build', async () => {
+    let calls = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const deps = {
+      log: () => {},
+      now: () => new Date(),
+      build: async () => { calls++; if (calls === 1) await gate; return empty; },
+    };
+    const first = rebuildLeaderboard(deps);
+    await Promise.resolve();
+    requestLeaderboardRebuild(deps);
+    requestLeaderboardRebuild(deps);
+    requestLeaderboardRebuild(deps);
+    release();
+    await first;
+    await settle();
+    expect(calls).toBe(6); // two builds x 3 windows
   });
 });

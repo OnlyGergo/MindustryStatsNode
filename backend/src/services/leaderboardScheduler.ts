@@ -88,6 +88,27 @@ export function rebuildLeaderboard(deps: LeaderboardDeps = defaultDeps): Promise
     return run;
 }
 
+let dirty = false;
+
+/**
+ * Fire-and-forget rebuild after an identity change. A build already running
+ * may have read pre-change data, so it is followed by exactly one more build
+ * however many requests arrive meanwhile.
+ */
+export function requestLeaderboardRebuild(deps: LeaderboardDeps = defaultDeps): void {
+    if (inFlight) {
+        if (dirty) return;
+        dirty = true;
+        const again = () => {
+            dirty = false;
+            requestLeaderboardRebuild(deps);
+        };
+        inFlight.then(again, again);
+        return;
+    }
+    rebuildLeaderboard(deps).catch(() => {});
+}
+
 function schedule(delayMs: number, deps: LeaderboardDeps): void {
     if (!running) return;
     if (timer) clearTimeout(timer);
