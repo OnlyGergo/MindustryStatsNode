@@ -9,6 +9,7 @@
 
 import sequelize from '../config/database.js';
 import { QueryTypes } from 'sequelize';
+import { familyHourMapCte } from './playerHoursSql.js';
 import type {
     NetworkActivityCell,
     NetworkBreakdown,
@@ -99,21 +100,8 @@ export async function getNetworkBreakdown(groupId: number): Promise<NetworkBreak
         // hour's mean. Aliases then collapse with MAX per (family, hour, map).
         sequelize.query(`
             WITH ${GROUP_SERVERS_CTE},
-            per_raw AS (
-                SELECT st.server_id, st.bucket, st.map_registry_id,
-                       st.sum_players::float8
-                         / NULLIF(SUM(st.samples) OVER (PARTITION BY st.server_id, st.bucket), 0) AS contribution
-                FROM server_stats_1h_by_map st
-                WHERE st.bucket > NOW() - INTERVAL '7 days'
-                  AND st.server_id IN (SELECT server_id FROM group_servers)
-            ),
-            per_family AS (
-                SELECT gs.canonical_id, r.bucket, r.map_registry_id, MAX(r.contribution) AS contribution
-                FROM per_raw r
-                JOIN group_servers gs ON gs.server_id = r.server_id
-                WHERE r.contribution IS NOT NULL
-                GROUP BY gs.canonical_id, r.bucket, r.map_registry_id
-            )
+            ${familyHourMapCte(`st.bucket > NOW() - INTERVAL '7 days'
+                  AND st.server_id IN (SELECT server_id FROM group_servers)`)}
             SELECT mr.map_name AS "mapName", gr.clean_name AS mode,
                    SUM(pf.contribution)::float8 AS "playerHours"
             FROM per_family pf
