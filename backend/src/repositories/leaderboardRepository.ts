@@ -41,8 +41,16 @@ interface Window {
     prevStart: Date;
 }
 
-function windowOf(start: Date, end: Date): Window {
-    return { start, end, prevStart: new Date(start.getTime() - (end.getTime() - start.getTime())) };
+export interface WindowOptions {
+    /** false skips scanning the comparison window (prev comes back 0). Default true. */
+    withPrevious?: boolean;
+}
+
+function windowOf(start: Date, end: Date, opts: WindowOptions = {}): Window {
+    const prevStart = opts.withPrevious === false
+        ? start
+        : new Date(start.getTime() - (end.getTime() - start.getTime()));
+    return { start, end, prevStart };
 }
 
 const replacementsOf = (w: Window, extra: Record<string, unknown> = {}) => ({
@@ -77,8 +85,8 @@ export interface FamilyHours {
 }
 
 /** Player-hours for every family active in either window, with its network and live country. */
-export async function getFamilyHours(start: Date, end: Date): Promise<FamilyHours[]> {
-    const w = windowOf(start, end);
+export async function getFamilyHours(start: Date, end: Date, opts: WindowOptions = {}): Promise<FamilyHours[]> {
+    const w = windowOf(start, end, opts);
     const rows = await sequelize.query<{
         id: number; group_id: number | null; country_code: string | null;
         cur: number | null; prev: number | null; max_wave: number | null;
@@ -328,7 +336,7 @@ export async function getReliable(
     }));
 }
 
-interface MapAgg {
+export interface MapAgg {
     mapName: string;
     mode: string | null;
     servers: number;
@@ -337,8 +345,8 @@ interface MapAgg {
 }
 
 /** Player-hours per (map name, mode), both windows, for every map seen in either. */
-export async function getMapAggregates(start: Date, end: Date): Promise<MapAgg[]> {
-    const w = windowOf(start, end);
+export async function getMapAggregates(start: Date, end: Date, opts: WindowOptions = {}): Promise<MapAgg[]> {
+    const w = windowOf(start, end, opts);
     const rows = await sequelize.query<{
         map_name: string; mode: string | null; servers: number | null; cur: number | null; prev: number | null;
     }>(`

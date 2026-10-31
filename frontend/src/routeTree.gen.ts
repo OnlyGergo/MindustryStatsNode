@@ -22,6 +22,7 @@ import { Route as AdminOwnersRouteImport } from './routes/admin/owners'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as BrowseNetworkNetworkIdRouteImport } from './routes/_browse/network.$networkId'
 import { Route as BrowseServerServerIdRouteImport } from './routes/_browse/server.$serverId'
+import { Route as BrowseWrappedYearRouteImport } from './routes/_browse/wrapped.$year'
 
 const BrowseRoute = BrowseRouteImport.update({
   id: '/_browse',
@@ -87,6 +88,11 @@ const BrowseServerServerIdRoute = BrowseServerServerIdRouteImport.update({
   path: '/server/$serverId',
   getParentRoute: () => BrowseRoute,
 } as any)
+const BrowseWrappedYearRoute = BrowseWrappedYearRouteImport.update({
+  id: '/wrapped/$year',
+  path: '/wrapped/$year',
+  getParentRoute: () => BrowseRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof BrowseIndexRoute
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
   '/server/$serverId': typeof BrowseServerServerIdRoute
+  '/wrapped/$year': typeof BrowseWrappedYearRoute
 }
 export interface FileRoutesByTo {
   '/global': typeof BrowseGlobalRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
   '/server/$serverId': typeof BrowseServerServerIdRoute
+  '/wrapped/$year': typeof BrowseWrappedYearRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/_browse/network/$networkId': typeof BrowseNetworkNetworkIdRoute
   '/_browse/server/$serverId': typeof BrowseServerServerIdRoute
+  '/_browse/wrapped/$year': typeof BrowseWrappedYearRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/network/$networkId'
     | '/server/$serverId'
+    | '/wrapped/$year'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/global'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/network/$networkId'
     | '/server/$serverId'
+    | '/wrapped/$year'
   id:
     | '__root__'
     | '/_browse'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/_browse/network/$networkId'
     | '/_browse/server/$serverId'
+    | '/_browse/wrapped/$year'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -274,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BrowseServerServerIdRouteImport
       parentRoute: typeof BrowseRoute
     }
+    '/_browse/wrapped/$year': {
+      id: '/_browse/wrapped/$year'
+      path: '/wrapped/$year'
+      fullPath: '/wrapped/$year'
+      preLoaderRoute: typeof BrowseWrappedYearRouteImport
+      parentRoute: typeof BrowseRoute
+    }
   }
 }
 
@@ -284,6 +303,7 @@ interface BrowseRouteChildren {
   BrowseIndexRoute: typeof BrowseIndexRoute
   BrowseNetworkNetworkIdRoute: typeof BrowseNetworkNetworkIdRoute
   BrowseServerServerIdRoute: typeof BrowseServerServerIdRoute
+  BrowseWrappedYearRoute: typeof BrowseWrappedYearRoute
 }
 
 const BrowseRouteChildren: BrowseRouteChildren = {
@@ -293,6 +313,7 @@ const BrowseRouteChildren: BrowseRouteChildren = {
   BrowseIndexRoute: BrowseIndexRoute,
   BrowseNetworkNetworkIdRoute: BrowseNetworkNetworkIdRoute,
   BrowseServerServerIdRoute: BrowseServerServerIdRoute,
+  BrowseWrappedYearRoute: BrowseWrappedYearRoute,
 }
 
 const BrowseRouteWithChildren =

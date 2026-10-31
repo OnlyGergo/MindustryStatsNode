@@ -71,7 +71,13 @@ const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: Leaderboard
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-xl sm:text-2xl font-bold text-primary">Leaderboard</h1>
             <div className="flex flex-wrap items-center gap-3">
-              {/* Wrapped link: task 4 */}
+              <Link
+                to="/wrapped/$year"
+                params={{ year: String(new Date(report.generatedAt).getUTCFullYear()) }}
+                className="px-3 py-1 text-sm rounded border bg-accent text-white border-accent hover:opacity-90"
+              >
+                {new Date(report.generatedAt).getUTCFullYear()} Wrapped →
+              </Link>
               <WindowTabs active={w} />
             </div>
           </div>

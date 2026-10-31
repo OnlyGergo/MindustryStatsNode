@@ -121,3 +121,32 @@ export interface LeaderboardReport {
     nextRefreshAt: number;
     windows: Record<LeaderboardWindow, LeaderboardSections>;
 }
+
+export interface WrappedReport {
+    year: number;
+    /** false while the year is still open (year to date). */
+    final: boolean;
+    /** epoch ms the range ends at (now for year to date, else 1 Jan next year). */
+    asOf: number;
+    /** epoch ms of the first stats bucket on record. */
+    dataStart: number;
+    headline: Headline;
+    serverOfTheYear: RankedServer | null;
+    topServers: RankedServer[];
+    /** Best month for each of `topServers`. */
+    bestMonths: { id: number; month: number; playerHours: number }[];
+    /** Second half of the range vs the first half. */
+    climbers: MoverRow[];
+    topMaps: MapRow[];
+    mapPerMode: { mode: string; mapName: string; playerHours: number }[];
+    modes: ModeShareRow[];
+    networks: NetworkRow[];
+    newcomers: NewcomerRow[];
+    records: RecordRow[];
+    streaks: (ServerRef & { days: number; from: number; to: number })[];
+    waves: WaveRow[];
+    countries: CountryRow[];
+    /** One entry per UTC month in range; month = epoch ms of its start. */
+    months: { month: number; playerHours: number }[];
+    busiestDay: { day: number; playerHours: number } | null;
+}
