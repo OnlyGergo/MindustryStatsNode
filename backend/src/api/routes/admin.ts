@@ -17,6 +17,7 @@ import { approveImage, rejectImage, type ModerateImageResult } from '../../repos
 import { dismissReports, getModerationQueue, moderateReply, moderateReview } from '../../repositories/user/moderationRepository.js';
 import { normalizeReviewBody } from '../../repositories/user/reviewBody.js';
 import { rebuildLeaderboard, requestLeaderboardRebuild } from '../../services/leaderboardScheduler.js';
+import { invalidateWrapped } from '../../services/wrappedService.js';
 import { clearCaches } from '../middleware/cache.js';
 import { ModerationQuery } from '../lib/schemas.js';
 import { REMOVED_REASON_MAX, REVIEW_BODY_MAX } from '../../../../common/models/reviews.js';
@@ -42,6 +43,7 @@ function mergeResponse(result: MergeResult) {
   if (result.kind === 'conflict') return status(409, { error: result.message });
   clearCaches();
   requestLeaderboardRebuild();
+  invalidateWrapped();
   return { rootId: result.rootId };
 }
 

@@ -44,6 +44,8 @@ export interface WrappedDeps {
 interface Entry {
     report: WrappedReport;
     builtAt: Date;
+    /** `generation` when the build started; older entries are stale. */
+    generation: number;
 }
 
 export function createWrappedService(deps: WrappedDeps) {
@@ -51,15 +53,19 @@ export function createWrappedService(deps: WrappedDeps) {
     const cache = new Map<number, Entry>();
     const inFlight = new Map<number, Promise<void>>();
     let dataStart: Date | null = null;
+    // Bumped by invalidate() (merges/unmerges). A build that started before
+    // the bump read pre-merge identities, so it lands already stale.
+    let generation = 0;
 
     const startBuild = (range: WrappedRange, ds: Date, builtAt: Date): void => {
         if (inFlight.has(range.year)) return;
+        const gen = generation;
         const run = (async () => {
             // Yield so `finally` cannot run before the map entry exists.
             await Promise.resolve();
             try {
                 const report = await deps.build(range, ds);
-                cache.set(range.year, { report, builtAt });
+                cache.set(range.year, { report, builtAt, generation: gen });
                 log('info', `Wrapped ${range.year} built in ${deps.now().getTime() - builtAt.getTime()}ms`);
             } catch (err) {
                 log('error', `Wrapped ${range.year} build failed; keeping the previous report`, err);
@@ -71,6 +77,7 @@ export function createWrappedService(deps: WrappedDeps) {
     };
 
     const isFresh = (e: Entry, range: WrappedRange, now: Date): boolean => {
+        if (e.generation !== generation) return false;
         if (e.report.final) return true;
         // Built while the year was open, but it has ended since: needs the final pass.
         if (range.final) return false;
@@ -97,7 +104,15 @@ export function createWrappedService(deps: WrappedDeps) {
         while (inFlight.size > 0) await Promise.all([...inFlight.values()]);
     }
 
-    return { getWrapped, idle };
+    /**
+     * Marks every year stale, final ones included. Stale reports keep being
+     * served while the next request rebuilds them in the background.
+     */
+    function invalidate(): void {
+        generation++;
+    }
+
+    return { getWrapped, idle, invalidate };
 }
 
 // ─── Default wiring ─────────────────────────────────────────────────────────
@@ -186,3 +201,6 @@ const defaultService = createWrappedService({
 
 export const getWrapped = (year: number, now?: Date): Promise<WrappedResult> =>
     defaultService.getWrapped(year, now);
+
+/** After a merge/unmerge: every year rebuilds on its next request. */
+export const invalidateWrapped = (): void => defaultService.invalidate();

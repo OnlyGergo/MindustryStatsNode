@@ -71,3 +71,13 @@ Moved `head` after `loader`, like the other `$param` routes.
 Coalescing + "exactly one more build" on merge is correct and tested; map player-hours
 collapsing by name before the alias MAX fixes a real double count; consistent MAX-not-SUM
 and root-row network/exclusion throughout; `retainSearchParams(BROWSE_SEARCH_KEYS)` fix is right.
+
+## Follow-up (same day)
+
+- 1 fixed: `peaks.Run` now does a full rebuild on start (its own goroutine, so nothing
+  waits on it), then on the ticker; start, end/failure and duration are logged.
+- 2 won't fix: the 24h tab is meant as "the past day", partial current hour included.
+- 3 fixed: Wrapped polling invalidates only its own route.
+- 4 fixed: merges/unmerges call `invalidateWrapped()` (generation counter, so a build
+  started before the merge lands stale). Rebuild cost on merge is an accepted tradeoff;
+  file or Valkey persistence (invalidated on merge) is being considered over a Postgres table.

@@ -50,9 +50,11 @@ function WrappedComponent() {
   const building = data.status === "building";
 
   // Poll while the server builds the report; effects only run in the browser.
+  // Only this route: a bare invalidate() marks every match invalid, which
+  // overrides _browse's shouldReload and refetches the whole server list.
   useEffect(() => {
     if (!building) return;
-    const id = setInterval(() => void router.invalidate(), RETRY_MS);
+    const id = setInterval(() => void router.invalidate({ filter: (m) => m.routeId === Route.id }), RETRY_MS);
     return () => clearInterval(id);
   }, [building, router]);
 

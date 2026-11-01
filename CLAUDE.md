@@ -102,7 +102,7 @@ One review per user per server **family**, stored in `server_reviews` against th
 ## Leaderboard + Wrapped
 - `/leaderboard` (24h/7d/30d tabs, `?w=`) is one in-memory report, rebuilt at 07:00/19:00 UTC and on boot by `backend/src/services/leaderboardScheduler.ts`; every merge/unmerge calls `requestLeaderboardRebuild()`, and admins can force one from the admin overview. Queries: `backend/src/repositories/leaderboardRepository.ts` (each section over `[start, end)` vs the equal window before it), pure ranking maths in `leaderboardMath.ts`, contracts in `common/models/leaderboard.ts`.
 - Player-hours = per (family, hour) MAX over aliases of `sum_players / samples` from `server_stats_1h`, summed. Map player-hours (`server_stats_1h_by_map`, `playerHoursSql.ts`) add a server's registry rows per map NAME before the alias MAX, so two addresses logging one map under different registry ids are not summed.
-- `/wrapped/:year` (`services/wrappedService.ts`, `repositories/wrappedRepository.ts`) is year to date while the year is open and final after; built lazily off the request path (503 while the first build runs), at most once per 12h slot, final years once per process. 404 for future years and years before the first `server_stats_1h` bucket.
+- `/wrapped/:year` (`services/wrappedService.ts`, `repositories/wrappedRepository.ts`) is year to date while the year is open and final after; built lazily off the request path (503 while the first build runs), at most once per 12h slot, final years once until the next merge/unmerge (`invalidateWrapped()` marks every year stale; the old report is served while it rebuilds). 404 for future years and years before the first `server_stats_1h` bucket.
 
 ## Ownership + admin panel
 

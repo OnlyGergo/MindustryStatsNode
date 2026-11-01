@@ -131,4 +131,29 @@ describe('getWrapped', () => {
     expect(t.builds).toHaveLength(2);
     expect(t.builds[1]!.final).toBe(true);
   });
+
+  test('invalidate makes even a final year rebuild, serving the old report meanwhile', async () => {
+    const t = setup();
+    await t.svc.getWrapped(2025, now);
+    await t.svc.idle();
+    t.svc.invalidate();
+    expect((await t.svc.getWrapped(2025, now)).kind).toBe('ok');
+    await t.svc.idle();
+    expect(t.builds).toHaveLength(2);
+    await t.svc.getWrapped(2025, now);
+    await t.svc.idle();
+    expect(t.builds).toHaveLength(2);
+  });
+
+  test('a build that started before invalidate lands stale and rebuilds', async () => {
+    const t = setup();
+    t.hold();
+    await t.svc.getWrapped(2025, now);
+    t.svc.invalidate();
+    t.open();
+    await t.svc.idle();
+    expect((await t.svc.getWrapped(2025, now)).kind).toBe('ok');
+    await t.svc.idle();
+    expect(t.builds).toHaveLength(2);
+  });
 });

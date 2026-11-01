@@ -24,9 +24,13 @@ func New(cfg config.PeaksConfig, repo *repository.Repository) *Service {
 	return &Service{cfg: cfg, repo: repo, log: logging.New("NetworkPeaks")}
 }
 
-// Run refreshes the last Lookback of buckets every RefreshInterval, and
-// rebuilds every network's peak from all history every RebuildInterval.  The
-// migration seeds the table, so the first rebuild waits a whole interval.
+// Run rebuilds every network's peak from all history once on start, then
+// refreshes the last Lookback of buckets every RefreshInterval and rebuilds
+// again every RebuildInterval.  Rebuilding on start matters: the ticker
+// restarts with the process, so a collector restarted more often than
+// RebuildInterval would otherwise never run a full rebuild, and peaks a
+// merge or regroup should have lowered would stay high.  Run is its own
+// goroutine, so the start-up rebuild never holds up the other services.
 func (s *Service) Run(ctx context.Context) error {
 	refresh := time.NewTicker(s.cfg.RefreshInterval)
 	defer refresh.Stop()
@@ -38,7 +42,8 @@ func (s *Service) Run(ctx context.Context) error {
 		"lookback", s.cfg.Lookback,
 		"rebuild_interval", s.cfg.RebuildInterval,
 	)
-	s.refresh(ctx)
+	// The full rebuild reads every bucket, so it covers the refresh too.
+	s.rebuild(ctx)
 
 	for {
 		select {
@@ -62,10 +67,11 @@ func (s *Service) refresh(ctx context.Context) {
 
 func (s *Service) rebuild(ctx context.Context) {
 	start := time.Now()
+	s.log.Info("Rebuilding network peaks from all history")
 	changed, err := s.repo.RefreshNetworkPeaks(ctx, nil)
 	if err != nil {
 		if ctx.Err() == nil {
-			s.log.Error("Network peak rebuild failed", "err", err)
+			s.log.Error("Network peak rebuild failed", "err", err, "took", time.Since(start))
 		}
 		return
 	}
