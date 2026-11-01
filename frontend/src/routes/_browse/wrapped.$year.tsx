@@ -31,7 +31,6 @@ async function loadWrapped(year: string): Promise<WrappedLoad> {
 
 export const Route = createFileRoute("/_browse/wrapped/$year")({
   staticData: { title: "Wrapped", back: true },
-  head: ({ params }) => ({ meta: [{ title: docTitle(`${params.year} Wrapped`) }] }),
   component: WrappedComponent,
   pendingComponent: () => (
     <DetailShell>
@@ -40,6 +39,8 @@ export const Route = createFileRoute("/_browse/wrapped/$year")({
   ),
   shouldReload: ({ cause }) => (cause === "stay" ? false : undefined),
   loader: ({ params }) => loadWrapped(params.year),
+  // After `loader`: declared before it, TS can't infer the loader data type.
+  head: ({ params }) => ({ meta: [{ title: docTitle(`${params.year} Wrapped`) }] }),
 });
 
 function WrappedComponent() {
