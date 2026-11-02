@@ -65,6 +65,25 @@ export function aggregateExcludeSql(alias?: string): string {
 }
 
 /**
+ * Canonical ids of every family with ANY member flagged aggregate_exclude,
+ * root or alias. The leaderboard and Wrapped use this stricter rule rather
+ * than the root-only one above: the flag gets set by hand on whichever row
+ * someone was looking at, and a ranking must never show an excluded server.
+ */
+export const EXCLUDED_FAMILIES_SQL = `SELECT xsc.canonical_id
+            FROM server_canonical xsc
+            JOIN servers xs ON xs.id = xsc.server_id
+            WHERE xs.aggregate_exclude`;
+
+/** `aggregateExcludeSql`, but a flag on any member excludes the whole family. */
+export function strictAggregateExcludeSql(alias?: string): string {
+    const prefix = alias ? `${alias}.` : '';
+    return `${prefix}server_id NOT IN (
+            SELECT ysc.server_id FROM server_canonical ysc
+            WHERE ysc.canonical_id IN (${EXCLUDED_FAMILIES_SQL}))`;
+}
+
+/**
  * The live address of a family: its newest non-retired member, root as fallback.
  * `where` (optional, sees the canonical row as `sc`) scopes the scan to some
  * families before the DISTINCT ON sort, for callers that only need a few.

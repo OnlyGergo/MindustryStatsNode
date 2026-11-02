@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createWrappedService, rangeOf } from './wrappedService.js';
+import { createWrappedService, rangeOf, shiftYears } from './wrappedService.js';
 import type { WrappedReport } from '../../../common/models/leaderboard.js';
 
 const at = (iso: string) => new Date(iso);
@@ -156,4 +156,14 @@ describe('getWrapped', () => {
     await t.svc.idle();
     expect(t.builds).toHaveLength(2);
   });
+});
+
+describe('shiftYears', () => {
+    test('moves the same UTC instant by whole years', () => {
+        expect(shiftYears(new Date('2026-11-02T19:30:00Z'), -1).toISOString()).toBe('2025-11-02T19:30:00.000Z');
+        expect(shiftYears(new Date('2027-01-01T00:00:00Z'), -1).toISOString()).toBe('2026-01-01T00:00:00.000Z');
+    });
+    test('29 February rolls onto 1 March', () => {
+        expect(shiftYears(new Date('2028-02-29T00:00:00Z'), -1).toISOString()).toBe('2027-03-01T00:00:00.000Z');
+    });
 });

@@ -9,12 +9,8 @@
 
 import sequelize from '../config/database.js';
 import { QueryTypes } from 'sequelize';
-import type { ServerRef } from '../../../common/models/leaderboard.js';
-import { aggregateExcludeSql } from './canonicalIdentity.js';
-import { attachServerRefs } from './leaderboardRepository.js';
+import { strictAggregateExcludeSql } from './canonicalIdentity.js';
 import { round1 } from './leaderboardMath.js';
-
-const STREAKS = 10;
 
 /** Per (family, hour) player-hours; `idFilter` optionally narrows families. */
 const famHourCte = (idFilter = '') => `
@@ -24,7 +20,7 @@ const famHourCte = (idFilter = '') => `
         FROM server_stats_1h st
         JOIN server_canonical sc ON sc.server_id = st.server_id
         WHERE st.bucket >= :start AND st.bucket < :end
-          AND ${aggregateExcludeSql('st')}
+          AND ${strictAggregateExcludeSql('st')}
           ${idFilter}
         GROUP BY sc.canonical_id, st.bucket
     )`;
@@ -100,55 +96,4 @@ export async function getBestMonths(
     return rows
         .filter((r) => Number(r.ph) > 0)
         .map((r) => ({ id: Number(r.id), month: Number(r.month) * 1000, playerHours: round1(Number(r.ph)) }));
-}
-
-export type StreakRow = ServerRef & { days: number; from: number; to: number };
-
-/**
- * Longest run of consecutive UTC days a family was online (any alias with
- * online_samples > 0 in any hour of the day). One row per family: its best run.
- */
-export async function getLongestStreaks(start: Date, end: Date): Promise<StreakRow[]> {
-    const rows = await sequelize.query<{ id: number; days: number; from: number; to: number }>(`
-        WITH online_days AS (
-            SELECT DISTINCT sc.canonical_id,
-                   date_trunc('day', st.bucket AT TIME ZONE 'UTC') AS day
-            FROM server_stats_1h st
-            JOIN server_canonical sc ON sc.server_id = st.server_id
-            WHERE st.bucket >= :start AND st.bucket < :end
-              AND st.online_samples > 0
-              AND ${aggregateExcludeSql('st')}
-        ),
-        islands AS (
-            SELECT canonical_id, day,
-                   day - (ROW_NUMBER() OVER (PARTITION BY canonical_id ORDER BY day) * INTERVAL '1 day') AS grp
-            FROM online_days
-        ),
-        runs AS (
-            SELECT canonical_id, COUNT(*) AS days, MIN(day) AS first_day, MAX(day) AS last_day
-            FROM islands
-            GROUP BY canonical_id, grp
-        ),
-        best AS (
-            SELECT DISTINCT ON (canonical_id) canonical_id, days, first_day, last_day
-            FROM runs
-            ORDER BY canonical_id, days DESC, first_day ASC
-        )
-        SELECT canonical_id AS id, days::int AS days,
-               EXTRACT(EPOCH FROM first_day)::float8 AS "from",
-               EXTRACT(EPOCH FROM last_day)::float8  AS "to"
-        FROM best
-        ORDER BY days DESC, first_day ASC, canonical_id ASC
-        LIMIT ${STREAKS}
-    `, { replacements: { start, end }, type: QueryTypes.SELECT });
-    const refs = await attachServerRefs(rows.map((r) => Number(r.id)));
-    return rows.map((r) => {
-        const id = Number(r.id);
-        return {
-            ...(refs.get(id) ?? { id, name: null, networkId: null, networkName: null }),
-            days: Number(r.days),
-            from: Number(r.from) * 1000,
-            to: Number(r.to) * 1000,
-        };
-    });
 }

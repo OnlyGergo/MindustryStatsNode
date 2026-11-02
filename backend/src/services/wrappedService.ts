@@ -117,34 +117,43 @@ export function createWrappedService(deps: WrappedDeps) {
 
 // ─── Default wiring ─────────────────────────────────────────────────────────
 
+/** The same UTC instant `n` years later (29 Feb lands on 1 Mar). */
+export function shiftYears(d: Date, n: number): Date {
+    const out = new Date(d.getTime());
+    out.setUTCFullYear(out.getUTCFullYear() + n);
+    return out;
+}
+
 async function buildWrapped(range: WrappedRange, dataStart: Date): Promise<WrappedReport> {
     const lb = await import('../repositories/leaderboardRepository.js');
     const wr = await import('../repositories/wrappedRepository.js');
     const { start, end } = range;
     const opts = { withPrevious: false };
 
-    // Climbers: second half vs first half. Both halves need the same length
-    // in whole hours so the "previous" window is exactly [start, mid).
-    // The halves start where data does, so a year whose collection began
-    // part-way through does not compare against an empty first half.
-    const climbStart = Math.max(start.getTime(), dataStart.getTime());
-    const totalHours = Math.max(0, Math.floor((end.getTime() - climbStart) / HOUR_MS));
-    const halfHours = Math.floor(totalHours / 2);
-    const mid = new Date(climbStart + halfHours * HOUR_MS);
-    const climbEnd = new Date(mid.getTime() + halfHours * HOUR_MS);
+    // Climbers: this year against the same dates a year earlier. Only dates
+    // with data on BOTH sides count, so while last year is only partly
+    // collected (tracking began part-way through it) the comparison shrinks
+    // to the overlap instead of everyone "climbing" out of an empty stretch.
+    // From the first full year on, the window is the whole year to date.
+    const climbStart = new Date(Math.max(start.getTime(), shiftYears(dataStart, 1).getTime()));
+    const hasClimbers = climbStart < end;
+    const climbPrevious = { start: shiftYears(climbStart, -1), end: shiftYears(end, -1) };
+    // When the climber window is the whole range, one scan covers both.
+    const sharedScan = hasClimbers && climbStart.getTime() === start.getTime();
 
     // Heavy year scans, in batches of at most 4 concurrent queries.
     const [families, maps, peak, climberFamilies] = await Promise.all([
-        lb.getFamilyHours(start, end, opts),
+        lb.getFamilyHours(start, end, sharedScan ? { previous: climbPrevious } : opts),
         lb.getMapAggregates(start, end, opts),
         lb.getPeakHour(start, end),
-        halfHours > 0 ? lb.getFamilyHours(mid, climbEnd) : Promise.resolve([]),
+        hasClimbers && !sharedScan
+            ? lb.getFamilyHours(climbStart, end, { previous: climbPrevious })
+            : Promise.resolve(null),
     ]);
-    const [records, months, busiestDay, streaks] = await Promise.all([
+    const [records, months, busiestDay] = await Promise.all([
         lb.getRecords(start, end),
         wr.getMonthlyPlayerHours(start, end),
         wr.getBusiestDay(start, end),
-        wr.getLongestStreaks(start, end),
     ]);
     const topServers = (await lb.getTopServers(families)).slice(0, 10);
     // Every server tracked when collection began looks "new" in that year, so
@@ -155,19 +164,11 @@ async function buildWrapped(range: WrappedRange, dataStart: Date): Promise<Wrapp
         newcomersFrom < end ? lb.getNewcomers(newcomersFrom, end, families) : Promise.resolve([]),
         lb.getNetworks(families),
         lb.getWaves(families),
-        lb.getMovers(climberFamilies, 50, 'up'),
+        hasClimbers ? lb.getMovers(climberFamilies ?? families, 50, 'up') : Promise.resolve([]),
     ]);
 
     const { topMaps } = lb.buildMapSections(maps, 200);
-    const bestPerMode = new Map<string, { mapName: string; cur: number }>();
-    for (const m of maps) {
-        const mode = m.mode ?? 'Unknown';
-        const best = bestPerMode.get(mode);
-        if (m.cur > 0 && (!best || m.cur > best.cur)) bestPerMode.set(mode, { mapName: m.mapName, cur: m.cur });
-    }
-    const mapPerMode = [...bestPerMode.entries()]
-        .sort((a, b) => b[1].cur - a[1].cur || a[0].localeCompare(b[0]))
-        .map(([mode, b]) => ({ mode, mapName: b.mapName, playerHours: Math.round(b.cur * 10) / 10 }));
+    const modes = lb.buildModeShares(maps);
 
     return {
         year: range.year,
@@ -179,13 +180,13 @@ async function buildWrapped(range: WrappedRange, dataStart: Date): Promise<Wrapp
         topServers,
         bestMonths,
         climbers,
+        climbersFrom: hasClimbers ? climbStart.getTime() : null,
         topMaps,
-        mapPerMode,
-        modes: lb.buildModeShares(maps),
+        mapPerMode: lb.buildMapPerMode(maps, modes),
+        modes,
         networks,
         newcomers,
         records,
-        streaks,
         waves,
         countries: lb.getCountries(families),
         months,

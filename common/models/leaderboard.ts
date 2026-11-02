@@ -135,15 +135,22 @@ export interface WrappedReport {
     topServers: RankedServer[];
     /** Best month for each of `topServers`. */
     bestMonths: { id: number; month: number; playerHours: number }[];
-    /** Second half of the range vs the first half. */
+    /**
+     * Gain over the same dates a year earlier (`prevPlayerHours`). Empty
+     * until there is a year of data to compare against.
+     */
     climbers: MoverRow[];
+    /**
+     * epoch ms the climber comparison starts at: 1 Jan, or later while last
+     * year was only partly collected. Runs to `asOf`. null with no climbers.
+     */
+    climbersFrom: number | null;
     topMaps: MapRow[];
     mapPerMode: { mode: string; mapName: string; playerHours: number }[];
     modes: ModeShareRow[];
     networks: NetworkRow[];
     newcomers: NewcomerRow[];
     records: RecordRow[];
-    streaks: (ServerRef & { days: number; from: number; to: number })[];
     waves: WaveRow[];
     countries: CountryRow[];
     /** One entry per UTC month in range; month = epoch ms of its start. */

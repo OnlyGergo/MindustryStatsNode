@@ -1,8 +1,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // leaderboardRepository.ts
 // Read-only queries behind the leaderboard / Wrapped reports. Every function
-// takes a window [start, end); the comparison window is the equally long one
-// immediately before it, [start - (end - start), start).
+// takes a window [start, end); the comparison window defaults to the equally
+// long one immediately before it, [start - (end - start), start), and can be
+// any earlier window instead (Wrapped compares against the previous year).
+//
+// Exclusion here is stricter than the charts': a family is left out if ANY
+// member is flagged aggregate_exclude (strictAggregateExcludeSql).
 //
 // Player-hours = the mean players of each hour bucket (sum_players / samples),
 // summed over the window. Aliases of one server collapse with MAX per
@@ -26,7 +30,7 @@ import type {
     ServerRef,
     WaveRow,
 } from '../../../common/models/leaderboard.js';
-import { aggregateExcludeSql, liveMemberSql } from './canonicalIdentity.js';
+import { EXCLUDED_FAMILIES_SQL, liveMemberSql, strictAggregateExcludeSql } from './canonicalIdentity.js';
 import { rawHourMapCte } from './playerHoursSql.js';
 import { pickMovers, rankTop, round1, shareOf } from './leaderboardMath.js';
 
@@ -34,44 +38,62 @@ const TOP_SERVERS = 20;
 const TOP_MAPS = 20;
 const TOP_SMALL = 10;
 const HOUR_MS = 3_600_000;
+/**
+ * Waves at or above this are a server reporting int32 max (2,147,483,647, an
+ * "infinite" wave counter), not a wave anyone reached. Hours carrying one are
+ * ignored for the waves section.
+ */
+const WAVE_SANITY_MAX = 2_000_000_000;
 
 interface Window {
     start: Date;
     end: Date;
     prevStart: Date;
+    /** <= start; the gap [prevEnd, start) is scanned but counted nowhere. */
+    prevEnd: Date;
 }
 
 export interface WindowOptions {
     /** false skips scanning the comparison window (prev comes back 0). Default true. */
     withPrevious?: boolean;
+    /** Explicit comparison window, which must end on or before `start`. Default: the equally long one before it. */
+    previous?: { start: Date; end: Date };
 }
 
 function windowOf(start: Date, end: Date, opts: WindowOptions = {}): Window {
-    const prevStart = opts.withPrevious === false
-        ? start
-        : new Date(start.getTime() - (end.getTime() - start.getTime()));
-    return { start, end, prevStart };
+    if (opts.withPrevious === false) return { start, end, prevStart: start, prevEnd: start };
+    if (opts.previous) {
+        const prevEnd = new Date(Math.min(opts.previous.end.getTime(), start.getTime()));
+        const prevStart = new Date(Math.min(opts.previous.start.getTime(), prevEnd.getTime()));
+        return { start, end, prevStart, prevEnd };
+    }
+    return { start, end, prevStart: new Date(start.getTime() - (end.getTime() - start.getTime())), prevEnd: start };
 }
 
 const replacementsOf = (w: Window, extra: Record<string, unknown> = {}) => ({
     start: w.start,
     end: w.end,
     prevStart: w.prevStart,
+    prevEnd: w.prevEnd,
     ...extra,
 });
 
-// Per (family, hour): mean players, peak players and highest wave, aliases
-// collapsed with MAX. Scans both windows once; callers split on :start.
+/** Both windows of `w` for a bucket column; one range scan, the gap between them filtered out. */
+const windowsSql = (col: string) =>
+    `${col} >= :prevStart AND ${col} < :end AND (${col} < :prevEnd OR ${col} >= :start)`;
+
+// Per (family, hour): mean players, peak players and highest sane wave,
+// aliases collapsed with MAX. Scans both windows once; callers split on :start.
 const FAMILY_HOUR_CTE = `
     fam_hour AS (
         SELECT sc.canonical_id, st.bucket,
                MAX(st.sum_players::float8 / NULLIF(st.samples, 0)) AS ph,
                MAX(st.max_players) AS max_players,
-               MAX(st.max_wave)    AS max_wave
+               MAX(st.max_wave) FILTER (WHERE st.max_wave < ${WAVE_SANITY_MAX}) AS max_wave
         FROM server_stats_1h st
         JOIN server_canonical sc ON sc.server_id = st.server_id
-        WHERE st.bucket >= :prevStart AND st.bucket < :end
-          AND ${aggregateExcludeSql('st')}
+        WHERE ${windowsSql('st.bucket')}
+          AND ${strictAggregateExcludeSql('st')}
         GROUP BY sc.canonical_id, st.bucket
     )`;
 
@@ -95,7 +117,7 @@ export async function getFamilyHours(start: Date, end: Date, opts: WindowOptions
         fam AS (
             SELECT canonical_id,
                    COALESCE(SUM(ph) FILTER (WHERE bucket >= :start), 0)::float8 AS cur,
-                   COALESCE(SUM(ph) FILTER (WHERE bucket <  :start), 0)::float8 AS prev,
+                   COALESCE(SUM(ph) FILTER (WHERE bucket <  :prevEnd), 0)::float8 AS prev,
                    COALESCE(MAX(max_wave) FILTER (WHERE bucket >= :start), 0)   AS max_wave
             FROM fam_hour
             GROUP BY canonical_id
@@ -259,7 +281,7 @@ export async function getNewcomers(start: Date, end: Date, families: FamilyHours
         FROM servers root
         JOIN server_canonical sc ON sc.server_id = root.id AND sc.canonical_id = root.id
         WHERE root.created_at >= :start AND root.created_at < :end
-          AND NOT root.aggregate_exclude
+          AND root.id NOT IN (${EXCLUDED_FAMILIES_SQL})
     `, { replacements: { start, end }, type: QueryTypes.SELECT });
     const cur = new Map(families.map((f) => [f.id, f.cur]));
     const top = rows
@@ -287,7 +309,7 @@ export async function getRecords(start: Date, end: Date): Promise<RecordRow[]> {
                       FROM server_peaks p2
                       JOIN server_canonical sc2 ON sc2.server_id = p2.server_id
                       WHERE p2.peak_at >= :start AND p2.peak_at < :end)
-              AND ${aggregateExcludeSql('p')}
+              AND ${strictAggregateExcludeSql('p')}
             ORDER BY sc.canonical_id, p.all_time_peak DESC, p.peak_at ASC
         ) fam
         WHERE peak_at >= :start AND peak_at < :end
@@ -317,7 +339,7 @@ export async function getReliable(
             FROM server_stats_1h st
             JOIN server_canonical sc ON sc.server_id = st.server_id
             WHERE st.bucket >= :start AND st.bucket < :end
-              AND ${aggregateExcludeSql('st')}
+              AND ${strictAggregateExcludeSql('st')}
             GROUP BY sc.canonical_id, st.server_id
         ) per_server
         GROUP BY canonical_id
@@ -344,13 +366,18 @@ export interface MapAgg {
     prev: number;
 }
 
-/** Player-hours per (map name, mode), both windows, for every map seen in either. */
+/**
+ * Player-hours per (map name, mode), both windows, for every map seen in either.
+ * Excluded families never count towards a map, and a map they account for most
+ * of the player-hours on (a hub/lobby map) is dropped altogether, so a stray
+ * unflagged copy of a lobby cannot keep it on the board.
+ */
 export async function getMapAggregates(start: Date, end: Date, opts: WindowOptions = {}): Promise<MapAgg[]> {
     const w = windowOf(start, end, opts);
     const rows = await sequelize.query<{
         map_name: string; mode: string | null; servers: number | null; cur: number | null; prev: number | null;
     }>(`
-        WITH ${rawHourMapCte(`st.bucket >= :prevStart AND st.bucket < :end AND ${aggregateExcludeSql('st')}`)},
+        WITH ${rawHourMapCte(windowsSql('st.bucket'))},
         -- One server can log a map under several registry rows: those add up
         -- per SERVER first, and only then do aliases collapse with MAX, so two
         -- addresses reporting the same map under different rows are not summed.
@@ -368,13 +395,19 @@ export async function getMapAggregates(start: Date, end: Date, opts: WindowOptio
             FROM per_server_key k
             JOIN server_canonical sc ON sc.server_id = k.server_id
             GROUP BY sc.canonical_id, k.bucket, k.map_name, k.mode
+        ),
+        excl AS (${EXCLUDED_FAMILIES_SQL}),
+        flagged AS (
+            SELECT p.*, (p.canonical_id IN (SELECT canonical_id FROM excl)) AS ex
+            FROM per_key p
         )
         SELECT map_name, mode,
-               COUNT(DISTINCT canonical_id) FILTER (WHERE bucket >= :start AND c > 0) AS servers,
-               COALESCE(SUM(c) FILTER (WHERE bucket >= :start), 0)::float8 AS cur,
-               COALESCE(SUM(c) FILTER (WHERE bucket <  :start), 0)::float8 AS prev
-        FROM per_key
+               COUNT(DISTINCT canonical_id) FILTER (WHERE NOT ex AND bucket >= :start AND c > 0) AS servers,
+               COALESCE(SUM(c) FILTER (WHERE NOT ex AND bucket >= :start), 0)::float8 AS cur,
+               COALESCE(SUM(c) FILTER (WHERE NOT ex AND bucket <  :prevEnd), 0)::float8 AS prev
+        FROM flagged
         GROUP BY map_name, mode
+        HAVING COALESCE(SUM(c) FILTER (WHERE ex), 0) <= COALESCE(SUM(c) FILTER (WHERE NOT ex), 0)
     `, { replacements: replacementsOf(w), type: QueryTypes.SELECT });
     return rows.map((r) => ({
         mapName: r.map_name,
@@ -412,6 +445,7 @@ export function buildMapSections(maps: MapAgg[], floor: number): { topMaps: MapR
     return { topMaps, risingMaps };
 }
 
+/** The `TOP_SMALL` busiest gamemodes; shares stay relative to ALL player-hours, so they need not sum to 1. */
 export function buildModeShares(maps: MapAgg[]): ModeShareRow[] {
     const byMode = new Map<string, { cur: number; prev: number }>();
     let totalCur = 0;
@@ -434,7 +468,26 @@ export function buildModeShares(maps: MapAgg[]): ModeShareRow[] {
             prevPlayerHours: round1(e.prev),
             share: shareOf(e.cur, totalCur),
             prevShare: shareOf(e.prev, totalPrev),
-        }));
+        }))
+        .slice(0, TOP_SMALL);
+}
+
+/** The most played map of each mode in `modes` (already the top few), in the same order. */
+export function buildMapPerMode(
+    maps: MapAgg[],
+    modes: ModeShareRow[],
+): { mode: string; mapName: string; playerHours: number }[] {
+    const best = new Map<string, MapAgg>();
+    for (const m of maps) {
+        if (m.cur <= 0) continue;
+        const mode = m.mode ?? 'Unknown';
+        const b = best.get(mode);
+        if (!b || m.cur > b.cur || (m.cur === b.cur && m.mapName < b.mapName)) best.set(mode, m);
+    }
+    return modes.flatMap(({ mode }) => {
+        const b = best.get(mode);
+        return b ? [{ mode, mapName: b.mapName, playerHours: round1(b.cur) }] : [];
+    });
 }
 
 /** Windows up to this long read the 5-minute aggregate for the peak instant. */
@@ -455,7 +508,7 @@ export async function getPeakHour(start: Date, end: Date): Promise<{ peakPlayers
             FROM ${table} st
             JOIN server_canonical sc ON sc.server_id = st.server_id
             WHERE st.bucket >= :start AND st.bucket < :end
-              AND ${aggregateExcludeSql('st')}
+              AND ${strictAggregateExcludeSql('st')}
             GROUP BY sc.canonical_id, st.bucket
         ) fp
         GROUP BY fp.bucket

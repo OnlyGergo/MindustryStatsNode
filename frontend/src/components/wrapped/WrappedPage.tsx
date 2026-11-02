@@ -153,15 +153,22 @@ const WrappedPage: React.FC<{ report: WrappedReport }> = ({ report: r }) => {
         )}
 
         {r.climbers.length > 0 && (
-          <Card title="Biggest climbers" note="Gain in player-hours, second half of the period vs the first half.">
+          <Card
+            title="Biggest climbers"
+            note={
+              r.climbersFrom != null && r.climbersFrom > Date.UTC(r.year, 0, 1)
+                ? `Gain in player-hours, ${formatUtcDate(r.climbersFrom)} to ${formatUtcDate(r.asOf)} vs the same dates in ${r.year - 1}.`
+                : `Gain in player-hours vs the same dates in ${r.year - 1}.`
+            }
+          >
             <RankTable
               rows={r.climbers}
               rowKey={(s) => s.id}
               rank={(_, i) => i + 1}
               columns={[
                 { header: "Server", cell: (s) => <ServerName server={s} /> },
-                { header: "1st half", cell: (s) => formatHours(s.prevPlayerHours), align: "right" },
-                { header: "2nd half", cell: (s) => formatHours(s.playerHours), align: "right" },
+                { header: String(r.year - 1), cell: (s) => formatHours(s.prevPlayerHours), align: "right" },
+                { header: String(r.year), cell: (s) => formatHours(s.playerHours), align: "right" },
               ]}
             />
           </Card>
@@ -188,7 +195,7 @@ const WrappedPage: React.FC<{ report: WrappedReport }> = ({ report: r }) => {
                       className="inline-flex items-center gap-1.5 max-w-full px-2 py-1 rounded bg-surface-tertiary border border-subtle text-xs"
                     >
                       <span className="uppercase text-secondary shrink-0">{m.mode}</span>
-                      <span className="text-primary truncate">{m.mapName}</span>
+                      <span className="text-primary truncate"><MindustryText text={m.mapName} /></span>
                     </span>
                   ))}
                 </div>
@@ -212,21 +219,6 @@ const WrappedPage: React.FC<{ report: WrappedReport }> = ({ report: r }) => {
                 </li>
               ))}
             </ul>
-          </Card>
-        )}
-
-        {r.streaks.length > 0 && (
-          <Card title="Longest streaks" note="Most consecutive days online.">
-            <RankTable
-              rows={r.streaks}
-              rowKey={(s) => s.id}
-              rank={(_, i) => i + 1}
-              columns={[
-                { header: "Server", cell: (s) => <ServerName server={s} /> },
-                { header: "Days", cell: (s) => formatInt(s.days), align: "right" },
-                { header: "From", cell: (s) => formatUtcDate(s.from), align: "right" },
-              ]}
-            />
           </Card>
         )}
 

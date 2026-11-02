@@ -7,6 +7,7 @@ import type {
   MapRow,
   MoverRow,
 } from "../../../../common/models/leaderboard.ts";
+import { MindustryText } from "../MindustryText.tsx";
 import { formatRelativeTime } from "../../util/general.ts";
 import HeadlineCards from "./HeadlineCards.tsx";
 import { Delta, RankTable, Section, ServerName } from "./RankTable.tsx";
@@ -47,7 +48,7 @@ const moverColumns: Column<MoverRow>[] = [
 
 const MapName: React.FC<{ row: MapRow }> = ({ row }) => (
   <div className="flex items-center gap-2 min-w-0">
-    <span className="truncate max-w-[14rem]">{row.mapName}</span>
+    <span className="truncate max-w-[14rem]"><MindustryText text={row.mapName} /></span>
     {row.mode && (
       <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-surface-tertiary border border-subtle text-secondary shrink-0">
         {row.mode}
