@@ -24,6 +24,8 @@ import { REMOVED_REASON_MAX, REVIEW_BODY_MAX } from '../../../../common/models/r
 import { UPLOAD_ID_RE } from '../../../../common/models/customisation.js';
 import { getAllMergeFamilies, getMergedFamilies, getMergeSuggestions } from '../../repositories/adminMergeRepository.js';
 import { dismissMergeSuggestion, mergeServers, unmergeServer, type MergeResult } from '../../repositories/user/serverMergeRepository.js';
+import { getHubFamily, getHubSuggestions, getMarkedHubs } from '../../repositories/adminHubRepository.js';
+import { dismissHubSuggestion, setServerHub, type SetHubResult } from '../../repositories/user/hubRepository.js';
 
 /** bigserial ids travel as strings; reject anything that is not a plain positive integer. */
 const BigIdString = t.String({ pattern: '^[1-9][0-9]{0,18}$' });
@@ -33,6 +35,7 @@ const REPORTS_PER_PAGE = 20;
 const RemoveBody = t.Object({ action: t.Literal('remove'), reason: t.String({ minLength: 1, maxLength: REMOVED_REASON_MAX }) }, { additionalProperties: false });
 const RestoreBody = t.Object({ action: t.Literal('restore') }, { additionalProperties: false });
 const ImageIdParam = t.Object({ id: t.String({ pattern: UPLOAD_ID_RE.source }) });
+const ServerIdParam = t.Object({ id: t.Numeric({ minimum: 1, maximum: 2_147_483_647 }) });
 
 /**
  * A merge changes what nearly every public route returns (lists, details,
@@ -41,6 +44,14 @@ const ImageIdParam = t.Object({ id: t.String({ pattern: UPLOAD_ID_RE.source }) }
 function mergeResponse(result: MergeResult) {
   if (result.kind === 'not_found') return status(404, { error: 'Server not found' });
   if (result.kind === 'conflict') return status(409, { error: result.message });
+  clearCaches();
+  requestLeaderboardRebuild();
+  invalidateWrapped();
+  return { rootId: result.rootId };
+}
+
+function hubResponse(result: SetHubResult) {
+  if (result.kind === 'not_found') return status(404, { error: 'Server not found' });
   clearCaches();
   requestLeaderboardRebuild();
   invalidateWrapped();
@@ -283,4 +294,54 @@ export const adminRoutes = new Elysia({ prefix: '/api/admin' })
   }, {
     requireAdmin: true,
     requireOrigin: true,
+  })
+
+  // ── Hubs ──────────────────────────────────────────────────────────────────
+  // "Hub" = the family is in aggregate_excluded_families; writes go through
+  // the SECURITY DEFINER set_aggregate_exclude (see hubRepository).
+  .get('/hub-suggestions', async ({ set }) => {
+    set.headers['cache-control'] = 'no-store';
+    return getHubSuggestions();
+  }, {
+    requireAdmin: true,
+  })
+
+  .get('/hubs', async ({ set }) => {
+    set.headers['cache-control'] = 'no-store';
+    return getMarkedHubs();
+  }, {
+    requireAdmin: true,
+  })
+
+  // Any member id works; the preview for the manual form.
+  .get('/hubs/:id', async ({ params, set }) => {
+    set.headers['cache-control'] = 'no-store';
+    return (await getHubFamily(params.id)) ?? status(404, { error: 'Server not found' });
+  }, {
+    requireAdmin: true,
+    params: ServerIdParam,
+  })
+
+  // Mark / unmark. Exclusion changes every global and network total, the
+  // server list, details, leaderboard and Wrapped, so it invalidates the same
+  // things a merge does.
+  .put('/hubs/:id', async ({ params }) => hubResponse(await setServerHub(params.id, true)), {
+    requireAdmin: true,
+    requireOrigin: true,
+    params: ServerIdParam,
+  })
+
+  .delete('/hubs/:id', async ({ params }) => hubResponse(await setServerHub(params.id, false)), {
+    requireAdmin: true,
+    requireOrigin: true,
+    params: ServerIdParam,
+  })
+
+  .post('/hub-dismissals', async ({ body, user, set }) => {
+    await dismissHubSuggestion(body.id, user.id);
+    set.status = 204;
+  }, {
+    requireAdmin: true,
+    requireOrigin: true,
+    body: t.Object({ id: PositiveInt }, { additionalProperties: false }),
   });

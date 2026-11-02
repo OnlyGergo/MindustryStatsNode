@@ -16,6 +16,7 @@ import { Route as BrowseGlobalRouteImport } from './routes/_browse/global'
 import { Route as BrowseInactiveRouteImport } from './routes/_browse/inactive'
 import { Route as BrowseLeaderboardRouteImport } from './routes/_browse/leaderboard'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminHubsRouteImport } from './routes/admin/hubs'
 import { Route as AdminImagesRouteImport } from './routes/admin/images'
 import { Route as AdminMergesRouteImport } from './routes/admin/merges'
 import { Route as AdminOwnersRouteImport } from './routes/admin/owners'
@@ -56,6 +57,11 @@ const BrowseLeaderboardRoute = BrowseLeaderboardRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHubsRoute = AdminHubsRouteImport.update({
+  id: '/hubs',
+  path: '/hubs',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminImagesRoute = AdminImagesRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/global': typeof BrowseGlobalRoute
   '/inactive': typeof BrowseInactiveRoute
   '/leaderboard': typeof BrowseLeaderboardRoute
+  '/admin/hubs': typeof AdminHubsRoute
   '/admin/images': typeof AdminImagesRoute
   '/admin/merges': typeof AdminMergesRoute
   '/admin/owners': typeof AdminOwnersRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/global': typeof BrowseGlobalRoute
   '/inactive': typeof BrowseInactiveRoute
   '/leaderboard': typeof BrowseLeaderboardRoute
+  '/admin/hubs': typeof AdminHubsRoute
   '/admin/images': typeof AdminImagesRoute
   '/admin/merges': typeof AdminMergesRoute
   '/admin/owners': typeof AdminOwnersRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/_browse/global': typeof BrowseGlobalRoute
   '/_browse/inactive': typeof BrowseInactiveRoute
   '/_browse/leaderboard': typeof BrowseLeaderboardRoute
+  '/admin/hubs': typeof AdminHubsRoute
   '/admin/images': typeof AdminImagesRoute
   '/admin/merges': typeof AdminMergesRoute
   '/admin/owners': typeof AdminOwnersRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
     | '/global'
     | '/inactive'
     | '/leaderboard'
+    | '/admin/hubs'
     | '/admin/images'
     | '/admin/merges'
     | '/admin/owners'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
     | '/global'
     | '/inactive'
     | '/leaderboard'
+    | '/admin/hubs'
     | '/admin/images'
     | '/admin/merges'
     | '/admin/owners'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/_browse/global'
     | '/_browse/inactive'
     | '/_browse/leaderboard'
+    | '/admin/hubs'
     | '/admin/images'
     | '/admin/merges'
     | '/admin/owners'
@@ -242,6 +254,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/hubs': {
+      id: '/admin/hubs'
+      path: '/hubs'
+      fullPath: '/admin/hubs'
+      preLoaderRoute: typeof AdminHubsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/images': {
@@ -320,6 +339,7 @@ const BrowseRouteWithChildren =
   BrowseRoute._addFileChildren(BrowseRouteChildren)
 
 interface AdminRouteChildren {
+  AdminHubsRoute: typeof AdminHubsRoute
   AdminImagesRoute: typeof AdminImagesRoute
   AdminMergesRoute: typeof AdminMergesRoute
   AdminOwnersRoute: typeof AdminOwnersRoute
@@ -328,6 +348,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminHubsRoute: AdminHubsRoute,
   AdminImagesRoute: AdminImagesRoute,
   AdminMergesRoute: AdminMergesRoute,
   AdminOwnersRoute: AdminOwnersRoute,

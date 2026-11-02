@@ -83,3 +83,24 @@ export interface MergedFamily {
   description: string | null;
   members: MergedMember[];
 }
+
+// ── Hubs (/admin/hubs) ─────────────────────────────────────────────────────
+
+/** Where a hub keyword was found. */
+export type HubMatchField = 'name' | 'description' | 'map';
+
+/**
+ * One server family as the hub page shows it. `id` is the canonical (root) id.
+ * Name/description are the family's newest open MOTD, map its current map.
+ */
+export interface HubFamily {
+  id: number;
+  name: string | null;
+  description: string | null;
+  mapName: string | null;
+  host: string;
+  port: number;
+  lastSeen: number | null;   // epoch ms
+  /** Fields a hub keyword matched in (empty for families marked by hand). */
+  matches: HubMatchField[];
+}
