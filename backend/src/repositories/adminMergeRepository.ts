@@ -19,6 +19,12 @@ import type { MergedFamily, MergeFamily, MergeReason, MergeSuggestion } from '..
  */
 const SUGGESTION_LIMIT = 2000;
 
+/**
+ * A resolved IP only counts while both families answered on it recently: an IP
+ * a server left months ago may since belong to an unrelated host.
+ */
+const SAME_ENDPOINT_RECENT_DAYS = 7;
+
 /** "Same day" = the newer family appeared within this long either side of the older one's last sighting. */
 const SAME_DAY_SECONDS = 24 * 60 * 60;
 
@@ -62,6 +68,8 @@ function familiesSql(familyFilter = 'TRUE'): string {
         f AS (
             SELECT fam.id, fam.first_seen, fam.last_seen, fam.member_count,
                    lm.host, lm.port, n.name, n.description,
+                   CASE WHEN fam.last_seen > now() - make_interval(days => ${SAME_ENDPOINT_RECENT_DAYS})
+                        THEN host(lm.resolved_ip) END AS endpoint_ip,
                    ${normSql('n.name')} AS norm,
                    ${normSql('n.description')} AS desc_norm
             FROM fam
@@ -86,7 +94,8 @@ function toFamily(prefix: string, row: Record<string, any>): MergeFamily {
 }
 
 /**
- * Pairs of families that look like the same server: the same name, or a
+ * Pairs of families that look like the same server: the same resolved
+ * IP + port (one server listed under both an IP and a domain), the same name, or a
  * shared host or description where the two were never online together or
  * handed over within a day. A shared host or description alone is too weak —
  * hosting providers run dozens of servers on one IP, and a network gives all
@@ -106,6 +115,8 @@ export async function getMergeSuggestions(): Promise<MergeSuggestion[]> {
             SELECT a.id, b.id FROM f a JOIN f b ON a.host = b.host AND a.id < b.id
             UNION
             SELECT a.id, b.id FROM f a JOIN f b ON a.desc_norm = b.desc_norm AND a.id < b.id
+            UNION
+            SELECT a.id, b.id FROM f a JOIN f b ON a.endpoint_ip = b.endpoint_ip AND a.port = b.port AND a.id < b.id
         ),
         ordered AS (
             -- target = the older family (it keeps the root), source = the newer one
@@ -124,6 +135,10 @@ export async function getMergeSuggestions(): Promise<MergeSuggestion[]> {
                    COALESCE(t.norm = s.norm, FALSE)           AS same_name,
                    COALESCE(t.desc_norm = s.desc_norm, FALSE) AS same_motd,
                    t.host = s.host                            AS same_host,
+                   -- Both answered on the same IP:port recently. Unlike same_host this
+                   -- is strong on its own: a shared hosting IP still gives each server
+                   -- its own port, and both being live together is the whole point.
+                   COALESCE(t.endpoint_ip = s.endpoint_ip AND t.port = s.port, FALSE) AS same_endpoint,
                    COALESCE(t.last_seen < s.first_seen OR s.last_seen < t.first_seen, FALSE) AS disjoint,
                    -- The handover: the newer one turned up within a day of the older one's
                    -- last sighting, on either side (a short gap or a short overlap).
@@ -132,8 +147,9 @@ export async function getMergeSuggestions(): Promise<MergeSuggestion[]> {
             JOIN f t ON t.id = o.t_id
             JOIN f s ON s.id = o.s_id
         )
-        SELECT ${cols('t')}, ${cols('s')}, p.same_name, p.same_motd, p.same_host, p.disjoint, p.same_day,
-               (CASE WHEN p.same_name THEN 3 ELSE 0 END
+        SELECT ${cols('t')}, ${cols('s')}, p.same_name, p.same_motd, p.same_host, p.same_endpoint, p.disjoint, p.same_day,
+               (CASE WHEN p.same_endpoint THEN 5 ELSE 0 END
+              + CASE WHEN p.same_name THEN 3 ELSE 0 END
               + CASE WHEN p.same_day  THEN 3 ELSE 0 END
               + CASE WHEN p.same_motd THEN 2 ELSE 0 END
               + CASE WHEN p.same_host THEN 2 ELSE 0 END
@@ -141,13 +157,14 @@ export async function getMergeSuggestions(): Promise<MergeSuggestion[]> {
         FROM pairs p
         JOIN f t ON t.id = p.t_id
         JOIN f s ON s.id = p.s_id
-        WHERE p.same_name OR ((p.same_host OR p.same_motd) AND (p.disjoint OR p.same_day))
+        WHERE p.same_endpoint OR p.same_name OR ((p.same_host OR p.same_motd) AND (p.disjoint OR p.same_day))
         ORDER BY score DESC, GREATEST(t.last_seen, s.last_seen) DESC NULLS LAST
         LIMIT :limit
     `, { replacements: { limit: SUGGESTION_LIMIT }, type: QueryTypes.SELECT });
 
     return rows.map(row => {
         const reasons: MergeReason[] = [];
+        if (row.same_endpoint) reasons.push('same_endpoint');
         if (row.same_name) reasons.push('same_name');
         if (row.same_day) reasons.push('same_day');
         if (row.same_motd) reasons.push('same_motd');

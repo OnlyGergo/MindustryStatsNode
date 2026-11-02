@@ -39,22 +39,45 @@ type StatRow struct {
 	MapRegistryID  *int      `json:"map_registry_id"`
 }
 
-// GetServers returns every server with its group name, which is what the
-// collector queues.
+// GetServers returns the servers to poll this cycle, with their group names.
 //
-// serverRepository.ts read both tables and joined them in JS; one LEFT JOIN is
-// the same result set with one round trip.
-func (r *Repository) GetServers(ctx context.Context) ([]ServerRecord, error) {
+// A merged family can hold several live members: an IP row and a domain row
+// for one server, or an old address merged into its new one.  Polling all of
+// them stores the same server twice, so unless all is set only each family's
+// PRIMARY member is returned.  all (the daily sweep) polls every live member,
+// which is what lets a skipped member take over: its fresh online sample moves
+// it up the primary ordering.
+//
+// The ordering is the same one liveMemberSql (backend canonicalIdentity.ts)
+// uses for the address a visitor sees, so the shown address is the polled one:
+// online now first, then a hostname over an IPv4 literal, then the most
+// recently seen.  It is derived from server_canonical every cycle, so an
+// unmerge puts both members back into polling with nothing to undo.
+func (r *Repository) GetServers(ctx context.Context, all bool) ([]ServerRecord, error) {
 	// A retired row is closed history for an address that may since have been
 	// reassigned to a new row -- polling it would hit whatever now answers on
 	// that host/port and misattribute the response to the old row's stats.
 	rows, err := r.pool.Query(ctx, `
-		SELECT s.id, s.host, s.port, COALESCE(g.name, 'Unknown') AS name
-		FROM servers s
-		LEFT JOIN server_groups g ON g.id = s.server_group_id
-		WHERE s.retired_at IS NULL
-		ORDER BY s.id
-	`)
+		WITH live AS (
+			SELECT s.id, s.host, s.port, s.server_group_id,
+			       row_number() OVER (
+			           PARTITION BY COALESCE(sc.canonical_id, s.id)
+			           ORDER BY COALESCE(cur.online, FALSE) DESC,
+			                    (s.host ~ '^[0-9.]+$') ASC,
+			                    s.last_seen DESC NULLS LAST,
+			                    s.id DESC
+			       ) AS rank
+			FROM servers s
+			LEFT JOIN server_canonical sc ON sc.server_id = s.id
+			LEFT JOIN server_current cur  ON cur.server_id = s.id
+			WHERE s.retired_at IS NULL
+		)
+		SELECT l.id, l.host, l.port, COALESCE(g.name, 'Unknown') AS name
+		FROM live l
+		LEFT JOIN server_groups g ON g.id = l.server_group_id
+		WHERE $1 OR l.rank = 1
+		ORDER BY l.id
+	`, all)
 	if err != nil {
 		return nil, &OperationError{Operation: "getServers", Err: err}
 	}
@@ -199,6 +222,35 @@ func (r *Repository) BulkUpdateCountryCodes(ctx context.Context, updates []Count
 		FROM jsonb_to_recordset($1::jsonb) AS x(server_id int, country_code varchar(2))
 		WHERE s.id = x.server_id
 		  AND s.country_code IS DISTINCT FROM x.country_code
+	`, payload)
+	return err
+}
+
+// ResolvedIPUpdate pairs a server with the IPv4 address its query reached.
+type ResolvedIPUpdate struct {
+	ServerID   int    `json:"server_id"`
+	ResolvedIP string `json:"resolved_ip"`
+}
+
+// BulkUpdateResolvedIPs writes servers.resolved_ip for the servers that
+// answered, skipping rows whose address has not changed so a steady server
+// costs no write.  The admin merge page matches live families on it.
+func (r *Repository) BulkUpdateResolvedIPs(ctx context.Context, updates []ResolvedIPUpdate) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	payload, err := toJSON(updates)
+	if err != nil {
+		return &OperationError{Operation: "bulkUpdateResolvedIPs", Err: err}
+	}
+
+	_, err = r.exec(ctx, r.pool, "bulkUpdateResolvedIPs", `
+		UPDATE servers s
+		SET resolved_ip = x.resolved_ip
+		FROM jsonb_to_recordset($1::jsonb) AS x(server_id int, resolved_ip inet)
+		WHERE s.id = x.server_id
+		  AND s.resolved_ip IS DISTINCT FROM x.resolved_ip
 	`, payload)
 	return err
 }

@@ -60,6 +60,10 @@ type CollectorConfig struct {
 	// ServerCollectionInterval is SERVER_COLLECTION_INTERVAL_MS: the window the
 	// rate limit below applies to (p-queue's `interval`).
 	ServerCollectionInterval time.Duration
+	// FullCollectionInterval is FULL_COLLECTION_INTERVAL_MS (default 24h): how
+	// often a sweep polls EVERY live member of a merged family rather than only
+	// its primary, so a skipped address can take over if the server moves back.
+	FullCollectionInterval time.Duration
 	// RawQueueCapacity bounds the poll-result channel.  p-queue's TS counterpart
 	// was unbounded; a bound turns a stalled processor into backpressure on the
 	// pollers rather than unbounded memory growth.
@@ -157,6 +161,7 @@ func Load() (Config, error) {
 			MindustryTimeout:         msVal("MINDUSTRY_TIMEOUT_MS", 1_000),
 			DataCollectionInterval:   msVal("DATA_COLLECTION_INTERVAL_MS", 300_000),
 			ServerCollectionInterval: msVal("SERVER_COLLECTION_INTERVAL_MS", 1_000),
+			FullCollectionInterval:   msVal("FULL_COLLECTION_INTERVAL_MS", 86_400_000),
 			RawQueueCapacity:         intVal("RAW_QUEUE_CAPACITY", 100_000),
 		},
 		Processor: ProcessorConfig{
@@ -194,6 +199,7 @@ func (c Config) validate() error {
 		"MINDUSTRY_TIMEOUT_MS":              c.Collector.MindustryTimeout,
 		"DATA_COLLECTION_INTERVAL_MS":       c.Collector.DataCollectionInterval,
 		"SERVER_COLLECTION_INTERVAL_MS":     c.Collector.ServerCollectionInterval,
+		"FULL_COLLECTION_INTERVAL_MS":       c.Collector.FullCollectionInterval,
 		"QUEUE_POLL_TIMEOUT_MS":             c.Processor.QueuePollTimeout,
 		"NETWORK_PEAKS_REFRESH_INTERVAL_MS": c.Peaks.RefreshInterval,
 		"NETWORK_PEAKS_LOOKBACK_MS":         c.Peaks.Lookback,

@@ -81,9 +81,15 @@ export function aggregateExcludeSql(alias?: string): string {
 }
 
 /**
- * The live address of a family: its newest non-retired member, root as fallback.
- * `where` (optional, sees the canonical row as `sc`) scopes the scan to some
- * families before the DISTINCT ON sort, for callers that only need a few.
+ * The live address of a family: the member the collector polls (its PRIMARY),
+ * root as fallback. `where` (optional, sees the canonical row as `sc`) scopes
+ * the scan to some families before the DISTINCT ON sort, for callers that
+ * only need a few.
+ *
+ * The ordering must stay the same as GetServers' in
+ * collector/internal/repository/servers.go, which polls only this member of a
+ * merged family between daily full sweeps, so the shown address is the one
+ * whose numbers are current.
  */
 export function liveMemberSql(where?: string | null): string {
     return `
@@ -93,16 +99,22 @@ export function liveMemberSql(where?: string | null): string {
            s.host,
            s.port,
            s.country_code,
+           s.resolved_ip,
            s.updated_at
     FROM server_canonical sc
     JOIN servers s ON s.id = sc.server_id
+    LEFT JOIN server_current lm_cur ON lm_cur.server_id = s.id
     ${where ? `WHERE ${where}` : ''}
     -- The root is the oldest observation, which makes it a stable identity but
     -- a stale address; what a visitor needs is whatever the server answers on
     -- today.  Retired rows sort last so they only win when the whole family is
-    -- retired, and then the tie-break falls back to the newest row seen.
+    -- retired.  Among live members (an IP row and a domain row of one server,
+    -- or an old address merged into its new one): online now, then a hostname
+    -- over an IPv4 literal, then the newest row seen.
     ORDER BY sc.canonical_id,
              (s.retired_at IS NULL) DESC,
+             COALESCE(lm_cur.online, FALSE) DESC,
+             (s.host ~ '^[0-9.]+$') ASC,
              s.last_seen DESC NULLS LAST,
              s.id DESC
 `;

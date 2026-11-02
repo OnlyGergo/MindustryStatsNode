@@ -56,7 +56,8 @@ export interface MergeFamily {
  *   the older one's last sighting, i.e. a handover rather than a reuse months later.
  * - `disjoint`: the two were never seen at the same time, however long the gap.
  */
-export type MergeReason = 'same_name' | 'same_motd' | 'same_host' | 'same_day' | 'disjoint';
+/** `same_endpoint`: both answered on the same resolved IP:port recently (an IP row and a domain row of one server). */
+export type MergeReason = 'same_endpoint' | 'same_name' | 'same_motd' | 'same_host' | 'same_day' | 'disjoint';
 
 /** A suggested pair. `target` is the older family, which will keep its root. */
 export interface MergeSuggestion {

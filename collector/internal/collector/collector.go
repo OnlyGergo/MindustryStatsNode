@@ -52,6 +52,10 @@ type Collector struct {
 
 	tasks   *taskQueue
 	limiter *intervalLimiter
+
+	// lastFullSweep is when CollectServers last polled every live member of
+	// merged families; only Run's goroutine touches it.
+	lastFullSweep time.Time
 }
 
 func New(cfg config.CollectorConfig, repo *repository.Repository, p *poller.Poller, out chan<- RawServerData) *Collector {
@@ -122,11 +126,17 @@ func (c *Collector) Run(ctx context.Context) error {
 }
 
 // CollectServers reads the server list fresh from the database and queues every
-// server for a poll.
+// server for a poll: only each merged family's primary member, except once per
+// FullCollectionInterval (and on startup), when every live member is polled.
 func (c *Collector) CollectServers(ctx context.Context) error {
-	servers, err := c.repo.GetServers(ctx)
+	now := time.Now()
+	full := fullSweepDue(c.lastFullSweep, now, c.cfg.FullCollectionInterval)
+	servers, err := c.repo.GetServers(ctx, full)
 	if err != nil {
 		return err
+	}
+	if full {
+		c.lastFullSweep = now
 	}
 
 	for _, server := range servers {
@@ -137,8 +147,14 @@ func (c *Collector) CollectServers(ctx context.Context) error {
 	}
 
 	size, pending := c.tasks.stats()
-	c.log.Info("Added servers to queue", "servers", len(servers), "queued", size, "in_flight", pending)
+	c.log.Info("Added servers to queue", "servers", len(servers), "full_sweep", full, "queued", size, "in_flight", pending)
 	return nil
+}
+
+// fullSweepDue reports whether this cycle should poll every live member of a
+// merged family: on the first cycle, then once per interval.
+func fullSweepDue(last, now time.Time, interval time.Duration) bool {
+	return last.IsZero() || now.Sub(last) >= interval
 }
 
 // QueueStats is getQueueStats(): waiting tasks and in-flight tasks.

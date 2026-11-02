@@ -7,6 +7,7 @@ import type { MergedFamily, MergeFamily, MergeReason, MergeSuggestion } from "..
 
 /** Filter chips, in display order. `same_day` is on by default: a handover, not a reuse months later. */
 const REASONS: { reason: MergeReason; label: string }[] = [
+  { reason: "same_endpoint", label: "Same IP:port" },
   { reason: "same_day", label: "Same-day overlap" },
   { reason: "same_name", label: "Same name" },
   { reason: "same_motd", label: "Same MOTD" },

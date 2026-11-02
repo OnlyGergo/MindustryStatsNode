@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"net/netip"
 	"testing"
 	"time"
 
@@ -155,6 +156,23 @@ func TestBuildBatchCollectsCountryCodes(t *testing.T) {
 	}
 	if b.countries[0].ServerID != 1 || b.countries[0].CountryCode != "US" {
 		t.Errorf("country entry = %+v, want server 1 at its newest code", b.countries[0])
+	}
+}
+
+func TestBuildBatchCollectsResolvedIPs(t *testing.T) {
+	base := time.UnixMilli(1_700_000_000_000)
+
+	b := buildBatch([]collector.RawServerData{
+		online(1, base, func(d *poller.ServerData) { d.ResolvedIP = netip.MustParseAddr("1.2.3.4") }),
+		online(2, base, nil), // never resolved: nothing to write
+		online(1, base.Add(time.Second), func(d *poller.ServerData) { d.ResolvedIP = netip.MustParseAddr("5.6.7.8") }),
+	})
+
+	if len(b.resolvedIPs) != 1 {
+		t.Fatalf("resolvedIPs = %+v, want one entry", b.resolvedIPs)
+	}
+	if b.resolvedIPs[0].ServerID != 1 || b.resolvedIPs[0].ResolvedIP != "5.6.7.8" {
+		t.Errorf("resolved entry = %+v, want server 1 at its newest address", b.resolvedIPs[0])
 	}
 }
 

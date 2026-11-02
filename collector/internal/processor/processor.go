@@ -96,6 +96,7 @@ type batch struct {
 	motds           []repository.MotdEntry
 	maps            []repository.MapEntry
 	countries       []repository.CountryUpdate
+	resolvedIPs     []repository.ResolvedIPUpdate
 }
 
 // buildBatch turns raw poll results into rows.  Kept separate from the writes so
@@ -119,6 +120,7 @@ func buildBatch(raws []collector.RawServerData) batch {
 		motds     = newOrderedByServer[repository.MotdEntry]()
 		maps      = newOrderedByServer[repository.MapEntry]()
 		countries = newOrderedByServer[repository.CountryUpdate]()
+		resolved  = newOrderedByServer[repository.ResolvedIPUpdate]()
 
 		result batch
 	)
@@ -162,6 +164,13 @@ func buildBatch(raws []collector.RawServerData) batch {
 			})
 		}
 
+		if data.ResolvedIP.IsValid() {
+			resolved.set(raw.ServerID, repository.ResolvedIPUpdate{
+				ServerID:   raw.ServerID,
+				ResolvedIP: data.ResolvedIP.String(),
+			})
+		}
+
 		result.stats = append(result.stats, repository.StatRow{
 			ServerID:    raw.ServerID,
 			Timestamp:   raw.Timestamp,
@@ -179,6 +188,7 @@ func buildBatch(raws []collector.RawServerData) batch {
 	result.motds = motds.all()
 	result.maps = maps.all()
 	result.countries = countries.all()
+	result.resolvedIPs = resolved.all()
 	return result
 }
 
@@ -202,11 +212,12 @@ func (p *Processor) ProcessBatch(ctx context.Context, raws []collector.RawServer
 		wg                   sync.WaitGroup
 		lastSeenErr, motdErr error
 		mapErr, countryErr   error
+		resolvedErr          error
 		motdRegistry         map[int]int
 		mapRegistry          map[int]int
 	)
 
-	wg.Add(4)
+	wg.Add(5)
 	go func() {
 		defer wg.Done()
 		lastSeenErr = p.repo.BulkUpdateLastSeen(ctx, onlineServerIDs)
@@ -223,12 +234,17 @@ func (p *Processor) ProcessBatch(ctx context.Context, raws []collector.RawServer
 		defer wg.Done()
 		countryErr = p.repo.BulkUpdateCountryCodes(ctx, b.countries)
 	}()
+	go func() {
+		defer wg.Done()
+		resolvedErr = p.repo.BulkUpdateResolvedIPs(ctx, b.resolvedIPs)
+	}()
 	wg.Wait()
 
 	p.reportFailure(lastSeenErr, "last-seen update", slog.Int("servers", len(onlineServerIDs)))
 	p.reportFailure(motdErr, "MOTD history write", slog.Int("entries", len(motdEntries)))
 	p.reportFailure(mapErr, "map history write", slog.Int("entries", len(mapEntries)))
 	p.reportFailure(countryErr, "country code update", slog.Int("entries", len(b.countries)))
+	p.reportFailure(resolvedErr, "resolved IP update", slog.Int("entries", len(b.resolvedIPs)))
 
 	// A failed registry write leaves its IDs null rather than blocking the
 	// sample: the player count is the point, and the FK is nullable.
