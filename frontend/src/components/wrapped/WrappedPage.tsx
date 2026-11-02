@@ -28,7 +28,7 @@ const Big: React.FC<{ value: React.ReactNode; label: string; hint?: React.ReactN
 
 const MapName: React.FC<{ row: MapRow }> = ({ row }) => (
   <div className="flex items-center gap-2 min-w-0">
-    <span className="truncate max-w-[12rem] sm:max-w-[16rem]">{row.mapName}</span>
+    <span className="truncate max-w-[12rem] sm:max-w-[16rem]"><MindustryText text={row.mapName} /></span>
     {row.mode && (
       <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-surface-tertiary border border-subtle text-secondary shrink-0">
         {row.mode}
