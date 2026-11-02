@@ -41,6 +41,8 @@ export interface OwnerEntry {
 export interface MergeFamily {
   id: number;
   name: string | null;
+  /** Latest MOTD description (raw, colour tags included). */
+  description: string | null;
   host: string;
   port: number;
   firstSeen: number | null;  // epoch ms
@@ -48,15 +50,19 @@ export interface MergeFamily {
   memberCount: number;
 }
 
-export type MergeReason = 'same_name' | 'same_host';
+/**
+ * Why a pair was suggested. The page filters on these client side.
+ * - `same_day`: the newer family first appeared within a day either side of
+ *   the older one's last sighting, i.e. a handover rather than a reuse months later.
+ * - `disjoint`: the two were never seen at the same time, however long the gap.
+ */
+export type MergeReason = 'same_name' | 'same_motd' | 'same_host' | 'same_day' | 'disjoint';
 
 /** A suggested pair. `target` is the older family, which will keep its root. */
 export interface MergeSuggestion {
   source: MergeFamily;
   target: MergeFamily;
   reasons: MergeReason[];
-  /** True when the two families were never seen at the same time — the classic address change. */
-  disjoint: boolean;
   score: number;
 }
 
@@ -74,5 +80,6 @@ export interface MergedMember {
 export interface MergedFamily {
   id: number;
   name: string | null;
+  description: string | null;
   members: MergedMember[];
 }
