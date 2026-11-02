@@ -29,46 +29,6 @@
      inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg20" />
-  <g
-     id="facets"
-     transform="matrix(1.2977077,0,0,1.2977077,-76.213172,-76.213172)">
-    <!-- big side panels -->
-    <path
-       fill="#8f665b"
-       d="m 224,123 v 69 l -86,86 v 9 l 22,22 80,80 H 186 L 128,331 V 192 l 69,-69 z"
-       id="path1" />
-    <path
-       fill="#c9a58f"
-       d="m 288,123 v 69 l 86,86 v 9 l -22,22 -80,80 h 54 l 58,-58 V 192 l -69,-69 z"
-       id="path2" />
-    <!-- diagonal bands -->
-    <path
-       fill="#c9a58f"
-       d="m 138,278 86,-86 v 21 l 16,16 -37,37 -43,43 -22,-22 z"
-       id="path3" />
-    <path
-       fill="#8f665b"
-       d="m 374,278 -86,-86 v 21 l -16,16 37,37 43,43 22,-22 z"
-       id="path4" />
-    <!-- centre piece -->
-    <path
-       fill="#8f665b"
-       d="m 240,229 h 16 v 84 h -6 l -47,-47 z"
-       id="path5" />
-    <path
-       fill="#c9a58f"
-       d="m 256,229 h 16 l 37,37 -47,47 h -6 z"
-       id="path6" />
-    <!-- lower panels -->
-    <path
-       fill="#b0bac0"
-       d="m 203,266 -43,43 80,80 h 16 v -76 h -6 z"
-       id="path7" />
-    <path
-       fill="#f4f4f4"
-       d="m 256,313 h 6 l 47,-47 43,43 -80,80 h -16 z"
-       id="path8" />
-  </g>
   <defs
      id="defs9">
     <clipPath
