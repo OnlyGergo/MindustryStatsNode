@@ -3,7 +3,7 @@
 // Read-only analytics for one network (server group): activity profile and
 // gamemode/map/version/country breakdown.  Membership is the same rule
 // getNetworkDetails uses: families whose ROOT has server_group_id = :groupId
-// and NOT aggregate_exclude.  Aliases collapse with MAX, never SUM, and
+// and that are not aggregate-excluded.  Aliases collapse with MAX, never SUM, and
 // anything counting servers counts DISTINCT canonical ids.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -15,14 +15,14 @@ import type {
     NetworkBreakdown,
 } from '../../../common/models/networkAnalytics.js';
 import { MAX_REALISTIC_PLAYERCOUNT } from '../const.js';
-import { liveMemberSql } from './canonicalIdentity.js';
+import { liveMemberSql, notExcludedRootSql } from './canonicalIdentity.js';
 
 const GROUP_SERVERS_CTE = `
         group_servers AS (
             SELECT sc.server_id, sc.canonical_id
             FROM server_canonical sc
             JOIN servers root ON root.id = sc.canonical_id
-            WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude
+            WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()}
         )`;
 
 /**
@@ -64,7 +64,7 @@ export async function getNetworkActivity(groupId: number, days: number): Promise
 
 /** Modes, top maps, version spread and countries for one network. */
 export async function getNetworkBreakdown(groupId: number): Promise<NetworkBreakdown> {
-    const familyScope = `sc.canonical_id IN (SELECT root.id FROM servers root WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude)`;
+    const familyScope = `sc.canonical_id IN (SELECT root.id FROM servers root WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()})`;
     const replacements = { groupId, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT };
 
     const [modes, maps, versions, countries] = await Promise.all([

@@ -17,8 +17,9 @@
 //   * Player counts collapse across aliases with MAX, never SUM.  During a
 //     migration both addresses answer for a while, and summing them would
 //     double-count one real server.
-//   * Family-level properties (server group, aggregate_exclude) are read from
-//     the ROOT row, so a merge cannot leave half a family excluded.
+//   * Family-level properties are per family, never per raw row: the server
+//     group is read from the ROOT row, and aggregate exclusion from
+//     aggregate_excluded_families (keyed on the root).
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** The canonical id a raw server_id resolves to. */
@@ -55,32 +56,28 @@ export function canonicalJoin(alias: string, sourceAlias: string): string {
 }
 
 /**
- * Filters out the hub/lobby servers that should not reach aggregate charts.
- * Exclusion is decided by the family root, so merging an alias in cannot
- * smuggle its players back into a total the root is excluded from.
+ * Canonical ids of every family excluded from aggregates (hub/lobby servers).
+ * Exclusion is a FAMILY property, stored once per root in
+ * aggregate_excluded_families (collector migration 45) and kept on the
+ * surviving root by merge/unmerge, so every read applies the same rule: the
+ * charts, network scopes, server list, leaderboard and Wrapped all agree.
  */
-export function aggregateExcludeSql(alias?: string): string {
-    const prefix = alias ? `${alias}.` : '';
-    return `${prefix}server_id IN (${familyMembersSql('NOT root.aggregate_exclude')})`;
+export const EXCLUDED_FAMILIES_SQL = `SELECT canonical_id FROM aggregate_excluded_families`;
+
+/** True when the family whose root row is `rootAlias` is not excluded. */
+export function notExcludedRootSql(rootAlias: string = 'root'): string {
+    return `${rootAlias}.id NOT IN (${EXCLUDED_FAMILIES_SQL})`;
 }
 
 /**
- * Canonical ids of every family with ANY member flagged aggregate_exclude,
- * root or alias. The leaderboard and Wrapped use this stricter rule rather
- * than the root-only one above: the flag gets set by hand on whichever row
- * someone was looking at, and a ranking must never show an excluded server.
+ * Filters a relation's raw server_id down to members of non-excluded families.
+ * The excluded set is a handful of families, so this is a small NOT IN.
  */
-export const EXCLUDED_FAMILIES_SQL = `SELECT xsc.canonical_id
-            FROM server_canonical xsc
-            JOIN servers xs ON xs.id = xsc.server_id
-            WHERE xs.aggregate_exclude`;
-
-/** `aggregateExcludeSql`, but a flag on any member excludes the whole family. */
-export function strictAggregateExcludeSql(alias?: string): string {
+export function aggregateExcludeSql(alias?: string): string {
     const prefix = alias ? `${alias}.` : '';
     return `${prefix}server_id NOT IN (
-            SELECT ysc.server_id FROM server_canonical ysc
-            WHERE ysc.canonical_id IN (${EXCLUDED_FAMILIES_SQL}))`;
+            SELECT xsc.server_id FROM server_canonical xsc
+            JOIN aggregate_excluded_families xaf ON xaf.canonical_id = xsc.canonical_id)`;
 }
 
 /**

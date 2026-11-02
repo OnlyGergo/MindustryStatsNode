@@ -19,7 +19,7 @@ import {
 } from '../../../common/models/serverData.js';
 import { QueryTypes } from 'sequelize';
 import {CURRENT_DATA_FRESH_THRESHOLD, MAX_REALISTIC_PLAYERCOUNT} from "../const.js";
-import { liveMemberSql, canonicalJoin, serverFamilySql } from './canonicalIdentity.js';
+import { liveMemberSql, canonicalJoin, serverFamilySql, notExcludedRootSql, EXCLUDED_FAMILIES_SQL } from './canonicalIdentity.js';
 import { bayesianScore } from './reviewScoring.js';
 
 // ─── Servers ─────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds
  * Returns all servers with their latest stats, map, and MOTD in one query.
  *
  * `groupId` restricts the result to one network: the families whose ROOT has
- * `server_group_id = :groupId AND NOT aggregate_exclude` (the membership rule
+ * `server_group_id = :groupId` and not aggregate-excluded (the membership rule
  * getNetworkDetails uses). The scope is applied inside the per-family CTEs so
  * the DISTINCT ON sorts only touch that network's rows, not the whole site.
  * Ratings are deliberately NOT scoped: `newest_reviews` also feeds the
@@ -63,7 +63,7 @@ export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds
 export async function getAllServerElements(hoursBack: number = 36, groupId?: number): Promise<ServerElement[]> {
     const scoped = groupId !== undefined;
     const familyScope = scoped
-        ? `sc.canonical_id IN (SELECT root.id FROM servers root WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude)`
+        ? `sc.canonical_id IN (SELECT root.id FROM servers root WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()})`
         : null;
     const rows: any[] = await sequelize.query(`
         WITH live_members AS (
@@ -182,13 +182,13 @@ export async function getAllServerElements(hoursBack: number = 36, groupId?: num
             stats.max_players AS "playerLimit",
             stats.wave, stats.version, stats.version_type AS "versionType", stats.ping,
             motds."serverName", motds.description,
-            maps."modeName", maps."mapName", maps.mode, root.aggregate_exclude AS "aggregateExclude",
+            maps."modeName", maps."mapName", maps.mode, (root.id IN (${EXCLUDED_FAMILIES_SQL})) AS "aggregateExclude",
             fr.rating_count AS "ratingCount", fr.rating_sum AS "ratingSum", fr.rating_avg AS "ratingAvg",
             gr.mean AS "globalRatingMean"${scoped ? ', fu.uptime_24h AS "uptime24h"' : ''}
         FROM live_members lm
-        -- Family-level properties (group, exclusion) come from the ROOT row,
-        -- so a merge can never leave half a family in a different group or
-        -- excluded state than the other half.
+        -- Family-level properties: the group comes from the ROOT row and
+        -- exclusion from aggregate_excluded_families (keyed on the root), so a
+        -- merge can never leave half a family in a different state.
         JOIN servers root             ON root.id = lm.canonical_id
         LEFT JOIN server_groups sg    ON root.server_group_id = sg.id
         LEFT JOIN family_meta fam     ON fam.canonical_id = lm.canonical_id
@@ -198,7 +198,7 @@ export async function getAllServerElements(hoursBack: number = 36, groupId?: num
         LEFT JOIN family_ratings fr   ON fr.canonical_id    = lm.canonical_id
         ${scoped ? 'LEFT JOIN family_uptime fu ON fu.canonical_id = lm.canonical_id' : ''}
         CROSS JOIN global_rating gr
-        ${scoped ? 'WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude' : ''}
+        ${scoped ? `WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()}` : ''}
         ORDER BY sg.name, lm.host, lm.port
     `, { replacements: { hoursBack, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT, ...(scoped ? { groupId } : {}) }, type: QueryTypes.SELECT });
 
@@ -417,7 +417,7 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             SELECT sc.server_id, sc.canonical_id
             FROM server_canonical sc
             JOIN servers root ON root.id = sc.canonical_id
-            WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude
+            WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()}
         ),
         group_families AS (
             -- Distinct family list once, so canonical_id-level joins below
@@ -458,7 +458,7 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
                 FROM server_current cur
                 ${canonicalJoin('sc', 'cur')}
                 JOIN servers root ON root.id = sc.canonical_id
-                WHERE NOT root.aggregate_exclude
+                WHERE ${notExcludedRootSql()}
                   AND cur.online
                   AND cur.timestamp > NOW() - INTERVAL '1 hour'
                   AND cur.players >= 0 AND cur.players < :maxRealisticPlayerCount

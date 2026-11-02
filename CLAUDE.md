@@ -62,7 +62,7 @@ Rules every read has to follow:
 - **Public IDs are canonical IDs.** This was a breaking change; nothing keeps the old raw-ID contract.
 - **Stats stay keyed on the raw `server_id`.** Collapsing happens at read time, which is the whole point: a merge never invalidates a continuous aggregate, so retention policies are irrelevant to merge correctness.
 - **Collapse aliases with MAX, never SUM.** Both addresses answer for a while either side of an IP change, and summing reports one server's players twice.
-- **Family-level properties (`server_group_id`, `aggregate_exclude`) come from the root row**; the address shown to a visitor comes from the family's live member, since the root is the oldest row and therefore the stalest address.
+- **Family-level properties come from the family, never a raw row**: `server_group_id` from the root row; aggregate exclusion from `aggregate_excluded_families` (keyed on the root, kept there by merge/unmerge, set by hand with `SELECT set_aggregate_exclude(<any member id>, true|false)`; migration 45). Use `aggregateExcludeSql` / `notExcludedRootSql` / `EXCLUDED_FAMILIES_SQL` from `canonicalIdentity.ts`. The address shown to a visitor comes from the family's live member, since the root is the oldest row and therefore the stalest address.
 - **Anything counting servers uses `COUNT(DISTINCT canonical_id)`.**
 
 Chart queries are all the same three-step shape: peak per (instant, canonical server) → sum across servers per instant → pick the busiest instant in each coarse bucket, then gapfill. Summing per-server bucket maxima instead would add up peaks that never coexisted.

@@ -19,6 +19,7 @@ import {
 } from './aggregateTiers.js';
 import {
     aggregateExcludeSql,
+    notExcludedRootSql,
     canonicalJoin,
     familyMembersSql,
     serverFamilySql,
@@ -51,8 +52,8 @@ interface RawHistoryRow {
  * to their members here and the query collapses them back onto the canonical id
  * afterwards.  That is what keeps a merge free of any aggregate invalidation.
  *
- * The single-server scope deliberately does not apply the aggregate_exclude
- * filter — excluding a hub server from global totals is not a reason to refuse
+ * The single-server scope deliberately does not apply the aggregate
+ * exclusion filter — excluding a hub server from global totals is not a reason to refuse
  * to draw its own chart.
  */
 function scopeFilter(scope: Scope): { sql: string; params: Record<string, unknown> } {
@@ -67,7 +68,7 @@ function scopeFilter(scope: Scope): { sql: string; params: Record<string, unknow
         case 'network':
             return {
                 sql: `src.server_id IN (${familyMembersSql(
-                    'root.server_group_id = :groupId AND NOT root.aggregate_exclude'
+                    `root.server_group_id = :groupId AND ${notExcludedRootSql()}`
                 )})`,
                 params: { groupId: scope.groupId }
             };

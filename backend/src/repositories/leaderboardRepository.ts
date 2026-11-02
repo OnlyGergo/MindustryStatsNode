@@ -5,8 +5,8 @@
 // long one immediately before it, [start - (end - start), start), and can be
 // any earlier window instead (Wrapped compares against the previous year).
 //
-// Exclusion here is stricter than the charts': a family is left out if ANY
-// member is flagged aggregate_exclude (strictAggregateExcludeSql).
+// Aggregate-excluded families (aggregate_excluded_families) are left out,
+// same rule as the charts (aggregateExcludeSql).
 //
 // Player-hours = the mean players of each hour bucket (sum_players / samples),
 // summed over the window. Aliases of one server collapse with MAX per
@@ -30,7 +30,7 @@ import type {
     ServerRef,
     WaveRow,
 } from '../../../common/models/leaderboard.js';
-import { EXCLUDED_FAMILIES_SQL, liveMemberSql, strictAggregateExcludeSql } from './canonicalIdentity.js';
+import { EXCLUDED_FAMILIES_SQL, liveMemberSql, aggregateExcludeSql } from './canonicalIdentity.js';
 import { rawHourMapCte } from './playerHoursSql.js';
 import { pickMovers, rankTop, round1, shareOf } from './leaderboardMath.js';
 
@@ -93,7 +93,7 @@ const FAMILY_HOUR_CTE = `
         FROM server_stats_1h st
         JOIN server_canonical sc ON sc.server_id = st.server_id
         WHERE ${windowsSql('st.bucket')}
-          AND ${strictAggregateExcludeSql('st')}
+          AND ${aggregateExcludeSql('st')}
         GROUP BY sc.canonical_id, st.bucket
     )`;
 
@@ -309,7 +309,7 @@ export async function getRecords(start: Date, end: Date): Promise<RecordRow[]> {
                       FROM server_peaks p2
                       JOIN server_canonical sc2 ON sc2.server_id = p2.server_id
                       WHERE p2.peak_at >= :start AND p2.peak_at < :end)
-              AND ${strictAggregateExcludeSql('p')}
+              AND ${aggregateExcludeSql('p')}
             ORDER BY sc.canonical_id, p.all_time_peak DESC, p.peak_at ASC
         ) fam
         WHERE peak_at >= :start AND peak_at < :end
@@ -339,7 +339,7 @@ export async function getReliable(
             FROM server_stats_1h st
             JOIN server_canonical sc ON sc.server_id = st.server_id
             WHERE st.bucket >= :start AND st.bucket < :end
-              AND ${strictAggregateExcludeSql('st')}
+              AND ${aggregateExcludeSql('st')}
             GROUP BY sc.canonical_id, st.server_id
         ) per_server
         GROUP BY canonical_id
@@ -508,7 +508,7 @@ export async function getPeakHour(start: Date, end: Date): Promise<{ peakPlayers
             FROM ${table} st
             JOIN server_canonical sc ON sc.server_id = st.server_id
             WHERE st.bucket >= :start AND st.bucket < :end
-              AND ${strictAggregateExcludeSql('st')}
+              AND ${aggregateExcludeSql('st')}
             GROUP BY sc.canonical_id, st.bucket
         ) fp
         GROUP BY fp.bucket

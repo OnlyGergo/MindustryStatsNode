@@ -9,7 +9,7 @@
 
 import sequelize from '../config/database.js';
 import { QueryTypes } from 'sequelize';
-import { strictAggregateExcludeSql } from './canonicalIdentity.js';
+import { aggregateExcludeSql } from './canonicalIdentity.js';
 import { round1 } from './leaderboardMath.js';
 
 /** Per (family, hour) player-hours; `idFilter` optionally narrows families. */
@@ -20,7 +20,7 @@ const famHourCte = (idFilter = '') => `
         FROM server_stats_1h st
         JOIN server_canonical sc ON sc.server_id = st.server_id
         WHERE st.bucket >= :start AND st.bucket < :end
-          AND ${strictAggregateExcludeSql('st')}
+          AND ${aggregateExcludeSql('st')}
           ${idFilter}
         GROUP BY sc.canonical_id, st.bucket
     )`;
