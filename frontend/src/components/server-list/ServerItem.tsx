@@ -25,7 +25,7 @@ const ServerItem: React.FC<{
       // Read by StaticServerList's search, which only has the markup.
       data-server={`${server.host}:${server.port}`}
       data-network={server.name}
-      className={`p-4 cursor-pointer transition-colors flex items-start justify-between ${
+      className={`p-4 cursor-pointer transition-colors flex [content-visibility:auto] [contain-intrinsic-size:auto_96px] items-start justify-between ${
         isSelected
           ? "bg-accent-muted border-l-4 border-default"
           : "hover:bg-accent-hover border-default"
@@ -60,7 +60,7 @@ const ServerItem: React.FC<{
       </div>
       <div className="flex flex-col items-end">
         <span
-          className={`${statusClass} text-xs px-2 py-1 rounded border backdrop-blur-sm mb-1`}
+          className={`${statusClass} text-xs px-2 py-1 rounded border mb-1`}
         >
           {server.online
             ? "Online - " + (serverData?.ping ?? "N/A") + "ms"
@@ -82,4 +82,4 @@ const ServerItem: React.FC<{
   );
 };
 
-export default ServerItem;
+export default React.memo(ServerItem);

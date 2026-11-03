@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useDeferredValue, useEffect, useMemo, useRef, useState} from 'react';
 import {getRouteApi, useNavigate} from '@tanstack/react-router';
 import {ServerListItem} from '../../../common/models/serverData';
 import {removeColors} from '../util/mindustry';
@@ -202,16 +202,20 @@ export const useServerList = (rawServers: ServerListItem[]) => {
     }, 300);
   };
 
+  // The input updates at once; the (re-)filtered list renders at low priority, so
+  // typing stays responsive on a phone even while hundreds of rows re-render.
+  const filterTerm = useDeferredValue(searchTerm);
+
   const processedData = useMemo(() => {
     if (!rawServers || !Array.isArray(rawServers)) {
       return { serverGroups: [] as ServerGroupEntry[], flatServers: [] as ServerListItem[] };
     }
 
     // Step 1: Apply search filter
+    const searchLower = filterTerm.toLowerCase();
     let filteredServers = rawServers.filter(server => {
-      if (!searchTerm) return true;
+      if (!searchLower) return true;
 
-      const searchLower = searchTerm.toLowerCase();
       return (
         server.name.toLowerCase().includes(searchLower) ||
         server.currentData?.serverName?.toLowerCase().includes(searchLower) ||
@@ -256,7 +260,7 @@ export const useServerList = (rawServers: ServerListItem[]) => {
     } else {
       return { serverGroups: [] as ServerGroupEntry[], flatServers: [...filteredServers].sort(serverComparator) };
     }
-  }, [rawServers, searchTerm, isGrouped, hideInactiveEnabled, sortCriteria, sortDirection]);
+  }, [rawServers, filterTerm, isGrouped, hideInactiveEnabled, sortCriteria, sortDirection]);
 
   const toggleGrouping = () => patchSearch({ grouped: !isGrouped });
   const toggleHideInactive = () => patchSearch({ inactive: hideInactiveEnabled });

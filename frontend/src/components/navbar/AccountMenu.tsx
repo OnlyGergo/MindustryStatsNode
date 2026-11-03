@@ -132,7 +132,7 @@ const AccountMenu: React.FC = () => {
         {isOpen && (
           <div
             role="menu"
-            className="absolute top-full right-0 mt-1 z-50 w-48 max-w-[calc(100vw-2rem)] bg-surface-secondary border border-default backdrop-blur-md rounded shadow-xl overflow-hidden"
+            className="absolute top-full right-0 mt-1 z-50 w-48 max-w-[calc(100vw-2rem)] bg-surface-secondary border border-default rounded shadow-xl overflow-hidden"
           >
             <div className="px-3 py-2 border-b border-subtle">
               <span className="text-sm font-medium text-primary truncate block">{displayName}</span>

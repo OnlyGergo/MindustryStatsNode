@@ -29,7 +29,7 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({
       onClick={onClick}
       className={`${
         isActive ? activeColor : inactiveColor
-      } ${sizeClassName} border rounded transition-colors backdrop-blur-sm ${className}`}
+      } ${sizeClassName} border rounded transition-colors ${className}`}
     >
       {isActive ? activeText : inactiveText}
     </button>

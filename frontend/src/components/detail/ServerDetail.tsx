@@ -89,7 +89,7 @@ const ServerDetail: React.FC<{
               <div className="flex flex-wrap gap-2 mt-3">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                   <span
-                    className={`${statusClass} text-xs sm:text-sm px-2 sm:px-3 py-1 rounded border backdrop-blur-sm`}
+                    className={`${statusClass} text-xs sm:text-sm px-2 sm:px-3 py-1 rounded border`}
                   >
                     {serverStatus}
                   </span>

@@ -101,7 +101,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({ open, onClose, label, childre
         aria-label={label}
         tabIndex={-1}
         style={{ transform: translate === null ? "translateY(100%)" : `translateY(${translate}px)` }}
-        className={`absolute inset-x-0 bottom-0 max-h-[85dvh] flex flex-col rounded-t-2xl bg-surface-secondary backdrop-blur-md border-t border-default shadow-2xl outline-none pb-[env(safe-area-inset-bottom)] ${
+        className={`absolute inset-x-0 bottom-0 max-h-[85dvh] flex flex-col rounded-t-2xl bg-surface-secondary border-t border-default shadow-2xl outline-none pb-[env(safe-area-inset-bottom)] ${
           dragging ? "" : "transition-transform duration-250 ease-out motion-reduce:transition-none"
         }`}
       >

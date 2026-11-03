@@ -26,7 +26,7 @@ const NetworkDetail: React.FC<{ details: NetworkDetails; }> = ({
     <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-surface-secondary border border-subtle backdrop-blur-md rounded p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="mb-4 min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold text-primary mb-2 wrap-break-word">
               {String(details.name)}
