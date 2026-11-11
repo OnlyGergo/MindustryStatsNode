@@ -332,16 +332,22 @@ export async function getReliable(
     families: FamilyHours[],
 ): Promise<ReliabilityRow[]> {
     const rows = await sequelize.query<{ id: number; uptime: number }>(`
-        SELECT canonical_id AS id, MAX(uptime)::float8 AS uptime
+        -- Collapse aliases per (family, hour) BEFORE summing, as
+        -- get_server_details does. Only a family's primary is polled between
+        -- daily sweeps, so a non-primary alias has ~1 sample a day; ratioing
+        -- per raw server and taking the MAX would let its 1/1 = 100% win.
+        SELECT canonical_id AS id,
+               SUM(online)::float8 / NULLIF(SUM(samples), 0) AS uptime
         FROM (
-            SELECT sc.canonical_id, st.server_id,
-                   SUM(st.online_samples)::float8 / NULLIF(SUM(st.samples), 0) AS uptime
+            SELECT sc.canonical_id, st.bucket,
+                   MAX(st.online_samples) AS online,
+                   MAX(st.samples)        AS samples
             FROM server_stats_1h st
             JOIN server_canonical sc ON sc.server_id = st.server_id
             WHERE st.bucket >= :start AND st.bucket < :end
               AND ${aggregateExcludeSql('st')}
-            GROUP BY sc.canonical_id, st.server_id
-        ) per_server
+            GROUP BY sc.canonical_id, st.bucket
+        ) per_family_hour
         GROUP BY canonical_id
     `, { replacements: { start, end }, type: QueryTypes.SELECT });
     const cur = new Map(families.map((f) => [f.id, f.cur]));

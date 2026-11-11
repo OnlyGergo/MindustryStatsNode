@@ -177,7 +177,7 @@ $$;
 -- ─── get_server_details reads the family flag ───────────────────────────────
 -- Same body as 43_server_details_slim.sql; only the root CTE changes (the row
 -- type is unchanged, so CREATE OR REPLACE is enough). plpgsql bodies are not
--- dependency-tracked, so the column drop below would succeed without this and
+-- dependency-tracked, so the (later) column drop would succeed without this and
 -- every /server/<id> page would then fail at call time.
 
 create or replace function get_server_details(server_id_param integer)
@@ -466,8 +466,11 @@ BEGIN
 END;
 $$;
 
--- ─── Drop the per-row column ────────────────────────────────────────────────
-alter table servers drop column aggregate_exclude;
+-- servers.aggregate_exclude is NOT dropped here: the master backend still
+-- reads root.aggregate_exclude, so dropping it with this migration would break
+-- the site until the new backend lands. The drop is parked in
+-- 48_drop_servers_aggregate_exclude.sql_pending; rename it to .sql once the
+-- backend that reads aggregate_excluded_families is live.
 
 -- Families that were only flagged on an alias were counted in network peaks
 -- until now; rebuild them under the new rule.

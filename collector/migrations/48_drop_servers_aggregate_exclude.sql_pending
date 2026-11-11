@@ -1,0 +1,20 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 48_drop_servers_aggregate_exclude.sql  (parked as .sql_pending)
+--
+-- Second half of 45_family_aggregate_exclude.sql. The collector skips files
+-- that don't end in .sql, so this stays unapplied until it is renamed.
+--
+-- Deploy order:
+--   1. Deploy the collector: 45 adds aggregate_excluded_families and seeds it,
+--      leaving servers.aggregate_exclude in place for the old backend.
+--   2. Deploy the backend that reads aggregate_excluded_families.
+--   3. Rename this file to .sql and redeploy/restart the collector.
+--
+-- Between 1 and 2 the old backend still reads the per-row column, which no
+-- longer changes (the admin setter writes the family table only). That is
+-- stale for exclusions set during the window, not broken.
+--
+-- IF EXISTS: an environment that ran the original 45 has already dropped it.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+alter table servers drop column if exists aggregate_exclude;

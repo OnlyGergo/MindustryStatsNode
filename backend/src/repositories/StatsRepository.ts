@@ -106,10 +106,23 @@ function buildPerCanonical(
         playerFilterSql(source, 'src'),
     ].filter((c): c is string => c != null);
 
+    // Offline polls are stored as players = 0, online = false. For a server or
+    // a network chart that has to read as "offline" (NULL, drawn as a shaded
+    // gap), not as "online with nobody on": only online samples count, so a
+    // server with no online sample in an instant contributes NULL, and a
+    // network is NULL only when every member is (SUM skips NULLs). The global
+    // chart keeps counting offline as 0; across hundreds of servers it is
+    // never all-offline, and it has no use for the distinction.
+    const players = scope.kind === 'global'
+        ? `MAX(src.${source.playersColumn})`
+        : source.needsPlayerFilter
+            ? `MAX(src.${source.playersColumn}) FILTER (WHERE src.online)`
+            : `MAX(src.${source.playersColumn}) FILTER (WHERE src.online_samples > 0)`;
+
     const perCanonicalSql = `per_canonical AS (
             SELECT ${fine} AS fine_bucket,
                    sc.canonical_id,
-                   MAX(src.${source.playersColumn}) AS players
+                   ${players} AS players
             FROM ${source.table} src
                      ${canonicalJoin('sc', 'src')}
             WHERE ${conditions.join('\n              AND ')}
@@ -185,7 +198,7 @@ function buildHistoryQuery(
         peak_instant AS (
             SELECT DISTINCT ON (${COARSE_OF('t.fine_bucket')}) t.fine_bucket, t.players
             FROM per_instant t
-            ORDER BY ${COARSE_OF('t.fine_bucket')}, t.players DESC, t.fine_bucket
+            ORDER BY ${COARSE_OF('t.fine_bucket')}, t.players DESC NULLS LAST, t.fine_bucket
         )
         SELECT extract(epoch FROM g.gf_bucket) * 1000 AS timestamp,
                g.players
@@ -328,7 +341,7 @@ export async function getNetworkServerHistory(
         peak_instant AS (
             SELECT DISTINCT ON (${COARSE_OF('t.fine_bucket')}) t.fine_bucket, t.players
             FROM per_instant t
-            ORDER BY ${COARSE_OF('t.fine_bucket')}, t.players DESC, t.fine_bucket
+            ORDER BY ${COARSE_OF('t.fine_bucket')}, t.players DESC NULLS LAST, t.fine_bucket
         ),
         top_families AS (
             SELECT canonical_id, MAX(players) AS peak
