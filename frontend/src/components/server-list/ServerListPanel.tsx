@@ -8,6 +8,7 @@ import { useServerList } from "../../hooks/useServerList.ts";
 import ServerStatsSummary from "../navbar/ServerStatsSummary.tsx";
 import { useServerListData } from "../../context/ServerListContext.tsx";
 import { useBrowseLayout } from "../../context/BrowseLayoutContext.tsx";
+import ServerListSkeleton from "./ServerListSkeleton.tsx";
 import StaticServerList, { topOfList } from "./StaticServerList.tsx";
 
 interface ServerListPanelProps {
@@ -22,6 +23,7 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
     onlineServers,
     totalPlayers,
     staticList,
+    loading,
     error,
     lastUpdated,
   } = useServerListData();
@@ -78,6 +80,11 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
       <FlatServerList servers={flat} selectedServerId={selectedServerId} />
     );
 
+  // Nothing to show yet: the header counts say the SSR page had no rows (so there is no static
+  // markup to keep) and the client is still fetching, possibly retrying a Cloudflare challenge.
+  // totalServers comes from loader data, so server and client agree and hydration holds.
+  const showSkeleton = loading && staticList && totalServers === 0 && rawServers.length === 0;
+
   // Collapse only exists at split+: below it the panel always renders as normal.
   let visibility: string;
   if (isMasterPanelCollapsed) visibility = mobileVisible ? "flex split:hidden" : "hidden";
@@ -125,7 +132,9 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
               </div>
           )}
 
-          {staticList ? (
+          {showSkeleton ? (
+              <ServerListSkeleton />
+          ) : staticList ? (
               <StaticServerList searchTerm={searchTerm}>
                 {renderList(topOfList(processedServerGroups, flatServers))}
               </StaticServerList>

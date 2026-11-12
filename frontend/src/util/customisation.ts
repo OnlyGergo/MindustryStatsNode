@@ -1,4 +1,5 @@
 import type React from "react";
+import { fetchJsonWithRetry } from "./fetchRetry.ts";
 import {
   ACCENT_COLOR_RE,
   UPLOAD_ID_RE,
@@ -59,9 +60,7 @@ export const fetchCustomisation = async (
   id: string,
 ): Promise<PublicCustomisation | null> => {
   try {
-    const r = await fetch(`${baseUrl}/api/${kind}/${id}/customisation`);
-    if (!r.ok) return null;
-    const j = (await r.json()) as Partial<PublicCustomisation> | null;
+    const j = await fetchJsonWithRetry<Partial<PublicCustomisation> | null>(`${baseUrl}/api/${kind}/${id}/customisation`);
     if (!j || typeof j !== "object") return null;
     return {
       accentColor: typeof j.accentColor === "string" ? j.accentColor : null,

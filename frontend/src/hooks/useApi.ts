@@ -1,18 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { ServerElement, ServerListItem } from '../../../common/models/serverData.ts';
 import { DEFAULT_REFRESH_INTERVAL_MS } from '../../../common/models/ClientConfig.ts';
-import { ApiPacker } from '../../../common/Packer.ts';
+import { ApiPacker, ApiResponsePacket } from '../../../common/Packer.ts';
 import { getBaseUrl } from '../util/getApi.ts';
 import { useClientConfig } from './useClientConfig.ts';
+import { fetchJsonWithRetry } from '../util/fetchRetry.ts';
 
 /** The full server list, from the server (SSR loader) or the browser alike. */
-export const loadServerList = async (): Promise<ServerListItem[]> => {
-    const response = await fetch(`${getBaseUrl()}/api/servers`);
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return ApiPacker.unpack<ServerElement>(await response.json());
-};
+export const loadServerList = async (signal?: AbortSignal): Promise<ServerListItem[]> =>
+    // Retries Cloudflare challenges on a visitor's first fetch (single attempt during SSR).
+    ApiPacker.unpack<ServerElement>(await fetchJsonWithRetry<ApiResponsePacket>(`${getBaseUrl()}/api/servers`, { signal }));
 
 /**
  * Client-side hook that keeps polling `/api/servers` every `refreshInterval` (from `/config`) to stay in
@@ -22,6 +19,9 @@ export const loadServerList = async (): Promise<ServerListItem[]> => {
 const useApi = (initialData: ServerListItem[] | null = null) => {
     const [data, setData] = useState<ServerListItem[] | null>(initialData);
     const [error, setError] = useState<Error | null>(null);
+    // True until the first fetch settles (it may be retrying behind a Cloudflare challenge).
+    const [fetching, setFetching] = useState(initialData === null);
+    const dataRef = useRef<ServerListItem[] | null>(initialData);
     const { config: clientConfig, loading: isConfigLoading, error: configError } = useClientConfig();
 
     // Only the *first* run may skip the immediate fetch. Kept in a ref rather than
@@ -42,20 +42,31 @@ const useApi = (initialData: ServerListItem[] | null = null) => {
     }, [configError]);
 
     useEffect(() => {
-        let isMounted = true;
+        const controller = new AbortController();
+        let inFlight = false;
 
         const fetchServerStats = async () => {
+            // A retry loop can outlast the poll interval; never stack a second one.
+            if (inFlight) return;
+            inFlight = true;
             try {
-                const servers = await loadServerList();
-                if (isMounted) {
-                    setData(servers);
-                    setError(null);
-                }
+                const servers = await loadServerList(controller.signal);
+                if (controller.signal.aborted) return;
+                dataRef.current = servers;
+                setData(servers);
+                setError(null);
             } catch (err) {
-                console.error('Error fetching server stats:', err);
-                if (isMounted) {
+                if (controller.signal.aborted) return;
+                if (dataRef.current) {
+                    // Keep showing the last good list; the next poll tries again.
+                    console.warn('Server list refresh failed, keeping previous data:', err);
+                } else {
+                    console.error('Error fetching server stats:', err);
                     setError(err instanceof Error ? err : new Error('Unknown error'));
                 }
+            } finally {
+                inFlight = false;
+                if (!controller.signal.aborted) setFetching(false);
             }
         };
         fetchRef.current = fetchServerStats;
@@ -67,7 +78,7 @@ const useApi = (initialData: ServerListItem[] | null = null) => {
         }
 
         return () => {
-            isMounted = false;
+            controller.abort();
             fetchRef.current = null;
         };
     }, []);
@@ -79,7 +90,7 @@ const useApi = (initialData: ServerListItem[] | null = null) => {
         return () => clearInterval(pollInterval);
     }, [refreshInterval]);
 
-    return { data, error };
+    return { data, error, loading: fetching && !data };
 };
 
 export default useApi;

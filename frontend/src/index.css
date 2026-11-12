@@ -172,3 +172,25 @@ body {
     outline-offset: 1px;
   }
 }
+/* Wrapped story: entrance animations, staggered with inline animation-delay. */
+@keyframes wr-rise { from { opacity: 0; transform: translateY(1.5rem); } to { opacity: 1; transform: none; } }
+@keyframes wr-pop { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+@keyframes wr-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wr-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes wr-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes wr-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes wr-glow {
+  0%, 100% { transform: translate3d(-8%, -6%, 0) scale(1); opacity: 0.55; }
+  50% { transform: translate3d(8%, 6%, 0) scale(1.25); opacity: 0.85; }
+}
+.wr-rise { animation: wr-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.wr-pop { animation: wr-pop 0.8s cubic-bezier(0.2, 1.2, 0.3, 1) both; }
+.wr-fade { animation: wr-fade 0.6s ease-out both; }
+.wr-grow-y { transform-origin: bottom; animation: wr-grow-y 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.wr-grow-x { transform-origin: left; animation: wr-grow-x 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.wr-progress { transform-origin: left; animation: wr-progress linear both; }
+.wr-glow { animation: wr-glow 9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .wr-rise, .wr-pop, .wr-fade, .wr-grow-y, .wr-grow-x, .wr-glow { animation: none; }
+  .wr-progress { animation: none; transform: none; }
+}

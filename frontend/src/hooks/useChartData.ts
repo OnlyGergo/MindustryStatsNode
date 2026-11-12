@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getBaseUrl } from "../util/getApi.ts";
+import { fetchJsonWithRetry } from "../util/fetchRetry.ts";
 
 /** Matches the server's chart `withCache` TTLs, so a client hit is never staler than a server one. */
 const TTL_MS = 5 * 60_000;
@@ -34,8 +35,7 @@ export function loadChartData<T>(url: string, parse: (json: unknown) => T): Prom
     const inFlight = cache.get(url)?.pending;
     if (inFlight) return inFlight as Promise<T>;
 
-    const pending = fetch(`${getBaseUrl()}${url}`)
-        .then((r) => r.ok ? r.json() : Promise.reject(new Error(`Status ${r.status}: ${r.statusText}`)))
+    const pending = fetchJsonWithRetry<unknown>(`${getBaseUrl()}${url}`)
         .then(parse)
         .then((value) => {
             cache.set(url, { at: Date.now(), value });

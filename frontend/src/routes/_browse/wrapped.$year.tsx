@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
+import type { SearchSchemaInput } from "@tanstack/react-router";
 import { DetailShell } from "../../components/server-list/DetailShell.tsx";
 import { EmptyState } from "../../components/detail/EmptyState.tsx";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
-import WrappedPage from "../../components/wrapped/WrappedPage.tsx";
+import WrappedView from "../../components/wrapped/WrappedView.tsx";
 import { getBaseUrl } from "../../util/getApi.ts";
 import { docTitle } from "../../util/pageTitle.ts";
 import type { WrappedReport } from "../../../../common/models/leaderboard.ts";
@@ -31,6 +32,8 @@ async function loadWrapped(year: string): Promise<WrappedLoad> {
 
 export const Route = createFileRoute("/_browse/wrapped/$year")({
   staticData: { title: "Wrapped", back: true },
+  validateSearch: (input: { view?: unknown } & SearchSchemaInput): { view?: "summary" } =>
+    input.view === "summary" ? { view: "summary" } : {},
   component: WrappedComponent,
   pendingComponent: () => (
     <DetailShell>
@@ -46,6 +49,7 @@ export const Route = createFileRoute("/_browse/wrapped/$year")({
 function WrappedComponent() {
   const data = Route.useLoaderData();
   const { year } = Route.useParams();
+  const { view } = Route.useSearch();
   const router = useRouter();
   const building = data.status === "building";
 
@@ -61,7 +65,7 @@ function WrappedComponent() {
   return (
     <DetailShell>
       {data.status === "ok" ? (
-        <WrappedPage report={data.report} />
+        <WrappedView report={data.report} summaryFirst={view === "summary"} />
       ) : data.status === "building" ? (
         <EmptyState title={`Wrapping up ${year}…`} message="This takes a moment." />
       ) : data.status === "not_found" ? (

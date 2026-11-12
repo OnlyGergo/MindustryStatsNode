@@ -16,6 +16,9 @@ interface ServerListContextValue extends ServerListSummary {
    * as markup only, which the client keeps unhydrated until its own fetch lands.
    */
   staticList: boolean;
+  /** No client data yet and the fetch is still in progress (possibly retrying). */
+  loading: boolean;
+  /** Every retry failed and there is no data to show. */
   error: boolean;
   lastUpdated: Date;
 }
@@ -61,7 +64,7 @@ export const ServerListProvider: React.FC<ServerListProviderProps> = ({
   children,
 }) => {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const { data, error } = useApi(initialData);
+  const { data, error, loading } = useApi(initialData);
 
   useEffect(() => {
     if (!data) return;
@@ -78,10 +81,11 @@ export const ServerListProvider: React.FC<ServerListProviderProps> = ({
       serverGroups: buildServerGroups(servers),
       ...(data ? summariseServers(data) : summary),
       staticList: !data,
+      loading: loading && !data,
       error: !!error && !data,
       lastUpdated,
     };
-  }, [data, ssrRows, summary, error, lastUpdated]);
+  }, [data, ssrRows, summary, error, loading, lastUpdated]);
 
   return (
     <ServerListContext.Provider value={value}>

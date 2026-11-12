@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { ServerElement } from "../../../../common/models/serverData.ts";
-import { ApiPacker } from "../../../../common/Packer.ts";
+import { ApiPacker, ApiResponsePacket } from "../../../../common/Packer.ts";
 import { getBaseUrl } from "../../util/getApi.ts";
+import { fetchJsonWithRetry } from "../../util/fetchRetry.ts";
 
 interface NetworkServersState {
     servers: ServerElement[];
@@ -19,11 +20,11 @@ export function useNetworkServers(networkId: number): NetworkServersState {
 
     useEffect(() => {
         let cancelled = false;
+        const controller = new AbortController();
         setState({ servers: [], loading: true, error: null });
 
-        fetch(`${getBaseUrl()}/api/networks/${networkId}/servers`)
-            .then((r) => r.ok ? r.json() : Promise.reject("Unable to load the network's servers."))
-            .then((r) => ApiPacker.unpack<ServerElement>(r))
+        fetchJsonWithRetry<unknown>(`${getBaseUrl()}/api/networks/${networkId}/servers`, { signal: controller.signal })
+            .then((r) => ApiPacker.unpack<ServerElement>(r as ApiResponsePacket))
             .then((servers: ServerElement[]) => {
                 if (!cancelled) setState({ servers, loading: false, error: null });
             })
@@ -34,7 +35,7 @@ export function useNetworkServers(networkId: number): NetworkServersState {
                 setState({ servers: [], loading: false, error: message });
             });
 
-        return () => { cancelled = true; };
+        return () => { cancelled = true; controller.abort(); };
     }, [networkId]);
 
     return state;

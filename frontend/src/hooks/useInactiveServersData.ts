@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { InactiveServerInfo } from '../../../common/models/RepositoryTypes';
 import { ServerListStats } from '../../../common/models/serverData';
-import { ApiPacker } from '../../../common/Packer';
+import { ApiPacker, ApiResponsePacket } from '../../../common/Packer';
 import { getBaseUrl } from '../util/getApi';
+import { fetchJsonWithRetry } from '../util/fetchRetry';
 
 interface UseInactiveServersDataResult {
   inactiveServers: InactiveServerInfo[];
@@ -24,17 +25,9 @@ export function useInactiveServersData(): UseInactiveServersDataResult {
 
     try {
       const baseUrl = getBaseUrl();
-      const [serversRes, statsRes] = await Promise.all([
-        fetch(`${baseUrl}/api/inactive-servers`),
-        fetch(`${baseUrl}/api/serverlist-stats`),
-      ]);
-
-      if (!serversRes.ok) throw new Error('Failed to fetch inactive servers');
-      if (!statsRes.ok) throw new Error('Failed to fetch server list stats');
-
       const [serversRaw, statsRaw] = await Promise.all([
-        serversRes.json(),
-        statsRes.json(),
+        fetchJsonWithRetry<ApiResponsePacket>(`${baseUrl}/api/inactive-servers`),
+        fetchJsonWithRetry<ApiResponsePacket>(`${baseUrl}/api/serverlist-stats`),
       ]);
 
       const serversData: InactiveServerInfo[] = ApiPacker.unpack(serversRaw);

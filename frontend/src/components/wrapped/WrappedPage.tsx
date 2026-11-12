@@ -37,7 +37,7 @@ const MapName: React.FC<{ row: MapRow }> = ({ row }) => (
   </div>
 );
 
-const WrappedPage: React.FC<{ report: WrappedReport }> = ({ report: r }) => {
+const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }> = ({ report: r, onPlayStory }) => {
   const bestMonthOf = new Map(r.bestMonths.map((b) => [b.id, b]));
   const winner = r.serverOfTheYear;
   const winnerBest = winner ? bestMonthOf.get(winner.id) : undefined;
@@ -51,6 +51,15 @@ const WrappedPage: React.FC<{ report: WrappedReport }> = ({ report: r }) => {
           <p className="text-sm sm:text-base text-secondary mt-2">
             {r.final ? `The year in Mindustry, ${r.year}.` : `so far · as of ${formatUtcDate(r.asOf)}`}
           </p>
+          {onPlayStory && (
+            <button
+              type="button"
+              onClick={onPlayStory}
+              className="mt-4 px-4 py-1.5 rounded-full bg-accent-muted border border-accent-border text-accent text-sm hover:bg-accent-hover cursor-pointer"
+            >
+              Play story
+            </button>
+          )}
         </header>
 
         <Card title="The year in numbers">
@@ -292,19 +301,6 @@ const WrappedPage: React.FC<{ report: WrappedReport }> = ({ report: r }) => {
                 },
                 { header: "Servers", cell: (c) => formatInt(c.servers), align: "right" },
                 { header: "Player-hours", cell: (c) => formatHours(c.playerHours), align: "right" },
-              ]}
-            />
-          </Card>
-        )}
-
-        {r.waves.length > 0 && (
-          <Card title="Deepest waves" note="Highest wave reached.">
-            <RankTable
-              rows={r.waves}
-              rowKey={(s) => s.id}
-              columns={[
-                { header: "Server", cell: (s) => <ServerName server={s} /> },
-                { header: "Wave", cell: (s) => formatInt(s.maxWave), align: "right" },
               ]}
             />
           </Card>

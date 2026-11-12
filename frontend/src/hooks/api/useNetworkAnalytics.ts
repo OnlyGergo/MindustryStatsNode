@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NetworkActivityCell, NetworkBreakdown } from "../../../../common/models/networkAnalytics.ts";
 import { getBaseUrl } from "../../util/getApi.ts";
+import { fetchJsonWithRetry } from "../../util/fetchRetry.ts";
 
 interface State<T> {
     data: T | null;
@@ -18,10 +19,10 @@ function useJson<T>(path: string | null): State<T> {
     useEffect(() => {
         if (path === null) return;
         let cancelled = false;
+        const controller = new AbortController();
         setState((s) => ({ ...s, loading: true, error: null }));
 
-        fetch(`${getBaseUrl()}${path}`)
-            .then((r) => r.ok ? r.json() : Promise.reject(new Error(`Status ${r.status}`)))
+        fetchJsonWithRetry<T>(`${getBaseUrl()}${path}`, { signal: controller.signal })
             .then((data: T) => { if (!cancelled) setState({ data, loading: false, error: null }); })
             .catch((err) => {
                 if (cancelled) return;
@@ -29,7 +30,7 @@ function useJson<T>(path: string | null): State<T> {
                 setState({ data: null, loading: false, error: "Unable to load this data. Please try again later." });
             });
 
-        return () => { cancelled = true; };
+        return () => { cancelled = true; controller.abort(); };
     }, [path]);
 
     return state;
