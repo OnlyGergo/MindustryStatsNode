@@ -106,7 +106,7 @@ function parseMarkupHex(tag: string): PackedColor | null {
 /** Resolves the inside of a [tag]: named colour first, then hex. */
 export function parseColor(tag: string): PackedColor | null {
   if (!tag) return null;
-  const c = tag.charCodeAt(0) === 35 ? parseMarkupHex(tag) : NAMED_COLORS[tag];
+  const c = tag.charCodeAt(0) === 35 ? parseMarkupHex(tag) : NAMED_COLORS[tag.replace('_', '')];
   return c === undefined || c === null ? null : clampAlpha(c);
 }
 
