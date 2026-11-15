@@ -43,7 +43,7 @@ const HOUR_MS = 3_600_000;
  * "infinite" wave counter), not a wave anyone reached. Hours carrying one are
  * ignored for the waves section.
  */
-const WAVE_SANITY_MAX = 2_000_000_000;
+const WAVE_SANITY_MAX = 10_000;
 
 interface Window {
     start: Date;

@@ -87,9 +87,6 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
               <h1 className="text-xl sm:text-2xl font-bold text-primary wrap-break-word">
                 Global Stats
               </h1>
-              <p className="text-sm sm:text-base text-secondary wrap-break-word">
-                Automated cluster network telemetry logging maps
-              </p>
             </div>
 
             <ChartControls
