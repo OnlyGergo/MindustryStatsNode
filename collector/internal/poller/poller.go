@@ -42,6 +42,9 @@ type ServerData struct {
 	ModeName    string
 	Online      bool
 	CountryCode string
+	// ResolvedIP is the IPv4 address the query actually reached, so an IP row
+	// and a domain row of one server can be matched up (servers.resolved_ip).
+	ResolvedIP netip.Addr
 }
 
 // Poller holds the query timeout and the geoip database; it is safe for
@@ -215,6 +218,7 @@ func (p *Poller) decode(buf []byte, host string, port, ping int, addr netip.Addr
 		ModeName:    DecodeGamemode(rawModeName, int(mode)),
 		Online:      true,
 		CountryCode: p.geo.Country(addr),
+		ResolvedIP:  addr,
 	}, nil
 }
 

@@ -38,7 +38,7 @@ export async function getInactiveServers(): Promise<InactiveServerInfo[]> {
             lm.port,
             fam.last_seen,
             -- inactivity_excluded is a family-level property, same rule as
-            -- aggregate_exclude: it comes from the ROOT row so a merge can't
+            -- the server group: it comes from the ROOT row so a merge can't
             -- leave half a family opted out of this report.
             root.inactivity_excluded,
             sg.name as group_name,

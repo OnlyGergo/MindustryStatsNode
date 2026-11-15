@@ -1,11 +1,27 @@
 import { createRouter as createTanStackRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
+import type { ServerListItem } from '../../common/models/serverData';
+
+/**
+ * Per-request (getRouter runs once per SSR request) holder for the full server
+ * list: the `_browse` loader fills it on the server and the SSR render reads it.
+ * Unlike loader data it is never serialised into the page, which is the point.
+ */
+export interface SsrServerList {
+  rows: ServerListItem[] | null;
+}
+
+export interface RouterContext {
+  head: string;
+  ssrServerList: SsrServerList;
+}
 
 export function getRouter() {
   return createTanStackRouter({
     routeTree,
     context: {
       head: '',
+      ssrServerList: { rows: null } as SsrServerList,
     },
     defaultPreload: 'intent',
     // Skip hovers that only pass over a link on the way somewhere else.

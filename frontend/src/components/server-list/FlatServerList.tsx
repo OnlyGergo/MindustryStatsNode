@@ -13,14 +13,14 @@ const FlatServerList: React.FC<FlatServerListProps> = ({
 }) => {
   if (servers.length === 0) {
     return (
-      <div className="card-base backdrop-blur-md p-6 text-center">
+      <div className="card-base p-6 text-center">
         <p className="text-secondary">No servers found matching your criteria.</p>
       </div>
     );
   }
 
   return (
-    <div className="card-base backdrop-blur-md overflow-hidden">
+    <div className="card-base overflow-hidden">
       <div className="divide-y divide-subtle">
         {servers.map(server => (
           <ServerItem

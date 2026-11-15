@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { NetworkActivityCell } from "../../../../common/models/networkAnalytics.ts";
 import { useNetworkActivity } from "../../hooks/api/useNetworkAnalytics.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
+import { useNearViewport } from "../../hooks/useNearViewport.ts";
 
 const DAYS = [7, 28, 90] as const;
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -28,7 +29,8 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 const NetworkActivity = ({ networkId }: { networkId: number }) => {
   const [days, setDays] = useState<7 | 28 | 90>(28);
-  const { data, loading, error } = useNetworkActivity(networkId, days);
+  const [ref, near] = useNearViewport<HTMLDivElement>();
+  const { data, loading, error } = useNetworkActivity(networkId, days, near);
 
   const tz = useMemo(() => {
     try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return "local time"; }
@@ -47,7 +49,7 @@ const NetworkActivity = ({ networkId }: { networkId: number }) => {
   }, [data]);
 
   return (
-    <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
+    <div ref={ref} className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
         <div>
           <h2 className="text-base sm:text-lg font-semibold text-primary">When it's busy</h2>

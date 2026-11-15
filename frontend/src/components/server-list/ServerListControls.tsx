@@ -128,7 +128,7 @@ const ServerListControls: React.FC<ServerListControlsProps> = ({
           </button>
 
           {filtersOpen && (
-            <div className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-1.5rem)] p-2 space-y-2 bg-surface-secondary border border-default backdrop-blur-md rounded shadow-xl">
+            <div className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-1.5rem)] p-2 space-y-2 bg-surface-secondary border border-default rounded shadow-xl">
               {groupButton}
               {inactiveButton}
               {sortDropdown}

@@ -34,6 +34,7 @@ existing `.env`.
 | `DB_POOL_MAX` / `DB_POOL_MIN` | `20` / `5` | Pool sizing, matching the Sequelize pool |
 | `SERVER_LIST_INTERVAL_MS` | `86400000` | Discovery cycle |
 | `DATA_COLLECTION_INTERVAL_MS` | `300000` | How often the whole server list is re-queued |
+| `FULL_COLLECTION_INTERVAL_MS` | `86400000` | How often a sweep polls every live member of a merged family, not just its primary |
 | `SERVER_COLLECTION_INTERVAL_MS` | `1000` | Rate-limit window (p-queue's `interval`) |
 | `COLLECTION_CONCURRENCY` | `max(4, cores × 1.5)` | Workers; at most `2 ×` this many queries start per window |
 | `MINDUSTRY_TIMEOUT_MS` | `1000` | UDP response deadline |

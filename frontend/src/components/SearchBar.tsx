@@ -25,7 +25,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearchValueChange, value }) => 
                     w-full px-3 py-1 rounded
                     border border-default
                     bg-surface-secondary
-                    text-secondary text-xs backdrop-blur-sm
+                    text-secondary text-xs
                     focus:outline-none focus:border-accent
                     hover:bg-accent-hover hover:border-accent
                     transition-colors"

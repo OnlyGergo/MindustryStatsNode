@@ -14,13 +14,16 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BrowseIndexRouteImport } from './routes/_browse/index'
 import { Route as BrowseGlobalRouteImport } from './routes/_browse/global'
 import { Route as BrowseInactiveRouteImport } from './routes/_browse/inactive'
+import { Route as BrowseLeaderboardRouteImport } from './routes/_browse/leaderboard'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminHubsRouteImport } from './routes/admin/hubs'
 import { Route as AdminImagesRouteImport } from './routes/admin/images'
 import { Route as AdminMergesRouteImport } from './routes/admin/merges'
 import { Route as AdminOwnersRouteImport } from './routes/admin/owners'
 import { Route as AdminReportsRouteImport } from './routes/admin/reports'
 import { Route as BrowseNetworkNetworkIdRouteImport } from './routes/_browse/network.$networkId'
 import { Route as BrowseServerServerIdRouteImport } from './routes/_browse/server.$serverId'
+import { Route as BrowseWrappedYearRouteImport } from './routes/_browse/wrapped.$year'
 
 const BrowseRoute = BrowseRouteImport.update({
   id: '/_browse',
@@ -46,9 +49,19 @@ const BrowseInactiveRoute = BrowseInactiveRouteImport.update({
   path: '/inactive',
   getParentRoute: () => BrowseRoute,
 } as any)
+const BrowseLeaderboardRoute = BrowseLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => BrowseRoute,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHubsRoute = AdminHubsRouteImport.update({
+  id: '/hubs',
+  path: '/hubs',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminImagesRoute = AdminImagesRouteImport.update({
@@ -81,12 +94,19 @@ const BrowseServerServerIdRoute = BrowseServerServerIdRouteImport.update({
   path: '/server/$serverId',
   getParentRoute: () => BrowseRoute,
 } as any)
+const BrowseWrappedYearRoute = BrowseWrappedYearRouteImport.update({
+  id: '/wrapped/$year',
+  path: '/wrapped/$year',
+  getParentRoute: () => BrowseRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof BrowseIndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/global': typeof BrowseGlobalRoute
   '/inactive': typeof BrowseInactiveRoute
+  '/leaderboard': typeof BrowseLeaderboardRoute
+  '/admin/hubs': typeof AdminHubsRoute
   '/admin/images': typeof AdminImagesRoute
   '/admin/merges': typeof AdminMergesRoute
   '/admin/owners': typeof AdminOwnersRoute
@@ -94,10 +114,13 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
   '/server/$serverId': typeof BrowseServerServerIdRoute
+  '/wrapped/$year': typeof BrowseWrappedYearRoute
 }
 export interface FileRoutesByTo {
   '/global': typeof BrowseGlobalRoute
   '/inactive': typeof BrowseInactiveRoute
+  '/leaderboard': typeof BrowseLeaderboardRoute
+  '/admin/hubs': typeof AdminHubsRoute
   '/admin/images': typeof AdminImagesRoute
   '/admin/merges': typeof AdminMergesRoute
   '/admin/owners': typeof AdminOwnersRoute
@@ -106,6 +129,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/network/$networkId': typeof BrowseNetworkNetworkIdRoute
   '/server/$serverId': typeof BrowseServerServerIdRoute
+  '/wrapped/$year': typeof BrowseWrappedYearRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -113,6 +137,8 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/_browse/global': typeof BrowseGlobalRoute
   '/_browse/inactive': typeof BrowseInactiveRoute
+  '/_browse/leaderboard': typeof BrowseLeaderboardRoute
+  '/admin/hubs': typeof AdminHubsRoute
   '/admin/images': typeof AdminImagesRoute
   '/admin/merges': typeof AdminMergesRoute
   '/admin/owners': typeof AdminOwnersRoute
@@ -121,6 +147,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/_browse/network/$networkId': typeof BrowseNetworkNetworkIdRoute
   '/_browse/server/$serverId': typeof BrowseServerServerIdRoute
+  '/_browse/wrapped/$year': typeof BrowseWrappedYearRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -129,6 +156,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/global'
     | '/inactive'
+    | '/leaderboard'
+    | '/admin/hubs'
     | '/admin/images'
     | '/admin/merges'
     | '/admin/owners'
@@ -136,10 +165,13 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/network/$networkId'
     | '/server/$serverId'
+    | '/wrapped/$year'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/global'
     | '/inactive'
+    | '/leaderboard'
+    | '/admin/hubs'
     | '/admin/images'
     | '/admin/merges'
     | '/admin/owners'
@@ -148,12 +180,15 @@ export interface FileRouteTypes {
     | '/admin'
     | '/network/$networkId'
     | '/server/$serverId'
+    | '/wrapped/$year'
   id:
     | '__root__'
     | '/_browse'
     | '/admin'
     | '/_browse/global'
     | '/_browse/inactive'
+    | '/_browse/leaderboard'
+    | '/admin/hubs'
     | '/admin/images'
     | '/admin/merges'
     | '/admin/owners'
@@ -162,6 +197,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/_browse/network/$networkId'
     | '/_browse/server/$serverId'
+    | '/_browse/wrapped/$year'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -206,11 +242,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BrowseInactiveRouteImport
       parentRoute: typeof BrowseRoute
     }
+    '/_browse/leaderboard': {
+      id: '/_browse/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof BrowseLeaderboardRouteImport
+      parentRoute: typeof BrowseRoute
+    }
     '/admin/': {
       id: '/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/hubs': {
+      id: '/admin/hubs'
+      path: '/hubs'
+      fullPath: '/admin/hubs'
+      preLoaderRoute: typeof AdminHubsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/images': {
@@ -255,29 +305,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BrowseServerServerIdRouteImport
       parentRoute: typeof BrowseRoute
     }
+    '/_browse/wrapped/$year': {
+      id: '/_browse/wrapped/$year'
+      path: '/wrapped/$year'
+      fullPath: '/wrapped/$year'
+      preLoaderRoute: typeof BrowseWrappedYearRouteImport
+      parentRoute: typeof BrowseRoute
+    }
   }
 }
 
 interface BrowseRouteChildren {
   BrowseGlobalRoute: typeof BrowseGlobalRoute
   BrowseInactiveRoute: typeof BrowseInactiveRoute
+  BrowseLeaderboardRoute: typeof BrowseLeaderboardRoute
   BrowseIndexRoute: typeof BrowseIndexRoute
   BrowseNetworkNetworkIdRoute: typeof BrowseNetworkNetworkIdRoute
   BrowseServerServerIdRoute: typeof BrowseServerServerIdRoute
+  BrowseWrappedYearRoute: typeof BrowseWrappedYearRoute
 }
 
 const BrowseRouteChildren: BrowseRouteChildren = {
   BrowseGlobalRoute: BrowseGlobalRoute,
   BrowseInactiveRoute: BrowseInactiveRoute,
+  BrowseLeaderboardRoute: BrowseLeaderboardRoute,
   BrowseIndexRoute: BrowseIndexRoute,
   BrowseNetworkNetworkIdRoute: BrowseNetworkNetworkIdRoute,
   BrowseServerServerIdRoute: BrowseServerServerIdRoute,
+  BrowseWrappedYearRoute: BrowseWrappedYearRoute,
 }
 
 const BrowseRouteWithChildren =
   BrowseRoute._addFileChildren(BrowseRouteChildren)
 
 interface AdminRouteChildren {
+  AdminHubsRoute: typeof AdminHubsRoute
   AdminImagesRoute: typeof AdminImagesRoute
   AdminMergesRoute: typeof AdminMergesRoute
   AdminOwnersRoute: typeof AdminOwnersRoute
@@ -286,6 +348,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminHubsRoute: AdminHubsRoute,
   AdminImagesRoute: AdminImagesRoute,
   AdminMergesRoute: AdminMergesRoute,
   AdminOwnersRoute: AdminOwnersRoute,

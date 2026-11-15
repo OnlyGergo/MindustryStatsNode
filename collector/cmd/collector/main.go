@@ -20,6 +20,7 @@ import (
 	"github.com/OnlyGergo/MindustryStatsNode/collector/internal/discovery"
 	"github.com/OnlyGergo/MindustryStatsNode/collector/internal/geoip"
 	"github.com/OnlyGergo/MindustryStatsNode/collector/internal/logging"
+	"github.com/OnlyGergo/MindustryStatsNode/collector/internal/peaks"
 	"github.com/OnlyGergo/MindustryStatsNode/collector/internal/poller"
 	"github.com/OnlyGergo/MindustryStatsNode/collector/internal/processor"
 	"github.com/OnlyGergo/MindustryStatsNode/collector/internal/repository"
@@ -89,6 +90,7 @@ func run() error {
 	discoveryService := discovery.New(cfg.Discovery, repo, geo)
 	collectorService := collector.New(cfg.Collector, repo, poller.New(cfg.Collector.MindustryTimeout, geo), rawData)
 	processorService := processor.New(cfg.Processor, repo, rawData)
+	peaksService := peaks.New(cfg.Peaks, repo)
 
 	var wg sync.WaitGroup
 	run := func(name string, fn func(context.Context) error) {
@@ -108,6 +110,7 @@ func run() error {
 	defer stopProcessor()
 
 	run("discovery", discoveryService.Run)
+	run("network-peaks", peaksService.Run)
 	run("collector", func(ctx context.Context) error {
 		defer stopProcessor()
 		return collectorService.Run(ctx)

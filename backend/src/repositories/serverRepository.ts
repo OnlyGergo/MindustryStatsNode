@@ -19,7 +19,7 @@ import {
 } from '../../../common/models/serverData.js';
 import { QueryTypes } from 'sequelize';
 import {CURRENT_DATA_FRESH_THRESHOLD, MAX_REALISTIC_PLAYERCOUNT} from "../const.js";
-import { liveMemberSql, canonicalJoin, serverFamilySql } from './canonicalIdentity.js';
+import { liveMemberSql, canonicalJoin, serverFamilySql, notExcludedRootSql, EXCLUDED_FAMILIES_SQL } from './canonicalIdentity.js';
 import { bayesianScore } from './reviewScoring.js';
 
 // ─── Servers ─────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds
  * Returns all servers with their latest stats, map, and MOTD in one query.
  *
  * `groupId` restricts the result to one network: the families whose ROOT has
- * `server_group_id = :groupId AND NOT aggregate_exclude` (the membership rule
+ * `server_group_id = :groupId` and not aggregate-excluded (the membership rule
  * getNetworkDetails uses). The scope is applied inside the per-family CTEs so
  * the DISTINCT ON sorts only touch that network's rows, not the whole site.
  * Ratings are deliberately NOT scoped: `newest_reviews` also feeds the
@@ -63,7 +63,7 @@ export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds
 export async function getAllServerElements(hoursBack: number = 36, groupId?: number): Promise<ServerElement[]> {
     const scoped = groupId !== undefined;
     const familyScope = scoped
-        ? `sc.canonical_id IN (SELECT root.id FROM servers root WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude)`
+        ? `sc.canonical_id IN (SELECT root.id FROM servers root WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()})`
         : null;
     const rows: any[] = await sequelize.query(`
         WITH live_members AS (
@@ -182,13 +182,13 @@ export async function getAllServerElements(hoursBack: number = 36, groupId?: num
             stats.max_players AS "playerLimit",
             stats.wave, stats.version, stats.version_type AS "versionType", stats.ping,
             motds."serverName", motds.description,
-            maps."modeName", maps."mapName", maps.mode, root.aggregate_exclude AS "aggregateExclude",
+            maps."modeName", maps."mapName", maps.mode, (root.id IN (${EXCLUDED_FAMILIES_SQL})) AS "aggregateExclude",
             fr.rating_count AS "ratingCount", fr.rating_sum AS "ratingSum", fr.rating_avg AS "ratingAvg",
             gr.mean AS "globalRatingMean"${scoped ? ', fu.uptime_24h AS "uptime24h"' : ''}
         FROM live_members lm
-        -- Family-level properties (group, exclusion) come from the ROOT row,
-        -- so a merge can never leave half a family in a different group or
-        -- excluded state than the other half.
+        -- Family-level properties: the group comes from the ROOT row and
+        -- exclusion from aggregate_excluded_families (keyed on the root), so a
+        -- merge can never leave half a family in a different state.
         JOIN servers root             ON root.id = lm.canonical_id
         LEFT JOIN server_groups sg    ON root.server_group_id = sg.id
         LEFT JOIN family_meta fam     ON fam.canonical_id = lm.canonical_id
@@ -198,7 +198,7 @@ export async function getAllServerElements(hoursBack: number = 36, groupId?: num
         LEFT JOIN family_ratings fr   ON fr.canonical_id    = lm.canonical_id
         ${scoped ? 'LEFT JOIN family_uptime fu ON fu.canonical_id = lm.canonical_id' : ''}
         CROSS JOIN global_rating gr
-        ${scoped ? 'WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude' : ''}
+        ${scoped ? `WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()}` : ''}
         ORDER BY sg.name, lm.host, lm.port
     `, { replacements: { hoursBack, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT, ...(scoped ? { groupId } : {}) }, type: QueryTypes.SELECT });
 
@@ -256,28 +256,27 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
 
     if (!result) return undefined;
 
-    const allMaps: ServerMapData[] = (result.detail_all_maps ?? []).map((m: any) => ({
-        id:        m.id,
-        serverId:  m.serverId,
-        validFrom: new Date(m.validFrom),
-        validTo:   m.validTo ? new Date(m.validTo) : null,
-        mapName:   m.mapName,
-        gameMode:  m.gameMode as GameMode,
-        modeName:  m.modeName,
-    }));
+    // The newest open MOTD/map of the family; the full history is paginated
+    // separately (/motd-history, /map-history) so the page doesn't wait on it.
+    const currentMotd: ServerMotdData | null = result.detail_motd_id == null ? null : {
+        id:          result.detail_motd_id,
+        serverId:    result.detail_motd_server_id,
+        validFrom:   result.detail_motd_valid_from,
+        validTo:     result.detail_motd_valid_to,
+        serverName:  result.detail_motd_server_name,
+        description: result.detail_motd_description,
+        modeName:    result.detail_mode_name,
+    };
 
-    const allMotds: ServerMotdData[] = (result.detail_all_motds ?? []).map((m: any) => ({
-        id:          m.id,
-        serverId:    m.serverId,
-        validFrom:   new Date(m.validFrom),
-        validTo:     m.validTo ? new Date(m.validTo) : null,
-        serverName:  m.serverName,
-        description: m.description,
-        modeName:    m.modeName,
-    }));
-
-    const currentMotd = allMotds.find(m => m.validTo === null) ?? allMotds[0] ?? null;
-    const currentMap  = allMaps.find(m => m.validTo === null)  ?? allMaps[0]  ?? null;
+    const currentMap: ServerMapData | null = result.detail_map_id == null ? null : {
+        id:        result.detail_map_id,
+        serverId:  result.detail_map_server_id,
+        validFrom: result.detail_map_valid_from,
+        validTo:   result.detail_map_valid_to,
+        mapName:   result.detail_map_map_name,
+        gameMode:  result.detail_map_game_mode as GameMode,
+        modeName:  result.detail_motd_mode_name,
+    };
 
     const detail: ServerElement & ServerDetails = {
         id:          result.detail_id,
@@ -297,8 +296,6 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
             last24h: parseFloat(result.detail_24h_uptime) || 0,
             last7d:  parseFloat(result.detail_7d_uptime)  || 0,
         },
-        allMaps,
-        allMotds,
         currentMotd,
         currentMap,
         aggregateExclude: result.detail_aggregate_exclude,
@@ -329,64 +326,77 @@ export async function getServer(serverId: number): Promise<(ServerElement & Serv
 
 // ─── Map / MOTD history reads ─────────────────────────────────────────────────
 
+/**
+ * The newest `offset + perPage` rows of each family member (one index probe on
+ * (server_id, valid_from DESC) apiece), then merged and paged. serverId is a
+ * canonical id; history has to be read across the whole family or an address
+ * change would silently truncate a server's past.
+ */
+function familyHistorySql(table: string, columns: string): string {
+    return `SELECT h.*
+            FROM (${serverFamilySql(':serverId')}) f
+            CROSS JOIN LATERAL (
+                SELECT ${columns}
+                FROM ${table}
+                WHERE server_id = f.server_id
+                ORDER BY valid_from DESC
+                LIMIT :fetch
+            ) h`;
+}
+
 export async function getMapHistory(
     serverId: number,
     page: number    = 1,
     perPage: number = 20
-): Promise<{ data: any[]; total: number }> {
+): Promise<ServerMapData[]> {
     const offset = (page - 1) * perPage;
-    // serverId is a canonical id; history has to be read across the whole
-    // family or an address change would silently truncate a server's past
-    // (the old rows are still there, just under a different raw server_id).
-    const family = serverFamilySql(':serverId');
+    const rows: any[] = await sequelize.query(
+        `SELECT h.id, h.server_id, h.valid_from, h.valid_to,
+                r.map_name, r.game_mode, r.mode_name
+         FROM (${familyHistorySql('server_maps_history', 'id, server_id, map_id, valid_from, valid_to')}) h
+         JOIN server_maps_registry r ON h.map_id = r.id
+         ORDER BY h.valid_from DESC
+         LIMIT :perPage OFFSET :offset`,
+        { replacements: { serverId, perPage, offset, fetch: offset + perPage }, type: QueryTypes.SELECT }
+    );
 
-    const [[{ count }], data]: any = await Promise.all([
-        sequelize.query(
-            `SELECT COUNT(*) AS count FROM server_maps_history WHERE server_id IN (${family})`,
-            { replacements: { serverId }, type: QueryTypes.SELECT }
-        ),
-        sequelize.query(
-            `SELECT h.id, h.server_id, h.valid_from, h.valid_to,
-                    r.map_name, r.game_mode, r.mode_name
-             FROM server_maps_history h
-             JOIN server_maps_registry r ON h.map_id = r.id
-             WHERE h.server_id IN (${family})
-             ORDER BY h.valid_from DESC
-             LIMIT :perPage OFFSET :offset`,
-            { replacements: { serverId, perPage, offset }, type: QueryTypes.SELECT }
-        ),
-    ]);
-
-    return { data, total: parseInt(count, 10) };
+    return rows.map(row => ({
+        id:        row.id,
+        serverId:  row.server_id,
+        validFrom: row.valid_from,
+        validTo:   row.valid_to,
+        mapName:   row.map_name,
+        gameMode:  row.game_mode as GameMode,
+        modeName:  row.mode_name,
+    }));
 }
 
+/** No mode name: nothing displays it, and it cost a map lookup per row. */
 export async function getMotdHistory(
     serverId: number,
     page: number    = 1,
     perPage: number = 20
-): Promise<{ data: any[]; total: number }> {
+): Promise<ServerMotdData[]> {
     const offset = (page - 1) * perPage;
-    // Same family-wide reasoning as getMapHistory.
-    const family = serverFamilySql(':serverId');
+    const rows: any[] = await sequelize.query(
+        `SELECT h.id, h.server_id, h.valid_from, h.valid_to,
+                r.server_name, r.description
+         FROM (${familyHistorySql('server_motds_history', 'id, server_id, motd_id, valid_from, valid_to')}) h
+         JOIN server_motds_registry r ON h.motd_id = r.id
+         ORDER BY h.valid_from DESC
+         LIMIT :perPage OFFSET :offset`,
+        { replacements: { serverId, perPage, offset, fetch: offset + perPage }, type: QueryTypes.SELECT }
+    );
 
-    const [[{ count }], data]: any = await Promise.all([
-        sequelize.query(
-            `SELECT COUNT(*) AS count FROM server_motds_history WHERE server_id IN (${family})`,
-            { replacements: { serverId }, type: QueryTypes.SELECT }
-        ),
-        sequelize.query(
-            `SELECT h.id, h.server_id, h.valid_from, h.valid_to,
-                    r.server_name, r.description
-             FROM server_motds_history h
-             JOIN server_motds_registry r ON h.motd_id = r.id
-             WHERE h.server_id IN (${family})
-             ORDER BY h.valid_from DESC
-             LIMIT :perPage OFFSET :offset`,
-            { replacements: { serverId, perPage, offset }, type: QueryTypes.SELECT }
-        ),
-    ]);
-
-    return { data, total: parseInt(count, 10) };
+    return rows.map(row => ({
+        id:          row.id,
+        serverId:    row.server_id,
+        validFrom:   row.valid_from,
+        validTo:     row.valid_to,
+        serverName:  row.server_name,
+        description: row.description,
+        modeName:    null,
+    }));
 }
 
 // ─── Network (server group) ───────────────────────────────────────────────────
@@ -407,7 +417,7 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
             SELECT sc.server_id, sc.canonical_id
             FROM server_canonical sc
             JOIN servers root ON root.id = sc.canonical_id
-            WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude
+            WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()}
         ),
         group_families AS (
             -- Distinct family list once, so canonical_id-level joins below
@@ -448,7 +458,7 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
                 FROM server_current cur
                 ${canonicalJoin('sc', 'cur')}
                 JOIN servers root ON root.id = sc.canonical_id
-                WHERE NOT root.aggregate_exclude
+                WHERE ${notExcludedRootSql()}
                   AND cur.online
                   AND cur.timestamp > NOW() - INTERVAL '1 hour'
                   AND cur.players >= 0 AND cur.players < :maxRealisticPlayerCount
@@ -510,7 +520,9 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
         fam_1h AS (
             -- Hourly tier, per family: same MAX-across-aliases collapse as
             -- get_server_details' family_stats_1h. This view has no map key,
-            -- so one row per raw server and bucket already.
+            -- so one row per raw server and bucket already. Bounded to the
+            -- 14 days the trend needs: the all-time peak comes from
+            -- network_peaks, so nothing here walks the whole history.
             SELECT gs.canonical_id, st.bucket,
                    MAX(st.max_players)    AS players,
                    MAX(st.samples)        AS samples,
@@ -519,6 +531,7 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
                    MAX(st.sum_players::float8 / NULLIF(st.samples, 0)) AS mean_players
             FROM server_stats_1h st
             JOIN group_servers gs ON gs.server_id = st.server_id
+            WHERE st.bucket > NOW() - INTERVAL '14 days'
             GROUP BY gs.canonical_id, st.bucket
         ),
         inst_1h AS (
@@ -541,10 +554,20 @@ export async function getNetworkDetails(groupId: number): Promise<NetworkDetails
                     FROM fam_1h) AS uptime_7d
         ),
         peak_bucket AS (
-            -- The hour of the all-time peak (ties: most recent) and its value.
+            -- The hour of the all-time peak and its value. The collector keeps
+            -- it in network_peaks (44_network_peaks.sql, same busiest-hourly-
+            -- instant rule as inst_1h); the best hour of the last 14 days is
+            -- folded in so the refresh lag can never put it below the weekly
+            -- peak. Ties: earliest hour, like server_peaks.
             SELECT bucket AS peak_date, total AS all_time_peak
-            FROM inst_1h
-            ORDER BY total DESC NULLS LAST, bucket DESC
+            FROM (
+                SELECT np.peak_at AS bucket, np.all_time_peak AS total
+                FROM network_peaks np
+                WHERE np.server_group_id = :groupId
+                UNION ALL
+                SELECT bucket, total FROM inst_1h WHERE total IS NOT NULL
+            ) candidates
+            ORDER BY total DESC, bucket ASC
             LIMIT 1
         ),
         trend_1h AS (

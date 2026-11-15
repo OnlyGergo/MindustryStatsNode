@@ -60,6 +60,10 @@ type CollectorConfig struct {
 	// ServerCollectionInterval is SERVER_COLLECTION_INTERVAL_MS: the window the
 	// rate limit below applies to (p-queue's `interval`).
 	ServerCollectionInterval time.Duration
+	// FullCollectionInterval is FULL_COLLECTION_INTERVAL_MS (default 24h): how
+	// often a sweep polls EVERY live member of a merged family rather than only
+	// its primary, so a skipped address can take over if the server moves back.
+	FullCollectionInterval time.Duration
 	// RawQueueCapacity bounds the poll-result channel.  p-queue's TS counterpart
 	// was unbounded; a bound turns a stalled processor into backpressure on the
 	// pollers rather than unbounded memory growth.
@@ -76,6 +80,18 @@ func (c CollectorConfig) IntervalCap() int {
 type ProcessorConfig struct {
 	// QueuePollTimeout is QUEUE_POLL_TIMEOUT_MS: how often the raw queue is drained.
 	QueuePollTimeout time.Duration
+}
+
+type PeaksConfig struct {
+	// RefreshInterval is NETWORK_PEAKS_REFRESH_INTERVAL_MS: how often recent
+	// hours are folded into network_peaks.
+	RefreshInterval time.Duration
+	// Lookback is NETWORK_PEAKS_LOOKBACK_MS: how far back each refresh reads.
+	// It has to cover the still-open hour plus any continuous aggregate lag.
+	Lookback time.Duration
+	// RebuildInterval is NETWORK_PEAKS_REBUILD_INTERVAL_MS: how often every
+	// network's peak is recomputed from all history.
+	RebuildInterval time.Duration
 }
 
 type GeoIPConfig struct {
@@ -103,6 +119,7 @@ type Config struct {
 	Collector CollectorConfig
 	Processor ProcessorConfig
 	GeoIP     GeoIPConfig
+	Peaks     PeaksConfig
 
 	// DryRun runs every loop and every read, but skips the statements that would
 	// change data, logging what they would have written instead.  This is
@@ -144,6 +161,7 @@ func Load() (Config, error) {
 			MindustryTimeout:         msVal("MINDUSTRY_TIMEOUT_MS", 1_000),
 			DataCollectionInterval:   msVal("DATA_COLLECTION_INTERVAL_MS", 300_000),
 			ServerCollectionInterval: msVal("SERVER_COLLECTION_INTERVAL_MS", 1_000),
+			FullCollectionInterval:   msVal("FULL_COLLECTION_INTERVAL_MS", 86_400_000),
 			RawQueueCapacity:         intVal("RAW_QUEUE_CAPACITY", 100_000),
 		},
 		Processor: ProcessorConfig{
@@ -152,6 +170,12 @@ func Load() (Config, error) {
 		GeoIP: GeoIPConfig{
 			Path:           str("GEOIP_MMDB_PATH", "./geoip/country.mmdb"),
 			ReloadInterval: msVal("GEOIP_RELOAD_INTERVAL_MS", 86_400_000),
+		},
+
+		Peaks: PeaksConfig{
+			RefreshInterval: msVal("NETWORK_PEAKS_REFRESH_INTERVAL_MS", 600_000),
+			Lookback:        msVal("NETWORK_PEAKS_LOOKBACK_MS", 10_800_000),
+			RebuildInterval: msVal("NETWORK_PEAKS_REBUILD_INTERVAL_MS", 86_400_000),
 		},
 
 		DryRun: boolVal("DRY_RUN", false),
@@ -171,11 +195,15 @@ func (c Config) validate() error {
 		return fmt.Errorf("RAW_QUEUE_CAPACITY must be at least 1, got %d", c.Collector.RawQueueCapacity)
 	}
 	for name, d := range map[string]time.Duration{
-		"SERVER_LIST_INTERVAL_MS":       c.Discovery.ServerListInterval,
-		"MINDUSTRY_TIMEOUT_MS":          c.Collector.MindustryTimeout,
-		"DATA_COLLECTION_INTERVAL_MS":   c.Collector.DataCollectionInterval,
-		"SERVER_COLLECTION_INTERVAL_MS": c.Collector.ServerCollectionInterval,
-		"QUEUE_POLL_TIMEOUT_MS":         c.Processor.QueuePollTimeout,
+		"SERVER_LIST_INTERVAL_MS":           c.Discovery.ServerListInterval,
+		"MINDUSTRY_TIMEOUT_MS":              c.Collector.MindustryTimeout,
+		"DATA_COLLECTION_INTERVAL_MS":       c.Collector.DataCollectionInterval,
+		"SERVER_COLLECTION_INTERVAL_MS":     c.Collector.ServerCollectionInterval,
+		"FULL_COLLECTION_INTERVAL_MS":       c.Collector.FullCollectionInterval,
+		"QUEUE_POLL_TIMEOUT_MS":             c.Processor.QueuePollTimeout,
+		"NETWORK_PEAKS_REFRESH_INTERVAL_MS": c.Peaks.RefreshInterval,
+		"NETWORK_PEAKS_LOOKBACK_MS":         c.Peaks.Lookback,
+		"NETWORK_PEAKS_REBUILD_INTERVAL_MS": c.Peaks.RebuildInterval,
 	} {
 		if d <= 0 {
 			return fmt.Errorf("%s must be positive, got %s", name, d)

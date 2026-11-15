@@ -8,6 +8,8 @@ import { useServerList } from "../../hooks/useServerList.ts";
 import ServerStatsSummary from "../navbar/ServerStatsSummary.tsx";
 import { useServerListData } from "../../context/ServerListContext.tsx";
 import { useBrowseLayout } from "../../context/BrowseLayoutContext.tsx";
+import ServerListSkeleton from "./ServerListSkeleton.tsx";
+import StaticServerList, { topOfList } from "./StaticServerList.tsx";
 
 interface ServerListPanelProps {
   /** Below `split` the list is only shown on the index route; at `split`+ it is always shown. */
@@ -20,6 +22,7 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
     totalServers,
     onlineServers,
     totalPlayers,
+    staticList,
     loading,
     error,
     lastUpdated,
@@ -56,6 +59,32 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
     sortOptions,
   } = useServerList(rawServers);
 
+  const renderList = ({ groups, flat }: ReturnType<typeof topOfList>) =>
+    isGrouped ? (
+      groups.map(({ name: groupName, servers }) => {
+        const groupId = servers.length > 0 ? servers[0].groupId : 0;
+        return (
+          <ServerGroup
+            key={groupName}
+            name={groupName}
+            servers={servers}
+            expanded={expandedGroups.has(groupName)}
+            onToggleExpand={onToggleGroup}
+            isSelected={selectedNetworkId === groupId}
+            networkId={groupId}
+            selectedServerId={selectedServerId}
+          />
+        );
+      })
+    ) : (
+      <FlatServerList servers={flat} selectedServerId={selectedServerId} />
+    );
+
+  // Nothing to show yet: the header counts say the SSR page had no rows (so there is no static
+  // markup to keep) and the client is still fetching, possibly retrying a Cloudflare challenge.
+  // totalServers comes from loader data, so server and client agree and hydration holds.
+  const showSkeleton = loading && staticList && totalServers === 0 && rawServers.length === 0;
+
   // Collapse only exists at split+: below it the panel always renders as normal.
   let visibility: string;
   if (isMasterPanelCollapsed) visibility = mobileVisible ? "flex split:hidden" : "hidden";
@@ -69,7 +98,7 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
         </div>
       )}
       <div
-        className={`relative ${visibility} w-full split:w-3/12 split:min-w-sm bg-surface-primary backdrop-blur-md border-r border-default flex-col h-full`}
+        className={`relative ${visibility} w-full split:w-3/12 split:min-w-sm bg-surface-primary border-r border-default flex-col h-full`}
       >
         <div className="border-b border-subtle shrink-0">
           <div className="flex justify-center items-center h-5 split:h-auto split:pt-3 split:pb-0">
@@ -97,41 +126,21 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
 
         {/* Server List */}
         <div className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
-          {loading && (
-              <div className="text-center p-4 bg-surface-secondary backdrop-blur-md border border-default rounded mb-2">
-                <div className="inline-block animate-spin rounded h-5 w-5 border-2 border-accent border-t-transparent"></div>
-                <p className="mt-2 text-sm text-secondary">Loading server data...</p>
-              </div>
-          )}
-
           {error && (
-              <div className="bg-red-500/20 border border-red-500 text-red-400 px-3 py-2 text-sm rounded backdrop-blur-sm mb-2">
+              <div className="bg-red-500/20 border border-red-500 text-red-400 px-3 py-2 text-sm rounded mb-2">
                 Failed to load server data. Please try again later.
               </div>
           )}
 
-          {!loading && !error && (
+          {showSkeleton ? (
+              <ServerListSkeleton />
+          ) : staticList ? (
+              <StaticServerList searchTerm={searchTerm}>
+                {renderList(topOfList(processedServerGroups, flatServers))}
+              </StaticServerList>
+          ) : (
               <div className="space-y-1.5">
-                {isGrouped ? (
-                    processedServerGroups.map(({ name: groupName, servers }) => {
-                      const groupId = servers.length > 0 ? servers[0].groupId : 0;
-                      const isNetworkSelected = selectedNetworkId === groupId;
-                      return (
-                          <ServerGroup
-                              key={groupName}
-                              name={groupName}
-                              servers={servers}
-                              expanded={expandedGroups.has(groupName)}
-                              onToggleExpand={() => onToggleGroup(groupName)}
-                              isSelected={isNetworkSelected}
-                              networkId={groupId}
-                              selectedServerId={selectedServerId}
-                          />
-                      );
-                    })
-                ) : (
-                    <FlatServerList servers={flatServers} selectedServerId={selectedServerId} />
-                )}
+                {renderList({ groups: processedServerGroups, flat: flatServers })}
               </div>
           )}
         </div>

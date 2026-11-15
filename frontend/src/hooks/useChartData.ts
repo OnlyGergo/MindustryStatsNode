@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getBaseUrl } from "../util/getApi.ts";
+import { fetchJsonWithRetry } from "../util/fetchRetry.ts";
 
 /** Matches the server's chart `withCache` TTLs, so a client hit is never staler than a server one. */
 const TTL_MS = 5 * 60_000;
@@ -34,8 +35,7 @@ export function loadChartData<T>(url: string, parse: (json: unknown) => T): Prom
     const inFlight = cache.get(url)?.pending;
     if (inFlight) return inFlight as Promise<T>;
 
-    const pending = fetch(`${getBaseUrl()}${url}`)
-        .then((r) => r.ok ? r.json() : Promise.reject(new Error(`Status ${r.status}: ${r.statusText}`)))
+    const pending = fetchJsonWithRetry<unknown>(`${getBaseUrl()}${url}`)
         .then(parse)
         .then((value) => {
             cache.set(url, { at: Date.now(), value });
@@ -56,14 +56,37 @@ interface ChartDataState<T> {
     error: string | null;
 }
 
+/** A response the route loader already fetched (during SSR), handed to the hook as raw JSON. */
+export interface InitialChartData {
+    url: string;
+    json: unknown;
+    /** When the loader fetched it (ms), so the seeded cache entry ages from then, not from hydration. */
+    at: number;
+}
+
 /**
  * Chart data for `url` (null: nothing to fetch yet). While a new URL loads,
  * `data` keeps the previous response so the chart can stay up, dimmed, instead
  * of blanking; a response for a URL that is no longer current is dropped.
  * `parse` must be stable (module-level), since it is an effect dependency.
+ *
+ * `initial` (read on mount only) is the loader's copy of one URL: it renders
+ * straight away on the server and the client alike, so hydration matches, and
+ * in the browser it seeds the cache so the effect below never refetches it.
  */
-export function useChartData<T>(url: string | null, parse: (json: unknown) => T, errorMessage: string) {
-    const [state, setState] = useState<ChartDataState<T>>({ url: null, data: undefined, error: null });
+export function useChartData<T>(
+    url: string | null,
+    parse: (json: unknown) => T,
+    errorMessage: string,
+    initial?: InitialChartData | null,
+) {
+    const [state, setState] = useState<ChartDataState<T>>(() => {
+        if (!initial) return { url: null, data: undefined, error: null };
+        const data = parse(initial.json);
+        // The server-side cache is shared between requests; only seed the browser's.
+        if (typeof window !== "undefined") cache.set(initial.url, { at: initial.at, value: data });
+        return { url: initial.url, data, error: null };
+    });
     const fresh = url === null ? undefined : readFresh<T>(url);
 
     useEffect(() => {

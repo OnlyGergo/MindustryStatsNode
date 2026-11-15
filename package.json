@@ -15,6 +15,7 @@
     "start": "bun backend/src/index.ts",
     "test": "bun run --filter 'mindustry-stats' test",
     "lint": "bun run --filter 'mindustry-stats-react' lint",
-    "typecheck": "cd backend && bunx tsc --noEmit"
+    "typecheck": "cd backend && bunx tsc --noEmit",
+    "icons": "node scripts/generate-icons.cjs"
   }
 }

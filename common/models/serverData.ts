@@ -53,8 +53,8 @@ export interface ServerElement {
 }
 
 /**
- * What the sidebar reads of a server, and all the SSR payload embeds for it (see
- * `fetchServers`). A full ServerElement satisfies it, so the client poll's data drops in.
+ * What the sidebar reads of a server. A full ServerElement satisfies it, so
+ * `/api/servers` drops straight in.
  */
 export type ServerListItem = Pick<ServerElement,
   'id' | 'name' | 'groupId' | 'host' | 'port' | 'online' | 'lastSeen' | 'countryCode' | 'aggregateExclude' | 'ratingScore'
@@ -94,9 +94,7 @@ export interface ServerDetails {
     last7d: number;
   };
 
-  allMaps: ServerMapData[];
-  allMotds: ServerMotdData[];
-  // Keep single current records for convenience
+  // Newest open records; the full history is paginated (/map-history, /motd-history)
   currentMotd: ServerMotdData | null;
   currentMap: ServerMapData | null;
 }

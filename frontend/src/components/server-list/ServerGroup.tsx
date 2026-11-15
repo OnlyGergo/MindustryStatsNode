@@ -7,7 +7,8 @@ const ServerGroup: React.FC<{
   name: string;
   servers: ServerListItem[];
   expanded: boolean;
-  onToggleExpand: () => void;
+  /** Called with this group's name; stable, so the memo below holds. */
+  onToggleExpand: (name: string) => void;
   selectedServerId: number;
   isSelected: boolean;
   networkId: number;
@@ -29,15 +30,16 @@ const ServerGroup: React.FC<{
 
   return (
     <div
-      className={`card-base backdrop-blur-md overflow-hidden transition-all ${
+      data-group={name}
+      className={`card-base overflow-hidden transition-colors ${
         isSelected ? "border-accent" : "border-default"
       }`}
     >
       <div
-        className={`bg-surface-secondary backdrop-blur-sm px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-accent-hover transition-colors ${
+        className={`bg-surface-secondary px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-accent-hover transition-colors ${
           expanded ? "border-b border-subtle" : ""
         }`}
-        onClick={onToggleExpand}
+        onClick={() => onToggleExpand(name)}
       >
         <div>
           <h3 className="font-semibold text-primary text-sm">{name}</h3>
@@ -101,4 +103,5 @@ const ServerGroup: React.FC<{
   );
 };
 
-export default ServerGroup;
+// Memoised: typing in search or toggling one group must not re-render every other group.
+export default React.memo(ServerGroup);

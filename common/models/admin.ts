@@ -41,6 +41,8 @@ export interface OwnerEntry {
 export interface MergeFamily {
   id: number;
   name: string | null;
+  /** Latest MOTD description (raw, colour tags included). */
+  description: string | null;
   host: string;
   port: number;
   firstSeen: number | null;  // epoch ms
@@ -48,15 +50,20 @@ export interface MergeFamily {
   memberCount: number;
 }
 
-export type MergeReason = 'same_name' | 'same_host';
+/**
+ * Why a pair was suggested. The page filters on these client side.
+ * - `same_day`: the newer family first appeared within a day either side of
+ *   the older one's last sighting, i.e. a handover rather than a reuse months later.
+ * - `disjoint`: the two were never seen at the same time, however long the gap.
+ */
+/** `same_endpoint`: both answered on the same resolved IP:port recently (an IP row and a domain row of one server). */
+export type MergeReason = 'same_endpoint' | 'same_name' | 'same_motd' | 'same_host' | 'same_day' | 'disjoint';
 
 /** A suggested pair. `target` is the older family, which will keep its root. */
 export interface MergeSuggestion {
   source: MergeFamily;
   target: MergeFamily;
   reasons: MergeReason[];
-  /** True when the two families were never seen at the same time — the classic address change. */
-  disjoint: boolean;
   score: number;
 }
 
@@ -74,5 +81,27 @@ export interface MergedMember {
 export interface MergedFamily {
   id: number;
   name: string | null;
+  description: string | null;
   members: MergedMember[];
+}
+
+// ── Hubs (/admin/hubs) ─────────────────────────────────────────────────────
+
+/** Where a hub keyword was found. */
+export type HubMatchField = 'name' | 'description' | 'map';
+
+/**
+ * One server family as the hub page shows it. `id` is the canonical (root) id.
+ * Name/description are the family's newest open MOTD, map its current map.
+ */
+export interface HubFamily {
+  id: number;
+  name: string | null;
+  description: string | null;
+  mapName: string | null;
+  host: string;
+  port: number;
+  lastSeen: number | null;   // epoch ms
+  /** Fields a hub keyword matched in (empty for families marked by hand). */
+  matches: HubMatchField[];
 }

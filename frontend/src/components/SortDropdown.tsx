@@ -89,7 +89,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
       {isOpen && (
         <div
           role="menu"
-          className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-2rem)] bg-surface-secondary border border-default backdrop-blur-md rounded shadow-xl"
+          className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-2rem)] bg-surface-secondary border border-default rounded shadow-xl"
         >
           <div className="text-xs text-tertiary uppercase tracking-wide px-3 pt-2 pb-1">
             {isGrouped ? 'Sort networks by' : 'Sort servers by'}

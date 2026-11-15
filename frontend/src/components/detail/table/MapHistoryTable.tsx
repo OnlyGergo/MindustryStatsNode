@@ -2,12 +2,15 @@ import React, { useMemo, useState } from "react";
 import { removeColors } from "../../../util/mindustry.ts";
 import { ServerMapData } from "../../../../../common/models/serverData.ts";
 import { formatDateTimeHuman } from "../../../util/general.ts";
+import { LoadingSpinner } from "../../LoadingSpinner.tsx";
 import { getModeName } from "../../../../../common/Gamemode.ts";
 
 const ITEMS_PER_PAGE = 10;
 
-const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({
+const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[]; loading?: boolean; error?: string | null }> = ({
   mapHistory,
+  loading = false,
+  error = null,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -182,9 +185,13 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[] }> = ({
             </div>
           )}
         </>
+      ) : loading ? (
+        <div className="py-6 sm:py-8">
+          <LoadingSpinner showText={false} size="small" />
+        </div>
       ) : (
         <p className="text-tertiary text-center py-6 sm:py-8 text-sm">
-          No map history available or matching your search.
+          {error ?? "No map history available or matching your search."}
         </p>
       )}
     </div>

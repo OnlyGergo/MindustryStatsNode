@@ -20,6 +20,9 @@ export const BROWSE_SEARCH_DEFAULTS: BrowseSearch = {
   inactive: false,
 };
 
+/** The keys every `_browse` link carries forward (see the middleware in `_browse.tsx`). */
+export const BROWSE_SEARCH_KEYS = Object.keys(BROWSE_SEARCH_DEFAULTS) as (keyof BrowseSearch)[];
+
 const parseBool = (value: unknown, fallback: boolean): boolean => {
   if (typeof value === 'boolean') return value;
   if (value === 'true' || value === '1' || value === 1) return true;

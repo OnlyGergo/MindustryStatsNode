@@ -1,22 +1,31 @@
 import React from "react";
 import { createFileRoute, Outlet, retainSearchParams, stripSearchParams, useMatches } from "@tanstack/react-router";
 import type { SearchSchemaInput } from "@tanstack/react-router";
-import { BROWSE_SEARCH_DEFAULTS, parseBrowseSearch } from "./-browseSearch.ts";
+import { BROWSE_SEARCH_DEFAULTS, BROWSE_SEARCH_KEYS, parseBrowseSearch } from "./-browseSearch.ts";
 import type { BrowseSearch } from "./-browseSearch.ts";
 import ServerListPanel from "../components/server-list/ServerListPanel";
-import { fetchServers, unpackListItems } from "../hooks/useApi.ts";
+import { loadServerList } from "../hooks/useApi.ts";
 import { getSiteOrigin } from "../util/getApi.ts";
-import { ServerListProvider } from "../context/ServerListContext.tsx";
+import { ServerListProvider, summariseServers } from "../context/ServerListContext.tsx";
+import type { ServerListSummary } from "../context/ServerListContext.tsx";
+import type { ServerListItem } from "../../../common/models/serverData.ts";
+import type { RouterContext } from "../router.tsx";
 import { BrowseLayoutProvider } from "../context/BrowseLayoutContext.tsx";
 
+interface BrowseLoaderData {
+  initialData: ServerListItem[] | null;
+  summary: ServerListSummary;
+}
+
 export const Route = createFileRoute("/_browse")({
-  // SSR-fetched on first load; the client hook (useApi) takes over polling afterward.
   validateSearch: (input: Partial<Record<keyof BrowseSearch, unknown>> & SearchSchemaInput): BrowseSearch =>
     parseBrowseSearch(input),
   search: {
     // Prefs follow every link inside _browse; defaults are stripped so `/` stays clean.
     // Order matters: listed the other way round, retain re-adds the defaults strip removed.
-    middlewares: [stripSearchParams(BROWSE_SEARCH_DEFAULTS), retainSearchParams(true)],
+    // Only the list prefs are retained: a child route's own params (the
+    // leaderboard's `w`) must not follow links out to other pages.
+    middlewares: [stripSearchParams(BROWSE_SEARCH_DEFAULTS), retainSearchParams(BROWSE_SEARCH_KEYS)],
   },
   // List prefs are view state, not content: every variant points at the bare path.
   head: ({ matches }) => ({
@@ -25,9 +34,20 @@ export const Route = createFileRoute("/_browse")({
   // List prefs live in the search; changing them must never refetch /api/servers.
   staleTime: Infinity,
   shouldReload: false,
-  loader: async () => {
-    const data = await fetchServers();
-    return { initialData: data };
+  // On an SSR request the list goes to the per-request holder, not the loader
+  // data, so it is never serialised into the page: the HTML carries only the
+  // top of the list as markup (ServerListPanel) and the header counts, and the
+  // client fetches the full list itself (useApi). A loader run in the browser
+  // (a client navigation into _browse) just hands its list over.
+  // Annotated: inferred, the context parameter makes the loader data type circular.
+  loader: async ({ context }: { context: RouterContext }): Promise<BrowseLoaderData> => {
+    const servers = await loadServerList();
+    const summary = summariseServers(servers);
+    if (typeof window === "undefined") {
+      context.ssrServerList.rows = servers;
+      return { initialData: null, summary };
+    }
+    return { initialData: servers, summary };
   },
   component: BrowseLayout,
 });
@@ -48,10 +68,11 @@ const BrowseContent: React.FC = () => {
 };
 
 function BrowseLayout() {
-  const initialData = unpackListItems(Route.useLoaderData().initialData);
+  const { initialData, summary } = Route.useLoaderData();
+  const { ssrServerList } = Route.useRouteContext();
 
   return (
-    <ServerListProvider initialData={initialData}>
+    <ServerListProvider initialData={initialData} ssrRows={ssrServerList.rows} summary={summary}>
       <BrowseLayoutProvider>
         <BrowseContent />
       </BrowseLayoutProvider>

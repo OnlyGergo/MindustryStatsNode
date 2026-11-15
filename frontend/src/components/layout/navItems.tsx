@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext.tsx";
 import { AuthMe } from "../../../../common/models/auth";
 
 export interface NavItem {
-  to: "/inactive" | "/global" | "/admin";
+  to: "/inactive" | "/global" | "/leaderboard" | "/admin";
   label: string;
   /** Shorter label for the mobile dock. */
   dockLabel?: string;
@@ -49,6 +49,21 @@ export const navItems: NavItem[] = [
           strokeLinejoin="round"
           strokeWidth="2"
           d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+        />
+      </svg>
+    ),
+  },
+  {
+    to: "/leaderboard",
+    label: "Leaderboard",
+    dockLabel: "Top",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M8 21h8m-4-4v4m-5-18h10v5a5 5 0 01-10 0V3zm0 2H4v2a3 3 0 003 3m10-5h3v2a3 3 0 01-3 3"
         />
       </svg>
     ),

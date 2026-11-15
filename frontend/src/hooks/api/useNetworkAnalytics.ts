@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NetworkActivityCell, NetworkBreakdown } from "../../../../common/models/networkAnalytics.ts";
 import { getBaseUrl } from "../../util/getApi.ts";
+import { fetchJsonWithRetry } from "../../util/fetchRetry.ts";
 
 interface State<T> {
     data: T | null;
@@ -8,16 +9,20 @@ interface State<T> {
     error: string | null;
 }
 
-/** Client-side fetch of one JSON endpoint; refetches whenever `path` changes. */
-function useJson<T>(path: string): State<T> {
+/**
+ * Client-side fetch of one JSON endpoint; refetches whenever `path` changes.
+ * A null `path` waits (still "loading") without fetching.
+ */
+function useJson<T>(path: string | null): State<T> {
     const [state, setState] = useState<State<T>>({ data: null, loading: true, error: null });
 
     useEffect(() => {
+        if (path === null) return;
         let cancelled = false;
+        const controller = new AbortController();
         setState((s) => ({ ...s, loading: true, error: null }));
 
-        fetch(`${getBaseUrl()}${path}`)
-            .then((r) => r.ok ? r.json() : Promise.reject(new Error(`Status ${r.status}`)))
+        fetchJsonWithRetry<T>(`${getBaseUrl()}${path}`, { signal: controller.signal })
             .then((data: T) => { if (!cancelled) setState({ data, loading: false, error: null }); })
             .catch((err) => {
                 if (cancelled) return;
@@ -25,14 +30,15 @@ function useJson<T>(path: string): State<T> {
                 setState({ data: null, loading: false, error: "Unable to load this data. Please try again later." });
             });
 
-        return () => { cancelled = true; };
+        return () => { cancelled = true; controller.abort(); };
     }, [path]);
 
     return state;
 }
 
-export const useNetworkActivity = (networkId: number, days: 7 | 28 | 90) =>
-    useJson<NetworkActivityCell[]>(`/api/networks/${networkId}/activity?days=${days}`);
+/** `enabled: false` holds the request back, e.g. until the section is near the viewport. */
+export const useNetworkActivity = (networkId: number, days: 7 | 28 | 90, enabled = true) =>
+    useJson<NetworkActivityCell[]>(enabled ? `/api/networks/${networkId}/activity?days=${days}` : null);
 
-export const useNetworkBreakdown = (networkId: number) =>
-    useJson<NetworkBreakdown>(`/api/networks/${networkId}/breakdown`);
+export const useNetworkBreakdown = (networkId: number, enabled = true) =>
+    useJson<NetworkBreakdown>(enabled ? `/api/networks/${networkId}/breakdown` : null);

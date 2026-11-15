@@ -488,7 +488,7 @@ func TestGetServersReturnsGroupNames(t *testing.T) {
 	seedServers(t, repo, repository.ServerInput{Name: "Network A", Host: "a.example.com", Port: 6567})
 	_ = pool
 
-	servers, err := repo.GetServers(ctx)
+	servers, err := repo.GetServers(ctx, true)
 	if err != nil {
 		t.Fatalf("GetServers: %v", err)
 	}
@@ -548,7 +548,7 @@ func TestDryRunWritesNothing(t *testing.T) {
 	}
 
 	// The read paths still run, which is what makes the dry run a useful check.
-	if _, err := dry.GetServers(ctx); err != nil {
+	if _, err := dry.GetServers(ctx, true); err != nil {
 		t.Fatalf("GetServers under DRY_RUN: %v", err)
 	}
 }

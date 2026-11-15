@@ -3,25 +3,26 @@
 // Read-only analytics for one network (server group): activity profile and
 // gamemode/map/version/country breakdown.  Membership is the same rule
 // getNetworkDetails uses: families whose ROOT has server_group_id = :groupId
-// and NOT aggregate_exclude.  Aliases collapse with MAX, never SUM, and
+// and that are not aggregate-excluded.  Aliases collapse with MAX, never SUM, and
 // anything counting servers counts DISTINCT canonical ids.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import sequelize from '../config/database.js';
 import { QueryTypes } from 'sequelize';
+import { familyHourMapCte } from './playerHoursSql.js';
 import type {
     NetworkActivityCell,
     NetworkBreakdown,
 } from '../../../common/models/networkAnalytics.js';
 import { MAX_REALISTIC_PLAYERCOUNT } from '../const.js';
-import { liveMemberSql } from './canonicalIdentity.js';
+import { liveMemberSql, notExcludedRootSql } from './canonicalIdentity.js';
 
 const GROUP_SERVERS_CTE = `
         group_servers AS (
             SELECT sc.server_id, sc.canonical_id
             FROM server_canonical sc
             JOIN servers root ON root.id = sc.canonical_id
-            WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude
+            WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()}
         )`;
 
 /**
@@ -63,7 +64,7 @@ export async function getNetworkActivity(groupId: number, days: number): Promise
 
 /** Modes, top maps, version spread and countries for one network. */
 export async function getNetworkBreakdown(groupId: number): Promise<NetworkBreakdown> {
-    const familyScope = `sc.canonical_id IN (SELECT root.id FROM servers root WHERE root.server_group_id = :groupId AND NOT root.aggregate_exclude)`;
+    const familyScope = `sc.canonical_id IN (SELECT root.id FROM servers root WHERE root.server_group_id = :groupId AND ${notExcludedRootSql()})`;
     const replacements = { groupId, maxRealisticPlayerCount: MAX_REALISTIC_PLAYERCOUNT };
 
     const [modes, maps, versions, countries] = await Promise.all([
@@ -99,21 +100,8 @@ export async function getNetworkBreakdown(groupId: number): Promise<NetworkBreak
         // hour's mean. Aliases then collapse with MAX per (family, hour, map).
         sequelize.query(`
             WITH ${GROUP_SERVERS_CTE},
-            per_raw AS (
-                SELECT st.server_id, st.bucket, st.map_registry_id,
-                       st.sum_players::float8
-                         / NULLIF(SUM(st.samples) OVER (PARTITION BY st.server_id, st.bucket), 0) AS contribution
-                FROM server_stats_1h_by_map st
-                WHERE st.bucket > NOW() - INTERVAL '7 days'
-                  AND st.server_id IN (SELECT server_id FROM group_servers)
-            ),
-            per_family AS (
-                SELECT gs.canonical_id, r.bucket, r.map_registry_id, MAX(r.contribution) AS contribution
-                FROM per_raw r
-                JOIN group_servers gs ON gs.server_id = r.server_id
-                WHERE r.contribution IS NOT NULL
-                GROUP BY gs.canonical_id, r.bucket, r.map_registry_id
-            )
+            ${familyHourMapCte(`st.bucket > NOW() - INTERVAL '7 days'
+                  AND st.server_id IN (SELECT server_id FROM group_servers)`)}
             SELECT mr.map_name AS "mapName", gr.clean_name AS mode,
                    SUM(pf.contribution)::float8 AS "playerHours"
             FROM per_family pf

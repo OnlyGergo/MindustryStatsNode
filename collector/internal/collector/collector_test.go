@@ -196,3 +196,18 @@ func TestNowMillisHasNoSubMillisecondPart(t *testing.T) {
 		t.Errorf("nowMillis() = %v, want millisecond resolution", got)
 	}
 }
+
+func TestFullSweepDue(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	day := 24 * time.Hour
+
+	if !fullSweepDue(time.Time{}, now, day) {
+		t.Error("the first cycle should be a full sweep")
+	}
+	if fullSweepDue(now.Add(-time.Hour), now, day) {
+		t.Error("a sweep an hour after the last full one should poll primaries only")
+	}
+	if !fullSweepDue(now.Add(-day), now, day) {
+		t.Error("a full interval later should be a full sweep again")
+	}
+}

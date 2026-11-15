@@ -35,15 +35,14 @@ export const BrowseLayoutProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const toggleGroupExpanded = (groupName: string) => {
-    const newExpanded = new Set(expandedGroups);
-    if (!newExpanded.has(groupName)) {
-      newExpanded.add(groupName);
-    } else {
-      newExpanded.delete(groupName);
-    }
-    setExpandedGroups(newExpanded);
-  };
+  // Stable identity, so memoised ServerGroups don't all re-render when one toggles.
+  const toggleGroupExpanded = useCallback((groupName: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(groupName)) next.add(groupName);
+      return next;
+    });
+  }, []);
 
   const handleToggleCollapse = useCallback(() => {
     setIsMasterPanelCollapsed((prev) => {
