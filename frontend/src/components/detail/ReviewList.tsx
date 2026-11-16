@@ -90,7 +90,7 @@ const ReviewList: React.FC<ReviewListProps> = ({
               <span className="text-xs text-dim shrink-0">{formatDate(review.updatedAt)}</span>
             </div>
 
-            <StarRatingDisplay value={review.rating} size={14} className="mb-2" />
+            <StarRatingDisplay value={review.rating} size={12} className="mb-2" />
 
             {review.body && (
               <p className="text-sm text-dim whitespace-pre-line wrap-break-word">{review.body}</p>

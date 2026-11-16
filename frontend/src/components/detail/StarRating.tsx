@@ -25,7 +25,7 @@ interface StarRatingDisplayProps {
 }
 
 /** Read-only stars for an average rating. Partial stars are a filled row clipped to `value/5`, laid over an empty row. */
-export const StarRatingDisplay: React.FC<StarRatingDisplayProps> = ({ value, size = 16, className = "" }) => {
+export const StarRatingDisplay: React.FC<StarRatingDisplayProps> = ({ value, size = 14, className = "" }) => {
   const clamped = Math.max(0, Math.min(5, value));
   const percent = (clamped / 5) * 100;
 
@@ -53,9 +53,9 @@ export const StarRatingDisplay: React.FC<StarRatingDisplayProps> = ({ value, siz
 };
 
 /** Same as {@link StarRatingDisplay}, but compact and without the hover effect. Single filled star, always, with text showing the rating at decimal precision */
-export const CompactStarRatingDisplay: React.FC<StarRatingDisplayProps> = ({ value, size = 16, className = "" }) => {
+export const CompactStarRatingDisplay: React.FC<StarRatingDisplayProps> = ({ value, size = 12, className = "" }) => {
   return (
-    <span className={`inline-flex items-center gap-1 text-acc font-bold ${className}`}>
+    <span className={`inline-flex items-center gap-1 text-acc text-xs font-semibold ${className}`}>
       <StarIcon filled size={size} />
       <span>{(value === -1 ? 'N/A' : Math.max(0, Math.min(5, value)).toFixed(1))}</span>
     </span>
@@ -71,7 +71,7 @@ interface StarRatingInputProps {
 }
 
 /** 5-button radiogroup: click/Enter to pick, arrow keys to move, hover previews the value without committing it. */
-export const StarRatingInput: React.FC<StarRatingInputProps> = ({ value, onChange, size = 28, disabled = false }) => {
+export const StarRatingInput: React.FC<StarRatingInputProps> = ({ value, onChange, size = 22, disabled = false }) => {
   const [hover, setHover] = useState<number | null>(null);
   const shown = hover ?? value;
 

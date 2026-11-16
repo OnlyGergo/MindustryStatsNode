@@ -63,7 +63,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
         title={`Sort by ${currentOption?.label} — ${currentOption?.directionLabels[currentDirection]}`}
         aria-label={`Sort by ${currentOption?.label} — ${currentOption?.directionLabels[currentDirection]}`}
         onClick={() => setIsOpen(!isOpen)}
-        className="btn w-full px-3 py-2 rounded text-sm flex items-center justify-center gap-1.5 min-w-0"
+        className="btn w-full px-3 py-2 text-sm split:px-1 split:py-[3px] split:text-[11px] min-w-0"
       >
         <svg
           className="w-3.5 h-3.5 shrink-0"
@@ -89,7 +89,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
       {isOpen && (
         <div
           role="menu"
-          className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-2rem)] bg-surf border border-bd rounded shadow-xl"
+          className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-2rem)] bg-surf border border-bd rounded-ui shadow-xl"
         >
           <div className="text-xs text-dim uppercase tracking-wide px-3 pt-2 pb-1">
             {isGrouped ? 'Sort networks by' : 'Sort servers by'}

@@ -20,15 +20,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearchValueChange, value }) => 
                 type="text"
                 value={value}
                 onChange={handleChange}
-                placeholder="Search servers..."
-                className="
-                    w-full px-3 py-1 rounded
-                    border border-bd
-                    bg-surf
-                    text-dim text-xs
-                    focus:outline-none focus:border-acc
-                    hover:bg-acc/18 hover:border-acc
-                    transition-colors"
+                placeholder="Search servers…"
+                aria-label="Search servers"
+                className="field pr-7"
             />
             {value && (
                 <button

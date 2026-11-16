@@ -99,7 +99,7 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
         <span className="text-xs text-dim">{formatDate(review.updatedAt)}</span>
       </div>
 
-      <StarRatingDisplay value={review.rating} size={14} />
+      <StarRatingDisplay value={review.rating} size={12} />
 
       {editing ? (
         <div>

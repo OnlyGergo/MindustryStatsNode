@@ -5,8 +5,8 @@ import { formatRelativeTime } from "../../util/general.ts";
 /** Desktop-only; below `split` the commit/source links live in the nav menu. */
 const ServerListFooter: React.FC<{ lastUpdated: Date }> = ({ lastUpdated }) => (
   <div className="hidden split:block px-3 py-2 border-t border-bd shrink-0">
-    <p className="text-xs text-dim flex items-center justify-between">
-    <span>Last Updated: {formatRelativeTime(lastUpdated)}</span>
+    <p className="text-[11px] text-dim flex items-center justify-between gap-2">
+    <span>Updated {formatRelativeTime(lastUpdated)}</span>
           <span>
             Commit:{" "}
 

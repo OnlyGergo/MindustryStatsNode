@@ -81,7 +81,7 @@ const AccountMenu: React.FC = () => {
       <>
         <a
           href={loginHref}
-          className="hidden split:flex btn items-center gap-1.5 text-sm font-medium px-3 py-2 shrink-0"
+          className="hidden split:flex btn shrink-0"
         >
           <DiscordGlyph />
           Log in with Discord
@@ -91,7 +91,7 @@ const AccountMenu: React.FC = () => {
           type="button"
           aria-haspopup="dialog"
           onClick={() => setSheetOpen(true)}
-          className="split:hidden btn flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 shrink-0"
+          className="split:hidden btn py-1.5 shrink-0"
         >
           <DiscordGlyph />
           Log in
@@ -132,7 +132,7 @@ const AccountMenu: React.FC = () => {
         {isOpen && (
           <div
             role="menu"
-            className="absolute top-full right-0 mt-1 z-50 w-48 max-w-[calc(100vw-2rem)] bg-surf border border-bd rounded shadow-xl overflow-hidden"
+            className="absolute top-full right-0 mt-1 z-50 w-48 max-w-[calc(100vw-2rem)] bg-surf border border-bd rounded-ui shadow-xl overflow-hidden"
           >
             <div className="px-3 py-2 border-b border-bd">
               <span className="text-sm font-medium text-tx truncate block">{displayName}</span>

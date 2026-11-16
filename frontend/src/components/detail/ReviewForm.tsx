@@ -133,7 +133,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <StarRatingInput value={rating} onChange={setRating} size={26} disabled={submitting} />
+      <StarRatingInput value={rating} onChange={setRating} size={22} disabled={submitting} />
 
       <div>
         <textarea
@@ -167,7 +167,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
               <StarRatingInput
                 value={aspects[a.key] ?? 0}
                 onChange={(value) => setAspects((prev) => ({ ...prev, [a.key]: value }))}
-                size={18}
+                size={16}
                 disabled={submitting}
               />
               {aspects[a.key] != null && (

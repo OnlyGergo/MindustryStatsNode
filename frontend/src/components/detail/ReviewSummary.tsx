@@ -30,7 +30,7 @@ const ReviewSummary: React.FC<ReviewSummaryProps> = ({ summary, loading }) => {
             {summary.average?.toFixed(1) ?? "-"}
           </div>
           <div className="flex flex-col gap-1">
-            <StarRatingDisplay value={summary.average ?? 0} size={16} />
+            <StarRatingDisplay value={summary.average ?? 0} size={14} />
             <div className="text-xs sm:text-sm text-dim">
               {summary.count} review{summary.count === 1 ? "" : "s"}
             </div>

@@ -4,10 +4,10 @@ const ROWS = 9;
 
 /** Pulsing placeholder rows, sized like ServerItem (p-4, ~96px: name, description, map, status pill, players). */
 const ServerListSkeleton: React.FC = () => (
-  <div className="space-y-1.5 animate-pulse" aria-busy="true" role="status">
+  <div className="animate-pulse" aria-busy="true" role="status">
     <span className="sr-only">Loading servers…</span>
     {Array.from({ length: ROWS }, (_, i) => (
-      <div key={i} className="p-4 flex items-start justify-between" aria-hidden="true">
+      <div key={i} className="mx-3 mb-2 split:m-0 px-3 py-2.5 flex items-start justify-between border-b border-bd" aria-hidden="true">
         <div className="flex flex-col flex-1 min-w-0 mr-4">
           <div className="h-4 w-3/5 rounded bg-tx/10 mb-1" />
           <div className="h-3 w-4/5 rounded bg-tx/10 mb-2" />
