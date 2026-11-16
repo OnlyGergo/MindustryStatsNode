@@ -1,5 +1,6 @@
 import type uPlot from "uplot";
 import { ServerShareEntry } from "../../../common/models/GlobalStatsTypes.js";
+import { cssToken, gridColor, labelColor, mix, modeHue, seriesFill, tokenStroke } from "./themeColors.ts";
 
 /** Ranges the API knows by name; "custom" sends explicit start/end dates instead. */
 export type PresetRange = "1d" | "7d" | "14d" | "3m" | "12m";
@@ -25,33 +26,6 @@ export const DATE_RANGE_OPTIONS: DateRange[] = [
     ...PRESET_RANGE_OPTIONS,
     { label: "Custom", value: "custom" },
 ];
-
-function stringToHue(str: string): number {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return Math.abs(hash) % 360;
-}
-
-function stringToColor(str: string): string {
-    return `hsl(${stringToHue(str)}, 75%, 60%)`;
-}
-
-export function getModeColor(modeName: string | null): string {
-    if (!modeName) return "#ffffff";
-    //const lowerName = modeName.toLowerCase();
-    //if (theme?.modeColors?.[lowerName]) {
-    //    return theme.modeColors[lowerName];
-    //}
-    return stringToColor(modeName);
-}
-
-/** Solid, slightly darker fill of getModeColor, for stacked areas. */
-export function getModeFill(modeName: string | null): string {
-    if (!modeName) return "#525252";
-    return `hsl(${stringToHue(modeName)}, 60%, 42%)`;
-}
 
 export const SHARE_OTHER_LABEL = "Other";
 
@@ -79,17 +53,17 @@ const compactCount = new Intl.NumberFormat(undefined, { notation: "compact", max
 export const countTicks = (narrow: boolean) => (_u: uPlot, splits: number[]) =>
     splits.map((v) => narrow ? compactCount.format(Math.round(v)) : Math.round(v).toLocaleString());
 
-/** Shared axis styling for every time-series chart; narrow charts get bigger labels and fewer ticks. */
-export function buildTimeAxes(
-    narrow: boolean,
-    yValues: uPlot.Axis["values"],
-    gridColor = "rgba(255,255,255,0.03)",
-): uPlot.Axis[] {
-    const font = narrow ? "11px sans-serif" : "10px sans-serif";
-    const line = { stroke: gridColor };
+/**
+ * Shared axis styling for every time-series chart; narrow charts get bigger
+ * labels and fewer ticks. Colours are functions of the theme (see themeColors.ts).
+ */
+export function buildTimeAxes(narrow: boolean, yValues: uPlot.Axis["values"]): uPlot.Axis[] {
+    const font = `${narrow ? 11 : 10}px Barlow, system-ui, sans-serif`;
+    const line = { stroke: (u: uPlot) => gridColor(u.root) };
+    const stroke = tokenStroke("dim");
     return [
-        { stroke: "#9ca3af", grid: line, ticks: line, values: formatTimeTicks, size: 30, font, space: narrow ? 70 : 50 },
-        { stroke: "#9ca3af", grid: line, ticks: line, values: yValues, size: narrow ? 44 : 60, font, space: narrow ? 36 : 30 },
+        { stroke, grid: line, ticks: line, values: formatTimeTicks, size: 30, font, space: narrow ? 70 : 50 },
+        { stroke, grid: line, ticks: line, values: yValues, size: narrow ? 44 : 60, font, space: narrow ? 36 : 30 },
     ];
 }
 
@@ -268,9 +242,7 @@ export function buildStackedData(
     return { labels, data: [xs, ...cumulative.reverse()], players, totals };
 }
 
-function shareColor(label: string): string {
-    return label === SHARE_OTHER_LABEL ? "#a3a3a3" : getModeColor(label);
-}
+const isOther = (label: string) => label === SHARE_OTHER_LABEL;
 
 /** uPlot series for a ShareData, matching its top-of-stack-first data order. */
 export function buildShareSeries(share: ShareData): uPlot.Series[] {
@@ -278,8 +250,10 @@ export function buildShareSeries(share: ShareData): uPlot.Series[] {
         { label: "Time" },
         ...[...share.labels].reverse().map((label): uPlot.Series => ({
             label,
-            stroke: shareColor(label),
-            fill: getModeFill(label === SHARE_OTHER_LABEL ? null : label),
+            stroke: (u) => labelColor(u.root, label, isOther(label)),
+            fill: (u) => isOther(label)
+                ? mix(cssToken(u.root, "dim"), cssToken(u.root, "bg"), 0.45)
+                : seriesFill(u.root, modeHue(label)),
             width: 1,
             spanGaps: false,
             points: { show: false },
@@ -288,7 +262,7 @@ export function buildShareSeries(share: ShareData): uPlot.Series[] {
 }
 
 /** Tooltip rows for one instant of a ShareData: "12.3% (45)", biggest first. */
-export function shareTooltipRows(share: ShareData, idx: number) {
+export function shareTooltipRows(share: ShareData, idx: number, el: Element) {
     const total = share.totals[idx];
     if (total == null) return [];
     return share.labels
@@ -297,7 +271,7 @@ export function shareTooltipRows(share: ShareData, idx: number) {
         .sort((a, b) => b.value - a.value)
         .map((r) => ({
             ...r,
-            color: shareColor(r.label),
+            color: labelColor(el, r.label, isOther(r.label)),
             display: `${((r.value / total) * 100).toFixed(1)}% (${r.value.toLocaleString()})`,
         }));
 }

@@ -196,6 +196,15 @@ body {
   &:hover { background-color: oklch(0.53 0.2 277); }
 }
 
+/* Legend dot for a named series (components/SeriesSwatch.tsx): its hash hue
+   (--h) at the accent's saturation/lightness, clamped like seriesColor() in
+   util/themeColors.ts. The first line is the fallback for browsers without
+   relative colour syntax. */
+.series-swatch {
+  background: hsl(var(--h) 60% 60%);
+  background: hsl(from var(--acc) var(--h) clamp(35, s, 80) clamp(50, l, 70));
+}
+
 /* uPlot tooltip (util/chartTooltip.ts) */
 .chart-tip {
   background: color-mix(in srgb, var(--surf) 96%, transparent);

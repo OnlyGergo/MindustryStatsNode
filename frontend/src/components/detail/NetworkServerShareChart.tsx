@@ -7,11 +7,12 @@ import {
   buildStackedData,
   buildTimeAxes,
   countTicks,
-  getModeColor,
   SHARE_OTHER_LABEL,
 } from "../../util/chartHelpers.ts";
 import { removeColors } from "../../util/mindustry.ts";
 import { useUPlot } from "../../hooks/useUPlot.ts";
+import { labelColor } from "../../util/themeColors.ts";
+import SeriesSwatch from "../SeriesSwatch.tsx";
 import { UPlotFrame } from "../UPlotFrame.tsx";
 
 interface NetworkServerShareChartProps {
@@ -30,7 +31,6 @@ function buildLabels(series: NetworkServerHistory["series"]): string[] {
   });
 }
 
-const labelColor = (label: string) => label === SHARE_OTHER_LABEL ? "#a3a3a3" : getModeColor(label);
 
 // Absolute stacked area of the network's top servers plus "Other". Stack height
 // at each point equals the main network chart's value (see getNetworkServerHistory).
@@ -58,7 +58,7 @@ const NetworkServerShareChart = ({ data, loading }: NetworkServerShareChartProps
     tooltip: (u, idx) => {
       if (!stacked || stacked.totals[idx] == null) return null;
       const rows = stacked.labels
-        .map((label, i) => ({ label, value: stacked.players[i][idx] ?? 0, color: labelColor(label) }))
+        .map((label, i) => ({ label, value: stacked.players[i][idx] ?? 0, color: labelColor(u.root, label, label === SHARE_OTHER_LABEL) }))
         .filter((r) => r.value > 0)
         .sort((a, b) => b.value - a.value);
       return { title: new Date((u.data[0] as number[])[idx] * 1000).toLocaleString(), rows };
@@ -79,7 +79,7 @@ const NetworkServerShareChart = ({ data, loading }: NetworkServerShareChartProps
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-dim max-h-20 overflow-y-auto">
           {labels.map((label) => (
             <span key={label} className="flex items-center gap-1.5 min-w-0">
-              <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: labelColor(label) }} />
+              <SeriesSwatch label={label} other={label === SHARE_OTHER_LABEL} className="w-2 h-2 rounded-full" />
               <span className="truncate max-w-48">{label}</span>
             </span>
           ))}

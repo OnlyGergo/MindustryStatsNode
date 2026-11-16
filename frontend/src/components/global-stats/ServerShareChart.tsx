@@ -53,7 +53,7 @@ const ServerShareChart: React.FC<ServerShareChartProps> = ({ data, loading, erro
         }),
         tooltip: (u, idx) => ({
             title: new Date((u.data[0] as number[])[idx] * 1000).toLocaleString(),
-            rows: shareTooltipRows(share, idx),
+            rows: shareTooltipRows(share, idx, u.root),
         }),
     });
 

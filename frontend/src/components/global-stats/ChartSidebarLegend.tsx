@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { getModeColor } from "../../util/chartHelpers.ts";
+import SeriesSwatch from "../SeriesSwatch.tsx";
 
 // Fixed locale: the legend is server-rendered, and the browser's must not differ.
 const nf = new Intl.NumberFormat("en-US");
@@ -71,15 +71,14 @@ export const ChartSidebarLegend: React.FC<ChartSidebarLegendProps> = ({
                     filteredModes.map((mode) => {
                         const isChecked = visibleModes.has(mode);
                         const peak = peaks[mode] || 0;
-                        const color = getModeColor(mode);
 
                         return (
                             <label
                                 key={mode}
                                 className={`flex items-center justify-between gap-2 px-2 sm:px-2.5 py-1.5 rounded cursor-pointer select-none transition-all ${
                                     isChecked
-                                        ? "bg-acc/12 border border-acc text-tx"
-                                        : "bg-transparent border border-transparent text-dim hover:bg-surf2 hover:text-dim"
+                                        ? "border border-transparent border-t-bd text-tx"
+                                        : "border border-transparent border-t-bd text-dim opacity-60 hover:opacity-100"
                                 }`}
                             >
                                 <div className="flex items-center gap-2.5 min-w-0">
@@ -89,13 +88,10 @@ export const ChartSidebarLegend: React.FC<ChartSidebarLegendProps> = ({
                                         onChange={() => toggleMode(mode)}
                                         className="accent-acc h-3.5 w-3.5 shrink-0 rounded border-bd bg-surf text-acc"
                                     />
-                                    <span
-                                        className="w-2 h-2 rounded shrink-0 animate-pulse"
-                                        style={{ backgroundColor: color }}
-                                    />
+                                    <SeriesSwatch label={mode} className="w-2 h-2 rounded-xs" />
                                     <span className="truncate text-xs font-medium">{mode}</span>
                                 </div>
-                                <span className="text-xs font-mono text-dim shrink-0 bg-surf2 px-1.5 py-0.5 rounded border border-bd">
+                                <span className="font-head font-bold text-sm text-dim shrink-0">
                                   {nf.format(peak)}
                                 </span>
                             </label>
