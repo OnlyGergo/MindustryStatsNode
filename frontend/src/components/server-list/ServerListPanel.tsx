@@ -98,9 +98,9 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
         </div>
       )}
       <div
-        className={`relative ${visibility} w-full split:w-3/12 split:min-w-sm bg-surface-primary border-r border-default flex-col h-full`}
+        className={`relative ${visibility} w-full split:w-3/12 split:min-w-sm bg-surf border-r border-bd flex-col h-full`}
       >
-        <div className="border-b border-subtle shrink-0">
+        <div className="border-b border-bd shrink-0">
           <div className="flex justify-center items-center h-5 split:h-auto split:pt-3 split:pb-0">
             <ServerStatsSummary
               onlineServers={onlineServers}
@@ -127,7 +127,7 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
         {/* Server List */}
         <div className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
           {error && (
-              <div className="bg-red-500/20 border border-red-500 text-red-400 px-3 py-2 text-sm rounded mb-2">
+              <div className="bg-bad/20 border border-bad text-bad px-3 py-2 text-sm rounded mb-2">
                 Failed to load server data. Please try again later.
               </div>
           )}

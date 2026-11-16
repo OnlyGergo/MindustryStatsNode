@@ -69,22 +69,22 @@ const matchesTerms = (haystack: string, terms: string[]) => terms.every((t) => h
 const termsOf = (query: string) => query.toLowerCase().split(/\s+/).filter(Boolean);
 
 const ServerName: React.FC<{ name: string | null }> = ({ name }) =>
-  name ? <MindustryText text={name} /> : <span className="text-tertiary">(no name)</span>;
+  name ? <MindustryText text={name} /> : <span className="text-dim">(no name)</span>;
 
 const Description: React.FC<{ text: string | null }> = ({ text }) =>
   text && stripMindustry(text).trim() ? (
-    <div className="text-xs text-secondary line-clamp-3 break-words">
+    <div className="text-xs text-dim line-clamp-3 break-words">
       <MindustryText text={text} />
     </div>
   ) : (
-    <div className="text-xs text-tertiary italic">No description</div>
+    <div className="text-xs text-dim italic">No description</div>
   );
 
 const FamilyCard: React.FC<{ family: MergeFamily; label?: string; action?: React.ReactNode }> = ({ family, label, action }) => (
-  <div className="flex-1 min-w-0 border border-subtle rounded p-2 bg-surface-primary flex flex-col gap-1">
+  <div className="flex-1 min-w-0 border border-bd rounded p-2 bg-surf flex flex-col gap-1">
     {(label || action) && (
       <div className="flex items-center justify-between gap-2">
-        {label && <div className="text-xs text-tertiary">{label}</div>}
+        {label && <div className="text-xs text-dim">{label}</div>}
         {action}
       </div>
     )}
@@ -92,13 +92,13 @@ const FamilyCard: React.FC<{ family: MergeFamily; label?: string; action?: React
       to="/server/$serverId"
       params={{ serverId: String(family.id) }}
       target="_blank"
-      className="block text-sm text-primary truncate hover:underline"
+      className="block text-sm text-tx truncate hover:underline"
     >
       <ServerName name={family.name} />
     </Link>
     <Description text={family.description} />
-    <div className="text-xs text-secondary font-mono break-all">#{family.id} · {family.host}:{family.port}</div>
-    <div className="text-xs text-tertiary">
+    <div className="text-xs text-dim font-mono break-all">#{family.id} · {family.host}:{family.port}</div>
+    <div className="text-xs text-dim">
       {formatDate(family.firstSeen)} → {formatDate(family.lastSeen)}
       {family.memberCount > 1 && ` · ${family.memberCount} members`}
     </div>
@@ -118,7 +118,7 @@ const PairView: React.FC<{ older: MergeFamily; newer: MergeFamily; olderLabel: s
 }) => (
   <div className="flex flex-col-reverse sm:flex-row gap-1 sm:gap-2 items-stretch">
     <FamilyCard family={older} label={olderLabel} />
-    <div className="self-center text-tertiary text-lg leading-none" aria-hidden>
+    <div className="self-center text-dim text-lg leading-none" aria-hidden>
       <span className="sm:hidden">↓</span>
       <span className="hidden sm:inline">←</span>
     </div>
@@ -143,14 +143,14 @@ const SearchInput: React.FC<{
       placeholder={placeholder}
       disabled={disabled}
       autoFocus={autoFocus}
-      className="w-full bg-surface-tertiary border border-subtle rounded px-3 py-2 pr-9 text-base sm:text-sm text-primary focus:outline-none focus:border-accent [&::-webkit-search-cancel-button]:appearance-none"
+      className="w-full bg-surf2 border border-bd rounded px-3 py-2 pr-9 text-base sm:text-sm text-tx focus:outline-none focus:border-acc [&::-webkit-search-cancel-button]:appearance-none"
     />
     {value && (
       <button
         type="button"
         aria-label="Clear search"
         onClick={() => onChange("")}
-        className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 text-tertiary hover:text-primary"
+        className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 text-dim hover:text-tx"
       >
         ✕
       </button>
@@ -191,7 +191,7 @@ const FamilyPicker: React.FC<{
           family={selected}
           label={label}
           action={
-            <button type="button" className="button-secondary text-xs px-3 py-1" disabled={disabled} onClick={() => onSelect(null)}>
+            <button type="button" className="btn text-xs px-3 py-1" disabled={disabled} onClick={() => onSelect(null)}>
               Change
             </button>
           }
@@ -201,7 +201,7 @@ const FamilyPicker: React.FC<{
   }
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col gap-1 text-sm text-secondary">
+    <div className="flex-1 min-w-0 flex flex-col gap-1 text-sm text-dim">
       <span>{label}</span>
       <SearchInput
         value={query}
@@ -210,25 +210,25 @@ const FamilyPicker: React.FC<{
         disabled={disabled || !families}
       />
       {deferred.trim() && families && (
-        <ul className="flex flex-col border border-subtle rounded divide-y divide-border-subtle max-h-96 overflow-y-auto overscroll-contain">
-          {results.length === 0 && <li className="p-3 text-xs text-tertiary">No servers match.</li>}
+        <ul className="flex flex-col border border-bd rounded divide-y divide-bd max-h-96 overflow-y-auto overscroll-contain">
+          {results.length === 0 && <li className="p-3 text-xs text-dim">No servers match.</li>}
           {results.map((f) => (
             <li key={f.id}>
               <button
                 type="button"
-                className="w-full text-left p-2 sm:p-2 min-h-11 hover:bg-surface-tertiary flex flex-col gap-0.5"
+                className="w-full text-left p-2 sm:p-2 min-h-11 hover:bg-surf2 flex flex-col gap-0.5"
                 onClick={() => {
                   onSelect(f);
                   setQuery("");
                 }}
               >
-                <span className="text-sm text-primary truncate">
+                <span className="text-sm text-tx truncate">
                   <ServerName name={f.name} />
                 </span>
-                <span className="text-xs text-secondary font-mono break-all">
+                <span className="text-xs text-dim font-mono break-all">
                   #{f.id} · {f.host}:{f.port}
                 </span>
-                <span className="text-xs text-tertiary">
+                <span className="text-xs text-dim">
                   {formatDate(f.firstSeen)} → {formatDate(f.lastSeen)}
                 </span>
               </button>
@@ -386,19 +386,19 @@ const MergesAdmin: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4 p-3 sm:p-4 max-w-4xl">
-      <p className="text-xs sm:text-sm text-secondary">
+      <p className="text-xs sm:text-sm text-dim">
         Merging folds two server families into one. Stats stay on their original rows and are combined when read, so a
         merge is undone by detaching the member again. The older family always keeps its id.
       </p>
 
       {message && (
-        <div className={`text-sm ${message.kind === "ok" ? "text-status-online" : "text-status-offline"}`} role="status">
+        <div className={`text-sm ${message.kind === "ok" ? "text-good" : "text-bad"}`} role="status">
           {message.text}
         </div>
       )}
-      {loadError && <div className="text-sm text-status-offline">{loadError}</div>}
+      {loadError && <div className="text-sm text-bad">{loadError}</div>}
 
-      <div className="sticky top-0 z-10 -mx-3 sm:mx-0 px-3 sm:px-0 py-2 bg-surface-primary flex flex-col gap-2 border-b border-subtle">
+      <div className="sticky top-0 z-10 -mx-3 sm:mx-0 px-3 sm:px-0 py-2 bg-surf flex flex-col gap-2 border-b border-bd">
         <div className="grid grid-cols-3 gap-1" role="tablist">
           {tabs.map((t) => (
             <button
@@ -406,7 +406,7 @@ const MergesAdmin: React.FC = () => {
               type="button"
               role="tab"
               aria-selected={tab === t.id}
-              className={`${tab === t.id ? "button-accent" : "button-secondary"} text-sm px-2 py-1.5 sm:py-2 leading-tight`}
+              className={`${tab === t.id ? "btn-acc" : "btn"} text-sm px-2 py-1.5 sm:py-2 leading-tight`}
               onClick={() => setTab(t.id)}
             >
               {t.label}
@@ -427,7 +427,7 @@ const MergesAdmin: React.FC = () => {
                   key={reason}
                   type="button"
                   aria-pressed={on}
-                  className={`${on ? "button-accent" : "button-secondary"} shrink-0 whitespace-nowrap text-xs px-3 py-1.5 rounded-full`}
+                  className={`${on ? "btn-acc" : "btn"} shrink-0 whitespace-nowrap text-xs px-3 py-1.5 rounded-full`}
                   onClick={() => toggleFilter(reason)}
                 >
                   {on && "✓ "}
@@ -442,13 +442,13 @@ const MergesAdmin: React.FC = () => {
 
       {tab === "suggestions" && (
         <section className="flex flex-col gap-2">
-          <p className="text-xs text-tertiary">
+          <p className="text-xs text-dim">
             Same name, or a shared host or MOTD with the timing to back it. Every selected tag must match.
             {suggestions && ` Showing ${visibleSuggestions.length} of ${searchedCount}${terms.length ? " matching" : ""}.`}
           </p>
-          {suggestions === null && !loadError && <div className="text-secondary text-sm">Loading…</div>}
+          {suggestions === null && !loadError && <div className="text-dim text-sm">Loading…</div>}
           {suggestions && visibleSuggestions.length === 0 && (
-            <div className="text-secondary text-sm">
+            <div className="text-dim text-sm">
               Nothing matches.
               {filters.size > 0 && (
                 <button type="button" className="ml-2 underline" onClick={() => setFilters(new Set())}>
@@ -460,24 +460,24 @@ const MergesAdmin: React.FC = () => {
           {visibleSuggestions.slice(0, shown).map((s) => {
             const handover = handoverText(s);
             return (
-              <div key={`${s.source.id}-${s.target.id}`} className="border border-subtle rounded p-3 bg-surface-secondary flex flex-col gap-2">
+              <div key={`${s.source.id}-${s.target.id}`} className="border border-bd rounded p-3 bg-surf flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   {s.reasons.map((r) => (
                     <span
                       key={r}
-                      className={`px-1.5 py-0.5 rounded ${filters.has(r) ? "bg-accent-muted text-accent" : "bg-surface-tertiary text-secondary"}`}
+                      className={`px-1.5 py-0.5 rounded ${filters.has(r) ? "bg-acc/12 text-acc" : "bg-surf2 text-dim"}`}
                     >
                       {REASON_LABELS[r]}
                     </span>
                   ))}
-                  {handover && <span className="text-tertiary">{handover}</span>}
-                  <span className="text-tertiary ml-auto">score {s.score}</span>
+                  {handover && <span className="text-dim">{handover}</span>}
+                  <span className="text-dim ml-auto">score {s.score}</span>
                 </div>
                 <PairView older={s.target} newer={s.source} olderLabel="Into (older, keeps id)" newerLabel="Merge (newer)" />
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="button-accent text-sm px-4 py-2 sm:py-1 flex-1 sm:flex-none"
+                    className="btn-acc text-sm px-4 py-2 sm:py-1 flex-1 sm:flex-none"
                     disabled={busy}
                     onClick={() => void merge(s.source, s.target)}
                   >
@@ -485,7 +485,7 @@ const MergesAdmin: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    className="button-secondary text-sm px-4 py-2 sm:py-1 flex-1 sm:flex-none"
+                    className="btn text-sm px-4 py-2 sm:py-1 flex-1 sm:flex-none"
                     disabled={busy}
                     onClick={() => void dismiss(s)}
                   >
@@ -496,7 +496,7 @@ const MergesAdmin: React.FC = () => {
             );
           })}
           {visibleSuggestions.length > shown && (
-            <button type="button" className="button-secondary text-sm px-4 py-2" onClick={() => setShown((n) => n + PAGE_SIZE)}>
+            <button type="button" className="btn text-sm px-4 py-2" onClick={() => setShown((n) => n + PAGE_SIZE)}>
               Show more ({visibleSuggestions.length - shown} left)
             </button>
           )}
@@ -504,8 +504,8 @@ const MergesAdmin: React.FC = () => {
       )}
 
       {tab === "manual" && (
-        <section className="border border-subtle rounded p-3 sm:p-4 bg-surface-secondary flex flex-col gap-3">
-          <p className="text-xs text-tertiary">
+        <section className="border border-bd rounded p-3 sm:p-4 bg-surf flex flex-col gap-3">
+          <p className="text-xs text-dim">
             Search every tracked server by name, MOTD, host or id, or paste a /server/… URL. The order you pick them in
             doesn't matter: the older one keeps its id.
           </p>
@@ -527,17 +527,17 @@ const MergesAdmin: React.FC = () => {
               disabled={busy}
             />
           </div>
-          {sameFamily && <div className="text-sm text-status-offline">Those are already the same server.</div>}
+          {sameFamily && <div className="text-sm text-bad">Those are already the same server.</div>}
           {manualPair && (
-            <div className="flex flex-col gap-2 border-t border-subtle pt-3">
-              <div className="text-xs text-tertiary">Result</div>
+            <div className="flex flex-col gap-2 border-t border-bd pt-3">
+              <div className="text-xs text-dim">Result</div>
               <PairView older={manualPair.older} newer={manualPair.newer} olderLabel="Into (older, keeps id)" newerLabel="Merge (newer)" />
             </div>
           )}
           <div>
             <button
               type="button"
-              className="button-accent text-sm px-4 py-2 sm:py-1 w-full sm:w-auto"
+              className="btn-acc text-sm px-4 py-2 sm:py-1 w-full sm:w-auto"
               disabled={busy || !manualPair}
               onClick={() => void handleManualMerge()}
             >
@@ -549,35 +549,35 @@ const MergesAdmin: React.FC = () => {
 
       {tab === "merged" && (
         <section className="flex flex-col gap-2">
-          {merged === null && !loadError && <div className="text-secondary text-sm">Loading…</div>}
-          {merged?.length === 0 && <div className="text-secondary text-sm">Nothing is merged yet.</div>}
-          {merged && merged.length > 0 && visibleMerged.length === 0 && <div className="text-secondary text-sm">Nothing matches.</div>}
+          {merged === null && !loadError && <div className="text-dim text-sm">Loading…</div>}
+          {merged?.length === 0 && <div className="text-dim text-sm">Nothing is merged yet.</div>}
+          {merged && merged.length > 0 && visibleMerged.length === 0 && <div className="text-dim text-sm">Nothing matches.</div>}
           {visibleMerged.map((family) => (
-            <div key={family.id} className="border border-subtle rounded p-3 bg-surface-secondary flex flex-col gap-2">
-              <Link to="/server/$serverId" params={{ serverId: String(family.id) }} className="text-sm text-primary hover:underline">
-                <ServerName name={family.name} /> <span className="text-tertiary font-mono">#{family.id}</span>
+            <div key={family.id} className="border border-bd rounded p-3 bg-surf flex flex-col gap-2">
+              <Link to="/server/$serverId" params={{ serverId: String(family.id) }} className="text-sm text-tx hover:underline">
+                <ServerName name={family.name} /> <span className="text-dim font-mono">#{family.id}</span>
               </Link>
               <Description text={family.description} />
               {/* Members come oldest first: desktop keeps that, a phone puts the newest on top. */}
               <ul className="flex flex-col-reverse sm:flex-col">
                 {family.members.map((m) => (
-                  <li key={m.id} className="border-t border-subtle py-2 flex items-center gap-2 text-xs text-secondary">
+                  <li key={m.id} className="border-t border-bd py-2 flex items-center gap-2 text-xs text-dim">
                     <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3">
                       <span className="font-mono whitespace-nowrap sm:w-28">
                         #{m.id}
-                        {m.isRoot && <span className="ml-1 text-tertiary">(root)</span>}
+                        {m.isRoot && <span className="ml-1 text-dim">(root)</span>}
                       </span>
                       <span className="font-mono break-all sm:flex-1">
                         {m.host}:{m.port}
-                        {m.retiredAt != null && <span className="ml-1 text-tertiary">(retired)</span>}
+                        {m.retiredAt != null && <span className="ml-1 text-dim">(retired)</span>}
                       </span>
-                      <span className="text-tertiary whitespace-nowrap">
+                      <span className="text-dim whitespace-nowrap">
                         {formatDate(m.createdAt)} → {formatDate(m.lastSeen)}
                       </span>
                     </div>
                     <button
                       type="button"
-                      className="button-secondary px-3 py-2 sm:py-0.5 shrink-0"
+                      className="btn px-3 py-2 sm:py-0.5 shrink-0"
                       disabled={busy}
                       onClick={() => detach(family.id, m.id)}
                     >

@@ -1,6 +1,6 @@
 const PlaceholderIcon: React.FC = () => (
   <svg
-    className="w-8 h-8 text-gray-400"
+    className="w-8 h-8 text-dim"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -22,12 +22,12 @@ export const EmptyState: React.FC<{
 }> = ({ title, message, isError, error }) => (
   <div className="h-full flex items-center justify-center">
     <div className="text-center">
-      <div className="w-16 h-16 bg-neutral-700/50 rounded flex items-center justify-center mb-4 mx-auto">
+      <div className="w-16 h-16 bg-surf2 rounded flex items-center justify-center mb-4 mx-auto">
         <PlaceholderIcon />
       </div>
-      <h3 className="text-xl font-semibold text-gray-300 mb-2">{title}</h3>
-      <p className={isError ? "text-red-400" : "text-gray-400"}>{message}</p>
-      {error && <p className="text-red-400">{error}</p>}
+      <h3 className="text-xl font-semibold text-tx mb-2">{title}</h3>
+      <p className={isError ? "text-bad" : "text-dim"}>{message}</p>
+      {error && <p className="text-bad">{error}</p>}
     </div>
   </div>
 );

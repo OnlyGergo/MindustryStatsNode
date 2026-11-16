@@ -3,10 +3,10 @@ import type { Headline } from "../../../../common/models/leaderboard.ts";
 import { formatHours, formatInt, formatSigned, formatUtcDateTime, pctChange } from "./format.ts";
 
 const Stat: React.FC<{ label: string; value: React.ReactNode; hint?: React.ReactNode }> = ({ label, value, hint }) => (
-  <div className="bg-surface-secondary border border-subtle p-2 sm:p-3 rounded min-w-0">
-    <div className="text-xl sm:text-2xl font-bold text-accent truncate">{value}</div>
-    <div className="text-xs sm:text-sm text-tertiary">{label}</div>
-    {hint && <div className="text-xs text-tertiary truncate">{hint}</div>}
+  <div className="bg-surf border border-bd p-2 sm:p-3 rounded min-w-0">
+    <div className="text-xl sm:text-2xl font-bold text-acc truncate">{value}</div>
+    <div className="text-xs sm:text-sm text-dim">{label}</div>
+    {hint && <div className="text-xs text-dim truncate">{hint}</div>}
   </div>
 );
 
@@ -15,7 +15,7 @@ const Change: React.FC<{ cur: number; prev: number; unit?: string }> = ({ cur, p
   const diff = cur - prev;
   const text = pct != null ? `${formatSigned(pct)}%` : `${formatSigned(diff)}${unit}`;
   return (
-    <span className={diff >= 0 ? "text-green-400" : "text-red-400"}>
+    <span className={diff >= 0 ? "text-good" : "text-bad"}>
       {diff >= 0 ? "▲" : "▼"} {text.replace(/^[+−]/, "")} vs previous
     </span>
   );

@@ -11,18 +11,18 @@ const monthName = (ms: number): string =>
 
 /** One story card: a title, one fact, content. */
 const Card: React.FC<{ title: string; note?: string; children: React.ReactNode }> = ({ title, note, children }) => (
-  <section className="bg-surface-secondary border border-subtle rounded p-4 sm:p-8 min-w-0">
-    <h2 className="text-sm uppercase tracking-wide text-tertiary">{title}</h2>
-    {note && <p className="text-xs text-tertiary">{note}</p>}
+  <section className="bg-surf border border-bd rounded p-4 sm:p-8 min-w-0">
+    <h2 className="text-sm uppercase tracking-wide text-dim">{title}</h2>
+    {note && <p className="text-xs text-dim">{note}</p>}
     <div className="mt-3 sm:mt-4">{children}</div>
   </section>
 );
 
 const Big: React.FC<{ value: React.ReactNode; label: string; hint?: React.ReactNode }> = ({ value, label, hint }) => (
   <div className="min-w-0">
-    <div className="text-3xl sm:text-5xl font-bold text-accent tabular-nums break-words">{value}</div>
-    <div className="text-sm text-secondary">{label}</div>
-    {hint && <div className="text-xs text-tertiary">{hint}</div>}
+    <div className="text-3xl sm:text-5xl font-bold text-acc tabular-nums break-words">{value}</div>
+    <div className="text-sm text-dim">{label}</div>
+    {hint && <div className="text-xs text-dim">{hint}</div>}
   </div>
 );
 
@@ -30,7 +30,7 @@ const MapName: React.FC<{ row: MapRow }> = ({ row }) => (
   <div className="flex items-center gap-2 min-w-0">
     <span className="truncate max-w-[12rem] sm:max-w-[16rem]"><MindustryText text={row.mapName} /></span>
     {row.mode && (
-      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-surface-tertiary border border-subtle text-secondary shrink-0">
+      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-surf2 border border-bd text-dim shrink-0">
         {row.mode}
       </span>
     )}
@@ -44,18 +44,18 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
   const maxMonth = Math.max(1, ...r.months.map((m) => m.playerHours));
 
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
+    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surf">
       <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
-        <header className="bg-surface-secondary border border-subtle rounded p-6 sm:p-12 text-center">
-          <h1 className="text-4xl sm:text-6xl font-bold text-accent">{r.year} Wrapped</h1>
-          <p className="text-sm sm:text-base text-secondary mt-2">
+        <header className="bg-surf border border-bd rounded p-6 sm:p-12 text-center">
+          <h1 className="text-4xl sm:text-6xl font-bold text-acc">{r.year} Wrapped</h1>
+          <p className="text-sm sm:text-base text-dim mt-2">
             {r.final ? `The year in Mindustry, ${r.year}.` : `so far · as of ${formatUtcDate(r.asOf)}`}
           </p>
           {onPlayStory && (
             <button
               type="button"
               onClick={onPlayStory}
-              className="mt-4 px-4 py-1.5 rounded-full bg-accent-muted border border-accent-border text-accent text-sm hover:bg-accent-hover cursor-pointer"
+              className="mt-4 px-4 py-1.5 rounded-full bg-acc/12 border border-acc/40 text-acc text-sm hover:bg-acc/18 cursor-pointer"
             >
               Play story
             </button>
@@ -77,7 +77,7 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
 
         {winner && (
           <Card title="Server of the year" note="Most player-hours.">
-            <div className="text-2xl sm:text-4xl font-bold text-primary break-words">
+            <div className="text-2xl sm:text-4xl font-bold text-tx break-words">
               <Link to="/server/$serverId" params={{ serverId: String(winner.id) }} className="hover:underline">
                 {winner.name ? <MindustryText text={winner.name} /> : `Server #${winner.id}`}
               </Link>
@@ -86,7 +86,7 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
               <Link
                 to="/network/$networkId"
                 params={{ networkId: String(winner.networkId) }}
-                className="text-sm text-tertiary hover:text-accent hover:underline"
+                className="text-sm text-dim hover:text-acc hover:underline"
               >
                 {winner.networkName}
               </Link>
@@ -122,7 +122,7 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
               return (
                 <div key={i} className="flex-1 min-w-0 h-full flex flex-col justify-end items-center">
                   <div
-                    className="w-full bg-accent rounded-t"
+                    className="w-full bg-acc rounded-t"
                     style={{ height: `${h}%`, minHeight: m && m.playerHours > 0 ? 2 : 0 }}
                     title={m ? `${monthName(m.month)}: ${formatHours(m.playerHours)}` : undefined}
                   />
@@ -132,7 +132,7 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
           </div>
           <div className="flex gap-1 sm:gap-2 mt-1">
             {MONTH_INITIALS.map((c, i) => (
-              <div key={i} className="flex-1 text-center text-xs text-tertiary">
+              <div key={i} className="flex-1 text-center text-xs text-dim">
                 {c}
               </div>
             ))}
@@ -196,15 +196,15 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
             />
             {r.mapPerMode.length > 0 && (
               <>
-                <h3 className="text-sm text-secondary mt-4 mb-2">Most played map per mode</h3>
+                <h3 className="text-sm text-dim mt-4 mb-2">Most played map per mode</h3>
                 <div className="flex flex-wrap gap-2">
                   {r.mapPerMode.map((m) => (
                     <span
                       key={m.mode}
-                      className="inline-flex items-center gap-1.5 max-w-full px-2 py-1 rounded bg-surface-tertiary border border-subtle text-xs"
+                      className="inline-flex items-center gap-1.5 max-w-full px-2 py-1 rounded bg-surf2 border border-bd text-xs"
                     >
-                      <span className="uppercase text-secondary shrink-0">{m.mode}</span>
-                      <span className="text-primary truncate"><MindustryText text={m.mapName} /></span>
+                      <span className="uppercase text-dim shrink-0">{m.mode}</span>
+                      <span className="text-tx truncate"><MindustryText text={m.mapName} /></span>
                     </span>
                   ))}
                 </div>
@@ -219,11 +219,11 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
               {r.modes.map((m) => (
                 <li key={m.mode}>
                   <div className="flex justify-between text-sm gap-2">
-                    <span className="truncate text-primary">{m.mode}</span>
+                    <span className="truncate text-tx">{m.mode}</span>
                     <span className="tabular-nums whitespace-nowrap">{(m.share * 100).toFixed(1)}%</span>
                   </div>
-                  <div className="h-2 rounded bg-surface-tertiary overflow-hidden">
-                    <div className="h-full bg-accent" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
+                  <div className="h-2 rounded bg-surf2 overflow-hidden">
+                    <div className="h-full bg-acc" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
                   </div>
                 </li>
               ))}
@@ -272,7 +272,7 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
                     <Link
                       to="/network/$networkId"
                       params={{ networkId: String(n.id) }}
-                      className="text-primary hover:underline block truncate max-w-[12rem] sm:max-w-[16rem]"
+                      className="text-tx hover:underline block truncate max-w-[12rem] sm:max-w-[16rem]"
                     >
                       {n.name}
                     </Link>

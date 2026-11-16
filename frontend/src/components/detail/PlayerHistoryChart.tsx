@@ -115,7 +115,7 @@ const PlayerHistoryChart = ({ data, loading }: PlayerHistoryChartProps) => {
       <UPlotFrame outerRef={outerRef} mountRef={mountRef} loading={loading} />
 
       {!loading && data.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-tertiary text-xs font-medium z-20">
+        <div className="absolute inset-0 flex items-center justify-center text-dim text-xs font-medium z-20">
           No data available for this range.
         </div>
       )}

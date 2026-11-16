@@ -35,7 +35,7 @@ const HistoryRangeControls = ({
             key={option.value}
             onClick={() => setSelectedRange(option.value)}
             className={`px-3 py-1 text-sm ${
-              selectedRange === option.value ? "button-accent" : "button-secondary"
+              selectedRange === option.value ? "btn-acc" : "btn"
             }`}
           >
             {option.label}
@@ -46,7 +46,7 @@ const HistoryRangeControls = ({
       {selectedRange === "custom" && (
         <div className="flex flex-wrap gap-4 mb-4">
           <div className="flex items-center gap-2">
-            <label htmlFor={`${idPrefix}-start-date`} className="text-sm text-tertiary">
+            <label htmlFor={`${idPrefix}-start-date`} className="text-sm text-dim">
               From:
             </label>
             <input
@@ -55,11 +55,11 @@ const HistoryRangeControls = ({
               value={customStartDate}
               max={today}
               onChange={(e) => setCustomStartDate(e.target.value)}
-              className="bg-surface-tertiary border border-default rounded px-3 py-1 text-sm text-primary focus:outline-none focus:border-accent"
+              className="bg-surf2 border border-bd rounded px-3 py-1 text-sm text-tx focus:outline-none focus:border-acc"
             />
           </div>
           <div className="flex items-center gap-2">
-            <label htmlFor={`${idPrefix}-end-date`} className="text-sm text-tertiary">
+            <label htmlFor={`${idPrefix}-end-date`} className="text-sm text-dim">
               To:
             </label>
             <input
@@ -68,16 +68,16 @@ const HistoryRangeControls = ({
               value={customEndDate}
               max={today}
               onChange={(e) => setCustomEndDate(e.target.value)}
-              className="bg-surface-tertiary border border-default rounded px-3 py-1 text-sm text-primary focus:outline-none focus:border-accent"
+              className="bg-surf2 border border-bd rounded px-3 py-1 text-sm text-tx focus:outline-none focus:border-acc"
             />
           </div>
         </div>
       )}
 
-      {dateError && <div className="text-status-offline text-sm mb-4">{dateError}</div>}
+      {dateError && <div className="text-bad text-sm mb-4">{dateError}</div>}
 
       {fetchError && (
-        <div className="text-status-offline text-sm mb-4 bg-status-offline border border-status-offline rounded p-3">
+        <div className="text-bad text-sm mb-4 bg-bad/15 border border-bad/40 rounded p-3">
           {fetchError}
         </div>
       )}

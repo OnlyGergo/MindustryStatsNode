@@ -79,12 +79,12 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
   const [visibleServerGroups, setVisibleServerGroups] = useVisibleSet(sortedServerGroups);
 
   return (
-      <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
+      <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surf">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
             <div className="min-w-0 mb-4">
-              <h1 className="text-xl sm:text-2xl font-bold text-primary wrap-break-word">
+              <h1 className="text-xl sm:text-2xl font-bold text-tx wrap-break-word">
                 Global Stats
               </h1>
             </div>
@@ -102,33 +102,33 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
 
           {/* Summary tiles */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
-            <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex items-center justify-between gap-3 sm:gap-4">
+            <div className="bg-surf border border-bd rounded p-4 sm:p-6 flex items-center justify-between gap-3 sm:gap-4">
               <div className="min-w-0">
-                <div className="text-xs sm:text-sm text-tertiary">
+                <div className="text-xs sm:text-sm text-dim">
                   Period Peak High
                 </div>
-                <div className="text-xl sm:text-2xl font-bold text-accent wrap-break-word">
+                <div className="text-xl sm:text-2xl font-bold text-acc wrap-break-word">
                   {loading ? "..." : nf.format(pivot.peakPlayers)}
                 </div>
               </div>
-              <div className="shrink-0 bg-accent-muted text-accent border border-accent rounded p-2 sm:p-3">
+              <div className="shrink-0 bg-acc/12 text-acc border border-acc rounded p-2 sm:p-3">
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
             </div>
 
-            <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex items-center justify-between gap-3 sm:gap-4">
+            <div className="bg-surf border border-bd rounded p-4 sm:p-6 flex items-center justify-between gap-3 sm:gap-4">
               <div className="min-w-0">
-                <div className="text-xs sm:text-sm text-tertiary">
+                <div className="text-xs sm:text-sm text-dim">
                   Tracked Gamemodes
                 </div>
-                <div className="text-xl sm:text-2xl font-bold text-accent wrap-break-word">
+                <div className="text-xl sm:text-2xl font-bold text-acc wrap-break-word">
                   {gamemodeList?.length ?? 0}{" "}
-                  <span className="text-xs sm:text-sm font-normal text-tertiary">modes</span>
+                  <span className="text-xs sm:text-sm font-normal text-dim">modes</span>
                 </div>
               </div>
-              <div className="shrink-0 bg-surface-tertiary text-secondary border border-subtle rounded p-2 sm:p-3">
+              <div className="shrink-0 bg-surf2 text-dim border border-bd rounded p-2 sm:p-3">
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
@@ -138,8 +138,8 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
 
           {/* Gamemode chart + legend */}
           <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:items-stretch lg:min-h-115 lg:h-[60vh] mb-4 sm:mb-6">
-            <div className="flex-1 min-w-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col">
-              <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4 wrap-break-word">
+            <div className="flex-1 min-w-0 bg-surf border border-bd rounded p-4 sm:p-6 flex flex-col">
+              <h2 className="text-base sm:text-lg font-semibold text-tx mb-3 sm:mb-4 wrap-break-word">
                 {viewMode === "share"
                     ? "Player Share by Gamemode"
                     : viewMode === "lines" ? "Playercounts by Gamemode" : "Aggregated Global Playercounts"}
@@ -158,8 +158,8 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
             </div>
 
             {viewMode !== "aggregated" && (
-                <div className="w-full lg:w-76 shrink-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col overflow-hidden">
-                  <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+                <div className="w-full lg:w-76 shrink-0 bg-surf border border-bd rounded p-4 sm:p-6 flex flex-col overflow-hidden">
+                  <h2 className="text-base sm:text-lg font-semibold text-tx mb-3 sm:mb-4">
                     Gamemodes
                   </h2>
                   <div className="flex-1 min-h-0">
@@ -177,10 +177,10 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
           {/* Group share chart + legend */}
           {selectedGamemode && (
               <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:items-stretch lg:min-h-115 lg:h-[60vh] mb-4 sm:mb-6">
-                <div className="flex-1 min-w-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col">
-                  <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4 flex flex-wrap items-center gap-2 min-w-0">
+                <div className="flex-1 min-w-0 bg-surf border border-bd rounded p-4 sm:p-6 flex flex-col">
+                  <h2 className="text-base sm:text-lg font-semibold text-tx mb-3 sm:mb-4 flex flex-wrap items-center gap-2 min-w-0">
                     <span>Group Share for</span>
-                    <span className="min-w-0 bg-accent-muted text-accent border border-accent rounded px-2 py-0.5 text-xs sm:text-sm font-medium wrap-break-word">
+                    <span className="min-w-0 bg-acc/12 text-acc border border-acc rounded px-2 py-0.5 text-xs sm:text-sm font-medium wrap-break-word">
                       {selectedGamemode.cleanModeName}
                     </span>
                   </h2>
@@ -196,8 +196,8 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
                   </div>
                 </div>
 
-                <div className="w-full lg:w-76 shrink-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col overflow-hidden">
-                  <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+                <div className="w-full lg:w-76 shrink-0 bg-surf border border-bd rounded p-4 sm:p-6 flex flex-col overflow-hidden">
+                  <h2 className="text-base sm:text-lg font-semibold text-tx mb-3 sm:mb-4">
                     Server Groups
                   </h2>
                   <div className="flex-1 min-h-0">

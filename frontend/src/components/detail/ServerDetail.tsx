@@ -48,8 +48,8 @@ const ServerDetail: React.FC<{
       : "Offline";
   
   const statusClass = serverDataElement.online
-    ? "bg-status-online text-status-online border-status-online"
-    : "bg-status-offline text-status-offline border-status-offline";
+    ? "bg-good/15 text-good border-good/40"
+    : "bg-bad/15 text-bad border-bad/40";
 
   const formatUptime = (percentage: number) => {
     return `${percentage.toFixed(1)}%`;
@@ -68,19 +68,19 @@ const ServerDetail: React.FC<{
   );
 
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
+    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surf">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
             <div className="flex-1 min-w-0">
               {serverData?.serverName && (
-                <h1 className="text-xl sm:text-2xl font-bold text-primary mb-2 wrap-break-word">
+                <h1 className="text-xl sm:text-2xl font-bold text-tx mb-2 wrap-break-word">
                   <MindustryText text={serverData.serverName}/>
                 </h1>
               )}
               {serverData?.description && (
-                <p className="text-secondary mb-4 text-sm sm:text-base wrap-break-word">
+                <p className="text-dim mb-4 text-sm sm:text-base wrap-break-word">
                   <MindustryText text={serverData.description}/>
                 </p>
               )}
@@ -95,10 +95,10 @@ const ServerDetail: React.FC<{
                   </span>
                   {serverDataElement.online && serverData && (
                     <>
-                      <span className="text-xs sm:text-sm text-tertiary">
+                      <span className="text-xs sm:text-sm text-dim">
                         {serverData.players}/{serverData.playerLimit} players
                       </span>
-                      <span className="text-xs sm:text-sm text-tertiary">
+                      <span className="text-xs sm:text-sm text-dim">
                         {serverData.ping}ms
                       </span>
                     </>
@@ -106,21 +106,21 @@ const ServerDetail: React.FC<{
                 </div>
                 <CopyButton
                   text={`${serverDataElement.host}:${serverDataElement.port}`}
-                  className="button-secondary text-xs sm:text-sm px-2 sm:px-3 py-1"
+                  className="btn text-xs sm:text-sm px-2 sm:px-3 py-1"
                 />
                 <ShareButton
                   serverId={serverDataElement.id}
-                  className="button-accent text-xs sm:text-sm px-2 sm:px-3 py-1"
+                  className="btn-acc text-xs sm:text-sm px-2 sm:px-3 py-1"
                 />
               </div>
             </div>
 
             {serverDataElement.online && serverData && (
               <div className="text-left sm:text-right shrink-0">
-                <div className="text-3xl sm:text-4xl font-bold text-accent">
+                <div className="text-3xl sm:text-4xl font-bold text-acc">
                   {String(serverData.players)}
                 </div>
-                <div className="text-xs sm:text-sm text-tertiary">
+                <div className="text-xs sm:text-sm text-dim">
                   players online
                 </div>
               </div>
@@ -129,28 +129,28 @@ const ServerDetail: React.FC<{
 
           {serverData && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm">
-              <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
-                <span className="text-tertiary">Map: </span>
-                <span className="font-medium text-primary wrap-break-word">
+              <div className="bg-surf2 border border-bd p-2 sm:p-3 rounded">
+                <span className="text-dim">Map: </span>
+                <span className="font-medium text-tx wrap-break-word">
                   <MindustryText text={serverData.mapName || "Unknown"}/>
                 </span>
               </div>
-              <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
-                <span className="text-tertiary">Wave: </span>
-                <span className="font-medium text-primary">
+              <div className="bg-surf2 border border-bd p-2 sm:p-3 rounded">
+                <span className="text-dim">Wave: </span>
+                <span className="font-medium text-tx">
                   {serverData.wave || "0"}
                 </span>
               </div>
-              <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
-                <span className="text-tertiary">Mode: </span>
-                <span className="font-medium text-primary wrap-break-word">
+              <div className="bg-surf2 border border-bd p-2 sm:p-3 rounded">
+                <span className="text-dim">Mode: </span>
+                <span className="font-medium text-tx wrap-break-word">
                   {String(removeColors(serverData.modeName)) ||
                     getModeName(serverData.modeName, serverData.mode)}
                 </span>
               </div>
-              <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
-                <span className="text-tertiary">Version: </span>
-                <span className="font-medium text-primary">
+              <div className="bg-surf2 border border-bd p-2 sm:p-3 rounded">
+                <span className="text-dim">Version: </span>
+                <span className="font-medium text-tx">
                   {String(serverData.versionType) || ""}{" "}
                   {String(serverData.version) || ""}
                 </span>
@@ -168,50 +168,50 @@ const ServerDetail: React.FC<{
 
         {/* Player Peaks and Uptime */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
-          <div className="bg-surface-secondary border border-subtle p-4 sm:p-6 rounded">
-            <h4 className="font-medium mb-3 sm:mb-4 text-accent text-base sm:text-lg">
+          <div className="bg-surf border border-bd p-4 sm:p-6 rounded">
+            <h4 className="font-medium mb-3 sm:mb-4 text-acc text-base sm:text-lg">
               Player Peaks
             </h4>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-accent">
+                <div className="text-xl sm:text-2xl font-bold text-acc">
                   {serverDataElement?.playerPeaks?.daily ?? "-"}
                 </div>
-                <div className="text-xs sm:text-sm text-tertiary">Today</div>
+                <div className="text-xs sm:text-sm text-dim">Today</div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-accent">
+                <div className="text-xl sm:text-2xl font-bold text-acc">
                   {serverDataElement?.playerPeaks?.weekly ?? "-"}
                 </div>
-                <div className="text-xs sm:text-sm text-tertiary">
+                <div className="text-xs sm:text-sm text-dim">
                   This Week
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-accent">
+                <div className="text-xl sm:text-2xl font-bold text-acc">
                   {serverDataElement?.playerPeaks?.allTime ?? "-"}
                 </div>
-                <div className="text-xs sm:text-sm text-tertiary">All Time</div>
+                <div className="text-xs sm:text-sm text-dim">All Time</div>
               </div>
             </div>
           </div>
 
-          <div className="bg-surface-secondary border border-subtle p-4 sm:p-6 rounded">
-            <h4 className="font-medium mb-3 sm:mb-4 text-status-online text-base sm:text-lg">
+          <div className="bg-surf border border-bd p-4 sm:p-6 rounded">
+            <h4 className="font-medium mb-3 sm:mb-4 text-good text-base sm:text-lg">
               Server Uptime
             </h4>
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-status-online">
+                <div className="text-xl sm:text-2xl font-bold text-good">
                   {serverDataElement?.uptime?.last24h !== undefined ? formatUptime(serverDataElement.uptime.last24h) : "-"}
                 </div>
-                <div className="text-xs sm:text-sm text-tertiary">Last 24h</div>
+                <div className="text-xs sm:text-sm text-dim">Last 24h</div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-status-online">
+                <div className="text-xl sm:text-2xl font-bold text-good">
                   {serverDataElement?.uptime?.last7d !== undefined ? formatUptime(serverDataElement.uptime.last7d) : "-"}
                 </div>
-                <div className="text-xs sm:text-sm text-tertiary">
+                <div className="text-xs sm:text-sm text-dim">
                   Last 7 Days
                 </div>
               </div>
@@ -220,8 +220,8 @@ const ServerDetail: React.FC<{
         </div>
 
         {/* Player History Chart */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+        <div className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-tx mb-3 sm:mb-4">
             Player History
           </h2>
           <div className="h-80 sm:h-96">
@@ -230,14 +230,14 @@ const ServerDetail: React.FC<{
         </div>
 
         {/* Reviews */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+        <div className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-tx mb-3 sm:mb-4">
             Reviews
           </h2>
           <div className="mb-4 sm:mb-6">
             <ReviewSummary summary={reviews.summary} loading={reviews.summaryLoading} />
           </div>
-          <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-subtle">
+          <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-bd">
             <ReviewForm
               serverId={serverDataElement.id}
               mine={reviews.mine}
@@ -261,16 +261,16 @@ const ServerDetail: React.FC<{
         </div>
 
         {/* Map History Table */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+        <div className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-tx mb-3 sm:mb-4">
             Map History
           </h2>
           <MapHistoryTable mapHistory={maps.data ?? []} loading={maps.loading} error={maps.error} />
         </div>
 
         {/* MOTD History Table */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
+        <div className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-tx mb-3 sm:mb-4">
             MOTD History
           </h2>
           <MotdHistoryTable motdHistory={motds.data ?? []} loading={motds.loading} error={motds.error} />

@@ -18,8 +18,8 @@ const ToggleButton: React.FC<ToggleButtonProps> = ({
   onClick,
   activeText,
   inactiveText,
-  activeColor = 'bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30',
-  inactiveColor = 'bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border-orange-500/30',
+  activeColor = 'bg-good/20 hover:bg-good/30 text-good border-good/30',
+  inactiveColor = 'bg-acc/20 hover:bg-acc/30 text-acc border-acc/30',
   sizeClassName = 'px-3 py-1 text-xs',
   className = ''
 }) => {

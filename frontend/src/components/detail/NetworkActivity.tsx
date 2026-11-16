@@ -49,11 +49,11 @@ const NetworkActivity = ({ networkId }: { networkId: number }) => {
   }, [data]);
 
   return (
-    <div ref={ref} className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
+    <div ref={ref} className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
         <div>
-          <h2 className="text-base sm:text-lg font-semibold text-primary">When it's busy</h2>
-          <p className="text-xs text-tertiary">Average players by weekday and hour, in {tz}</p>
+          <h2 className="text-base sm:text-lg font-semibold text-tx">When it's busy</h2>
+          <p className="text-xs text-dim">Average players by weekday and hour, in {tz}</p>
         </div>
         <div className="flex gap-2" role="group" aria-label="Activity window">
           {DAYS.map((d) => (
@@ -62,7 +62,7 @@ const NetworkActivity = ({ networkId }: { networkId: number }) => {
               type="button"
               onClick={() => setDays(d)}
               aria-pressed={days === d}
-              className={`px-3 py-1 text-sm ${days === d ? "button-accent" : "button-secondary"}`}
+              className={`px-3 py-1 text-sm ${days === d ? "btn-acc" : "btn"}`}
             >
               {d}d
             </button>
@@ -72,8 +72,8 @@ const NetworkActivity = ({ networkId }: { networkId: number }) => {
 
       <div className="relative min-h-24">
         {loading && <LoadingSpinner showText={false} />}
-        {error && <p className="text-sm text-status-offline">{error}</p>}
-        {!loading && !error && max === 0 && <p className="text-sm text-tertiary">No activity data for this window.</p>}
+        {error && <p className="text-sm text-bad">{error}</p>}
+        {!loading && !error && max === 0 && <p className="text-sm text-dim">No activity data for this window.</p>}
 
         {!error && max > 0 && (
           <div className={`overflow-x-auto ${loading ? "opacity-30" : ""}`}>
@@ -81,7 +81,7 @@ const NetworkActivity = ({ networkId }: { networkId: number }) => {
               <div className="grid gap-px" style={{ gridTemplateColumns: "2.5rem repeat(24, minmax(0, 1fr))" }}>
                 <div />
                 {HOURS.map((h) => (
-                  <div key={h} className="text-[10px] text-tertiary text-center">
+                  <div key={h} className="text-[10px] text-dim text-center">
                     {h % 3 === 0 ? pad(h) : ""}
                   </div>
                 ))}
@@ -89,10 +89,10 @@ const NetworkActivity = ({ networkId }: { networkId: number }) => {
                   <Row key={name} name={name} dow={i + 1} grid={grid} max={max} />
                 ))}
               </div>
-              <div className="flex items-center gap-2 mt-3 text-xs text-tertiary">
+              <div className="flex items-center gap-2 mt-3 text-xs text-dim">
                 <span>Quieter</span>
                 {[0.1, 0.3, 0.5, 0.75, 1].map((f) => (
-                  <span key={f} className="inline-block w-5 h-3 rounded-sm border border-subtle" style={{ background: shade(f) }} />
+                  <span key={f} className="inline-block w-5 h-3 rounded-sm border border-bd" style={{ background: shade(f) }} />
                 ))}
                 <span>Busier (max {Math.round(max).toLocaleString()})</span>
               </div>
@@ -106,18 +106,18 @@ const NetworkActivity = ({ networkId }: { networkId: number }) => {
 
 /** Accent at increasing strength; the title on each cell carries the exact value. */
 const shade = (fraction: number): string =>
-  `color-mix(in srgb, var(--color-accent) ${Math.round(8 + fraction * 92)}%, transparent)`;
+  `color-mix(in srgb, var(--acc) ${Math.round(8 + fraction * 92)}%, transparent)`;
 
 const Row = ({ name, dow, grid, max }: { name: string; dow: number; grid: Map<string, number>; max: number }) => (
   <>
-    <div className="text-xs text-tertiary pr-1 flex items-center">{name}</div>
+    <div className="text-xs text-dim pr-1 flex items-center">{name}</div>
     {HOURS.map((h) => {
       const v = grid.get(`${dow}-${h}`);
       return (
         <div
           key={h}
           title={v == null ? `${name} ${pad(h)}:00 – no data` : `${name} ${pad(h)}:00 – avg ${Math.round(v).toLocaleString()}`}
-          className="h-5 sm:h-6 rounded-sm bg-surface-tertiary"
+          className="h-5 sm:h-6 rounded-sm bg-surf2"
           style={v == null ? undefined : { background: shade(v / max) }}
         />
       );

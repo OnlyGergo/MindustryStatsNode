@@ -13,8 +13,8 @@ const ServerItem: React.FC<{
   const serverData = server.currentData;
   //const serverStatus = server.online ? 'Online' : server.lastSeen ? 'Offline - Last Seen ' + formatDate(server.lastSeen) : 'Offline';
   const statusClass = server.online
-    ? "bg-status-online text-status-online border-status-online"
-    : "bg-status-offline text-status-offline border-status-offline";
+    ? "bg-good/15 text-good border-good/40"
+    : "bg-bad/15 text-bad border-bad/40";
 
   const flagEmoji = countryCodeToFlag(server.countryCode);
 
@@ -27,13 +27,13 @@ const ServerItem: React.FC<{
       data-network={server.name}
       className={`p-4 cursor-pointer transition-colors flex [content-visibility:auto] [contain-intrinsic-size:auto_96px] items-start justify-between ${
         isSelected
-          ? "bg-accent-muted border-l-4 border-default"
-          : "hover:bg-accent-hover border-default"
+          ? "bg-acc/12 border-l-4 border-bd"
+          : "hover:bg-acc/18 border-bd"
       }`}
     >
       <div className="flex flex-col flex-1 min-w-0 mr-4">
         {serverData?.serverName && (
-          <div className="text-sm font-bold text-primary truncate mb-1 flex items-center gap-1.5">
+          <div className="text-sm font-bold text-tx truncate mb-1 flex items-center gap-1.5">
             <span className="text-base" title={server.countryCode || "Unknown"}>
               {flagEmoji}
             </span>
@@ -42,7 +42,7 @@ const ServerItem: React.FC<{
         )}
 
         {serverData?.description && (
-          <div className="text-xs text-secondary truncate mb-2">
+          <div className="text-xs text-dim truncate mb-2">
             {formatTextLines(serverData.description).map((line, i) => (
               <React.Fragment key={i}>
                 {i > 0 && <br />}
@@ -53,7 +53,7 @@ const ServerItem: React.FC<{
         )}
 
         {server.online && serverData && (
-          <div className="text-xs text-tertiary">
+          <div className="text-xs text-dim">
             <MindustryText text={serverData.mapName || "Unknown"}/>
           </div>
         )}
@@ -69,9 +69,9 @@ const ServerItem: React.FC<{
         {server.online && serverData && (
           <div className="text-right">
             <CompactStarRatingDisplay value={server.ratingScore ?? -1} />
-            <div className="text-lg font-bold text-accent">
+            <div className="text-lg font-bold text-acc">
               {String(serverData.players)}
-              <span className="text-tertiary ml-1">
+              <span className="text-dim ml-1">
                 / {String(serverData.playerLimit)}
               </span>
             </div>

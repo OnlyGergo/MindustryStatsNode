@@ -63,7 +63,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
         title={`Sort by ${currentOption?.label} — ${currentOption?.directionLabels[currentDirection]}`}
         aria-label={`Sort by ${currentOption?.label} — ${currentOption?.directionLabels[currentDirection]}`}
         onClick={() => setIsOpen(!isOpen)}
-        className="button-secondary w-full px-3 py-2 rounded text-sm flex items-center justify-center gap-1.5 min-w-0"
+        className="btn w-full px-3 py-2 rounded text-sm flex items-center justify-center gap-1.5 min-w-0"
       >
         <svg
           className="w-3.5 h-3.5 shrink-0"
@@ -75,7 +75,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
         </svg>
         <span className="truncate">{currentOption?.label}</span>
         <svg
-          className={`w-3 h-3 shrink-0 text-accent transition-transform ${
+          className={`w-3 h-3 shrink-0 text-acc transition-transform ${
             currentDirection === 'asc' ? 'rotate-180' : ''
           }`}
           fill="none"
@@ -89,9 +89,9 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
       {isOpen && (
         <div
           role="menu"
-          className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-2rem)] bg-surface-secondary border border-default rounded shadow-xl"
+          className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-2rem)] bg-surf border border-bd rounded shadow-xl"
         >
-          <div className="text-xs text-tertiary uppercase tracking-wide px-3 pt-2 pb-1">
+          <div className="text-xs text-dim uppercase tracking-wide px-3 pt-2 pb-1">
             {isGrouped ? 'Sort networks by' : 'Sort servers by'}
           </div>
 
@@ -104,19 +104,19 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
                 role="menuitemradio"
                 aria-checked={isSelected}
                 onClick={() => selectOption(option.key)}
-                className="w-full text-left px-3 py-2 hover:bg-accent-hover transition-colors"
+                className="w-full text-left px-3 py-2 hover:bg-acc/18 transition-colors"
               >
                 <div className="flex justify-between items-center gap-2">
-                  <span className={`text-sm ${isSelected ? 'text-accent font-medium' : 'text-secondary'}`}>
+                  <span className={`text-sm ${isSelected ? 'text-acc font-medium' : 'text-dim'}`}>
                     {option.label}
                   </span>
                   {isSelected && (
-                    <svg className="w-4 h-4 text-accent shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-acc shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                     </svg>
                   )}
                 </div>
-                <div className="text-xs text-tertiary mt-0.5">
+                <div className="text-xs text-dim mt-0.5">
                   {isGrouped ? option.groupHint : option.serverHint}
                 </div>
               </button>
@@ -124,12 +124,12 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
           })}
 
           {currentOption && (
-            <div className="flex gap-2 p-2 border-t border-subtle">
+            <div className="flex gap-2 p-2 border-t border-bd">
               <button
                 type="button"
                 onClick={() => selectDirection('asc')}
                 className={`flex-1 text-xs px-2 py-1.5 rounded transition-colors ${
-                  currentDirection === 'asc' ? 'button-accent' : 'button-secondary'
+                  currentDirection === 'asc' ? 'btn-acc' : 'btn'
                 }`}
               >
                 {currentOption.directionLabels.asc}
@@ -138,7 +138,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
                 type="button"
                 onClick={() => selectDirection('desc')}
                 className={`flex-1 text-xs px-2 py-1.5 rounded transition-colors ${
-                  currentDirection === 'desc' ? 'button-accent' : 'button-secondary'
+                  currentDirection === 'desc' ? 'btn-acc' : 'btn'
                 }`}
               >
                 {currentOption.directionLabels.desc}
@@ -146,7 +146,7 @@ const SortDropdown: React.FC<SortDropdownProps> = ({
             </div>
           )}
 
-          <div className="text-xs text-tertiary px-3 py-2 border-t border-subtle">
+          <div className="text-xs text-dim px-3 py-2 border-t border-bd">
             Online servers are always listed first.
             {isGrouped && ' Servers inside a network follow the same order.'}
           </div>

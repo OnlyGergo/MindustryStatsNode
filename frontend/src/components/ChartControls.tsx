@@ -40,18 +40,18 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
     <div className="flex flex-wrap items-center gap-x-4 gap-y-3 w-full min-w-0">
       {/* Timeframe Controls */}
       <div className="flex flex-wrap items-center gap-2 min-w-0">
-        <span className="text-xs text-tertiary uppercase tracking-wider">
+        <span className="text-xs text-dim uppercase tracking-wider">
           Timeframe
         </span>
-        <div className="flex flex-wrap gap-1 p-1 rounded border border-default bg-surface-tertiary">
+        <div className="flex flex-wrap gap-1 p-1 rounded border border-bd bg-surf2">
           {PRESET_RANGE_OPTIONS.map((option) => (
             <button
               key={option.value}
               onClick={() => onRangeChange(option.value)}
-              className={`text-xs sm:text-sm px-2 sm:px-3 py-1 rounded transition-all focus-ring-accent ${
+              className={`text-xs sm:text-sm px-2 sm:px-3 py-1 rounded transition-all ${
                 selectedRange === option.value
-                  ? "button-accent"
-                  : "text-secondary hover:text-primary hover:bg-accent-hover"
+                  ? "btn-acc"
+                  : "text-dim hover:text-tx hover:bg-acc/18"
               }`}
             >
               {option.label}
@@ -62,18 +62,18 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
 
       {/* View Toggles */}
       <div className="flex flex-wrap items-center gap-2 min-w-0">
-        <span className="text-xs text-tertiary uppercase tracking-wider">
+        <span className="text-xs text-dim uppercase tracking-wider">
           View
         </span>
-        <div className="flex flex-wrap gap-1 p-1 rounded border border-default bg-surface-tertiary">
+        <div className="flex flex-wrap gap-1 p-1 rounded border border-bd bg-surf2">
           {(["share", "lines", "aggregated"] as ViewMode[]).map((mode) => (
             <button
               key={mode}
               onClick={() => onViewModeChange(mode)}
-              className={`text-xs sm:text-sm px-2 sm:px-3 py-1 rounded capitalize transition-all focus-ring-accent ${
+              className={`text-xs sm:text-sm px-2 sm:px-3 py-1 rounded capitalize transition-all ${
                 viewMode === mode
-                  ? "button-accent"
-                  : "text-secondary hover:text-primary hover:bg-accent-hover"
+                  ? "btn-acc"
+                  : "text-dim hover:text-tx hover:bg-acc/18"
               }`}
             >
               {mode}
@@ -87,7 +87,7 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
         <select
           value={selectedGamemode?.registryId ?? ""}
           onChange={handleGamemodeChange}
-          className="appearance-none truncate w-full sm:w-auto max-w-full border border-default text-primary text-xs sm:text-sm rounded pl-3 pr-8 py-1 focus-ring-accent focus:border-accent bg-surface-tertiary transition-all cursor-pointer"
+          className="appearance-none truncate w-full sm:w-auto max-w-full border border-bd text-tx text-xs sm:text-sm rounded pl-3 pr-8 py-1 focus:border-acc bg-surf2 transition-all cursor-pointer"
         >
           <option value="">🌐 All Gamemodes</option>
           {[...gamemodeList]
@@ -97,7 +97,7 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
               </option>
             ))}
         </select>
-        <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-tertiary">
+        <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none text-dim">
           <svg
             className="w-3.5 h-3.5"
             fill="none"

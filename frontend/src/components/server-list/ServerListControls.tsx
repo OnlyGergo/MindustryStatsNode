@@ -10,7 +10,7 @@ import { BROWSE_SEARCH_DEFAULTS } from "../../routes/-browseSearch.ts";
 export const CollapseToggle: React.FC<{ collapsed: boolean; onClick: () => void; className?: string }> = ({ collapsed, onClick, className }) => (
   <button
     onClick={onClick}
-    className={`bg-accent-muted hover:bg-accent-hover text-accent p-1 rounded transition-colors border border-accent shrink-0 ${className ?? ""}`}
+    className={`bg-acc/12 hover:bg-acc/18 text-acc p-1 rounded transition-colors border border-acc shrink-0 ${className ?? ""}`}
     title={collapsed ? "Expand server list" : "Collapse server list"}
   >
     <svg
@@ -83,8 +83,8 @@ const ServerListControls: React.FC<ServerListControlsProps> = ({
       onClick={onToggleHideInactive}
       activeText="Show All"
       inactiveText="Hide Inactive"
-      activeColor="bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 border-orange-500/40"
-      inactiveColor="bg-neutral-600/20 hover:bg-neutral-600/40 text-neutral-400 border-neutral-600/40"
+      activeColor="bg-acc/20 hover:bg-acc/40 text-acc border-acc/40"
+      inactiveColor="bg-dim/20 hover:bg-dim/40 text-dim border-dim/40"
       sizeClassName="px-3 py-2 text-sm"
       className="w-full"
     />
@@ -114,21 +114,21 @@ const ServerListControls: React.FC<ServerListControlsProps> = ({
             aria-expanded={filtersOpen}
             aria-label={activeCount > 0 ? `Filters (${activeCount} changed)` : "Filters"}
             onClick={() => setFiltersOpen((o) => !o)}
-            className="button-secondary relative h-9 px-3 rounded text-sm flex items-center gap-1.5"
+            className="btn relative h-9 px-3 rounded text-sm flex items-center gap-1.5"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6h18M6 12h12M10 18h4" />
             </svg>
             <span>Filters</span>
             {activeCount > 0 && (
-              <span className="min-w-4 h-4 px-1 rounded-full bg-accent text-[10px] leading-4 text-center text-black font-semibold">
+              <span className="min-w-4 h-4 px-1 rounded-full bg-acc text-[10px] leading-4 text-center text-onacc font-semibold">
                 {activeCount}
               </span>
             )}
           </button>
 
           {filtersOpen && (
-            <div className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-1.5rem)] p-2 space-y-2 bg-surface-secondary border border-default rounded shadow-xl">
+            <div className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-1.5rem)] p-2 space-y-2 bg-surf border border-bd rounded shadow-xl">
               {groupButton}
               {inactiveButton}
               {sortDropdown}

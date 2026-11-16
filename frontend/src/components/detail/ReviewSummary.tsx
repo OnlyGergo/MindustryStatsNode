@@ -10,11 +10,11 @@ interface ReviewSummaryProps {
 
 const ReviewSummary: React.FC<ReviewSummaryProps> = ({ summary, loading }) => {
   if (loading && !summary) {
-    return <div className="text-sm text-tertiary">Loading…</div>;
+    return <div className="text-sm text-dim">Loading…</div>;
   }
 
   if (!summary || summary.count === 0) {
-    return <div className="text-sm text-tertiary">No reviews yet</div>;
+    return <div className="text-sm text-dim">No reviews yet</div>;
   }
 
   const maxCount = Math.max(...summary.histogram, 1);
@@ -26,12 +26,12 @@ const ReviewSummary: React.FC<ReviewSummaryProps> = ({ summary, loading }) => {
     <div className="flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
         <div className="flex flex-row sm:flex-col items-center sm:items-start gap-3 sm:gap-1 shrink-0">
-          <div className="text-3xl sm:text-4xl font-bold text-primary">
+          <div className="text-3xl sm:text-4xl font-bold text-tx">
             {summary.average?.toFixed(1) ?? "-"}
           </div>
           <div className="flex flex-col gap-1">
             <StarRatingDisplay value={summary.average ?? 0} size={16} />
-            <div className="text-xs sm:text-sm text-tertiary">
+            <div className="text-xs sm:text-sm text-dim">
               {summary.count} review{summary.count === 1 ? "" : "s"}
             </div>
           </div>
@@ -43,11 +43,11 @@ const ReviewSummary: React.FC<ReviewSummaryProps> = ({ summary, loading }) => {
             const width = (count / maxCount) * 100;
             return (
               <div key={star} className="flex items-center gap-2 text-xs sm:text-sm">
-                <span className="w-3 text-tertiary text-right">{star}</span>
-                <div className="flex-1 h-2 bg-surface-tertiary rounded overflow-hidden">
-                  <div className="h-full bg-accent" style={{ width: `${width}%` }} />
+                <span className="w-3 text-dim text-right">{star}</span>
+                <div className="flex-1 h-2 bg-surf2 rounded overflow-hidden">
+                  <div className="h-full bg-acc" style={{ width: `${width}%` }} />
                 </div>
-                <span className="w-6 text-right text-tertiary">{count}</span>
+                <span className="w-6 text-right text-dim">{count}</span>
               </div>
             );
           })}
@@ -61,12 +61,12 @@ const ReviewSummary: React.FC<ReviewSummaryProps> = ({ summary, loading }) => {
             const width = ((average ?? 0) / 5) * 100;
             return (
               <div key={a.key} className="flex items-center gap-2 text-xs sm:text-sm">
-                <span className="w-20 sm:w-24 text-tertiary shrink-0">{a.label}</span>
-                <div className="flex-1 h-1.5 bg-surface-tertiary rounded overflow-hidden">
-                  <div className="h-full bg-accent" style={{ width: `${width}%` }} />
+                <span className="w-20 sm:w-24 text-dim shrink-0">{a.label}</span>
+                <div className="flex-1 h-1.5 bg-surf2 rounded overflow-hidden">
+                  <div className="h-full bg-acc" style={{ width: `${width}%` }} />
                 </div>
-                <span className="w-8 text-right text-primary">{average?.toFixed(1) ?? "—"}</span>
-                <span className="w-8 text-tertiary">({count})</span>
+                <span className="w-8 text-right text-tx">{average?.toFixed(1) ?? "—"}</span>
+                <span className="w-8 text-dim">({count})</span>
               </div>
             );
           })}

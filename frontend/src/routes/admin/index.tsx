@@ -40,16 +40,16 @@ function AdminOverview() {
 
   return (
     <div className="p-4 flex flex-col items-start gap-2">
-      <p className="text-sm text-secondary">Pick a section from the tabs above.</p>
+      <p className="text-sm text-dim">Pick a section from the tabs above.</p>
       <button
         type="button"
         onClick={rebuild}
         disabled={busy}
-        className="button-secondary text-sm px-3 py-1"
+        className="btn text-sm px-3 py-1"
       >
         {busy ? "Rebuilding…" : "Rebuild leaderboard"}
       </button>
-      {result && <div className={`text-sm ${result.ok ? "text-secondary" : "text-red-500"}`}>{result.text}</div>}
+      {result && <div className={`text-sm ${result.ok ? "text-dim" : "text-bad"}`}>{result.text}</div>}
     </div>
   );
 }

@@ -72,11 +72,11 @@ const NetworkServerShareChart = ({ data, loading }: NetworkServerShareChartProps
       <div className="flex-1 min-h-0 relative">
         <UPlotFrame outerRef={outerRef} mountRef={mountRef} loading={loading} />
         {!loading && data && data.timestamps.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center text-tertiary text-sm">No data for this range</div>
+          <div className="absolute inset-0 flex items-center justify-center text-dim text-sm">No data for this range</div>
         )}
       </div>
       {labels.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-secondary max-h-20 overflow-y-auto">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-dim max-h-20 overflow-y-auto">
           {labels.map((label) => (
             <span key={label} className="flex items-center gap-1.5 min-w-0">
               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: labelColor(label) }} />

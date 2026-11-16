@@ -25,17 +25,17 @@ export const trendHint = (
   const pct = Math.round(((current - previous) / previous) * 100);
   const up = pct >= 0;
   return (
-    <span className={up ? "text-green-400" : "text-red-400"}>
+    <span className={up ? "text-good" : "text-bad"}>
       {up ? "▲" : "▼"} {Math.abs(pct)}% vs prev. week
     </span>
   );
 };
 
 const Stat: React.FC<{ label: string; value: React.ReactNode; hint?: React.ReactNode }> = ({ label, value, hint }) => (
-  <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded min-w-0">
-    <div className="text-xl sm:text-2xl font-bold text-accent truncate">{value}</div>
-    <div className="text-xs sm:text-sm text-tertiary">{label}</div>
-    {hint && <div className="text-xs text-tertiary truncate">{hint}</div>}
+  <div className="bg-surf2 border border-bd p-2 sm:p-3 rounded min-w-0">
+    <div className="text-xl sm:text-2xl font-bold text-acc truncate">{value}</div>
+    <div className="text-xs sm:text-sm text-dim">{label}</div>
+    {hint && <div className="text-xs text-dim truncate">{hint}</div>}
   </div>
 );
 

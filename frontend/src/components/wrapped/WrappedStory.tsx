@@ -12,12 +12,12 @@ const monthName = (ms: number): string =>
 const delay = (s: number): React.CSSProperties => ({ animationDelay: `${s}s` });
 
 const Kicker: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <p className="wr-fade text-xs sm:text-sm uppercase tracking-[0.25em] text-accent mb-4">{children}</p>
+  <p className="wr-fade text-xs sm:text-sm uppercase tracking-[0.25em] text-acc mb-4">{children}</p>
 );
 
 const Huge: React.FC<{ children: React.ReactNode; d?: number; small?: boolean }> = ({ children, d = 0.2, small }) => (
   <div
-    className={`wr-pop font-extrabold text-primary tabular-nums break-words leading-tight ${
+    className={`wr-pop font-extrabold text-tx tabular-nums break-words leading-tight ${
       small ? "text-4xl sm:text-6xl" : "text-5xl sm:text-8xl"
     }`}
     style={delay(d)}
@@ -27,7 +27,7 @@ const Huge: React.FC<{ children: React.ReactNode; d?: number; small?: boolean }>
 );
 
 const Sub: React.FC<{ children: React.ReactNode; d?: number }> = ({ children, d = 0.6 }) => (
-  <p className="wr-rise text-base sm:text-xl text-secondary mt-3" style={delay(d)}>
+  <p className="wr-rise text-base sm:text-xl text-dim mt-3" style={delay(d)}>
     {children}
   </p>
 );
@@ -42,7 +42,7 @@ const NetworkLink: React.FC<{ id: number; name: string; className?: string }> = 
   <Link
     to="/network/$networkId"
     params={{ networkId: String(id) }}
-    className={`hover:text-accent hover:underline ${className ?? ""}`}
+    className={`hover:text-acc hover:underline ${className ?? ""}`}
   >
     {name}
   </Link>
@@ -153,14 +153,14 @@ function buildSlides(r: WrappedReport, instant: boolean): Slide[] {
       node: (
         <>
           <Kicker>Server of the year</Kicker>
-          <p className="wr-fade text-secondary mb-3" style={delay(0.4)}>
+          <p className="wr-fade text-dim mb-3" style={delay(0.4)}>
             And the winner is…
           </p>
           <div className="wr-pop text-4xl sm:text-7xl font-extrabold break-words leading-tight" style={delay(1.4)}>
-            <ServerLink id={winner.id} name={winner.name} className="text-accent" />
+            <ServerLink id={winner.id} name={winner.name} className="text-acc" />
           </div>
           {winner.networkId != null && winner.networkName && (
-            <div className="wr-rise mt-2 text-secondary" style={delay(1.9)}>
+            <div className="wr-rise mt-2 text-dim" style={delay(1.9)}>
               <NetworkLink id={winner.networkId} name={winner.networkName} />
             </div>
           )}
@@ -206,7 +206,7 @@ function buildSlides(r: WrappedReport, instant: boolean): Slide[] {
               return (
                 <div key={i} className="flex-1 min-w-0 h-full flex flex-col justify-end">
                   <div
-                    className={`wr-grow-y w-full rounded-t ${isBest ? "bg-accent shadow-[0_0_24px_rgba(255,107,53,0.7)]" : "bg-accent/35"}`}
+                    className={`wr-grow-y w-full rounded-t ${isBest ? "bg-acc shadow-[0_0_24px_color-mix(in_srgb,var(--acc)_70%,transparent)]" : "bg-acc/35"}`}
                     style={{ height: `${h}%`, minHeight: m && m.playerHours > 0 ? 3 : 0, ...delay(0.3 + i * 0.3) }}
                   />
                 </div>
@@ -215,7 +215,7 @@ function buildSlides(r: WrappedReport, instant: boolean): Slide[] {
           </div>
           <div className="flex gap-1.5 sm:gap-3 mt-2">
             {MONTH_INITIALS.map((c, i) => (
-              <div key={i} className="flex-1 text-center text-xs text-tertiary">
+              <div key={i} className="flex-1 text-center text-xs text-dim">
                 {c}
               </div>
             ))}
@@ -243,12 +243,12 @@ function buildSlides(r: WrappedReport, instant: boolean): Slide[] {
                 className="wr-rise flex items-baseline gap-3 min-w-0"
                 style={delay(0.4 + i * 0.8)}
               >
-                <span className="text-2xl sm:text-4xl font-extrabold text-accent tabular-nums w-8 sm:w-12 shrink-0">
+                <span className="text-2xl sm:text-4xl font-extrabold text-acc tabular-nums w-8 sm:w-12 shrink-0">
                   {t.rank}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <ServerLink id={t.id} name={t.name} className="block truncate text-lg sm:text-3xl font-bold text-primary" />
-                  <div className="text-xs sm:text-sm text-tertiary">{formatHours(t.playerHours)}</div>
+                  <ServerLink id={t.id} name={t.name} className="block truncate text-lg sm:text-3xl font-bold text-tx" />
+                  <div className="text-xs sm:text-sm text-dim">{formatHours(t.playerHours)}</div>
                 </div>
               </li>
             ))}
@@ -268,11 +268,11 @@ function buildSlides(r: WrappedReport, instant: boolean): Slide[] {
         <>
           <Kicker>Biggest climber</Kicker>
           <div className="wr-pop text-4xl sm:text-6xl font-extrabold break-words leading-tight" style={delay(0.3)}>
-            <ServerLink id={climber.id} name={climber.name} className="text-primary" />
+            <ServerLink id={climber.id} name={climber.name} className="text-tx" />
           </div>
           <Sub d={0.9}>
             from {formatHours(climber.prevPlayerHours)} in {r.year - 1} to{" "}
-            <span className="text-accent font-bold">{formatHours(climber.playerHours)}</span>
+            <span className="text-acc font-bold">{formatHours(climber.playerHours)}</span>
           </Sub>
         </>
       ),
@@ -300,10 +300,10 @@ function buildSlides(r: WrappedReport, instant: boolean): Slide[] {
               {r.mapPerMode.slice(0, 6).map((m, i) => (
                 <span
                   key={m.mode}
-                  className="wr-rise inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-full bg-white/10 text-xs sm:text-sm"
+                  className="wr-rise inline-flex items-center gap-1.5 max-w-full px-2.5 py-1 rounded-full bg-tx/10 text-xs sm:text-sm"
                   style={delay(1 + i * 0.25)}
                 >
-                  <span className="uppercase text-secondary shrink-0">{m.mode}</span>
+                  <span className="uppercase text-dim shrink-0">{m.mode}</span>
                   <span className="truncate">
                     <MindustryText text={m.mapName} />
                   </span>
@@ -329,11 +329,11 @@ function buildSlides(r: WrappedReport, instant: boolean): Slide[] {
               <li key={m.mode}>
                 <div className="flex justify-between gap-2 text-base sm:text-2xl font-bold">
                   <span className="truncate">{m.mode}</span>
-                  <span className="tabular-nums text-accent">{(m.share * 100).toFixed(1)}%</span>
+                  <span className="tabular-nums text-acc">{(m.share * 100).toFixed(1)}%</span>
                 </div>
-                <div className="h-2.5 sm:h-3 rounded-full bg-white/10 overflow-hidden mt-1">
+                <div className="h-2.5 sm:h-3 rounded-full bg-tx/10 overflow-hidden mt-1">
                   <div
-                    className="wr-grow-x h-full bg-accent rounded-full"
+                    className="wr-grow-x h-full bg-acc rounded-full"
                     style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%`, ...delay(0.3 + i * 0.35) }}
                   />
                 </div>
@@ -355,7 +355,7 @@ function buildSlides(r: WrappedReport, instant: boolean): Slide[] {
         <>
           <Kicker>Top network</Kicker>
           <div className="wr-pop text-4xl sm:text-7xl font-extrabold break-words leading-tight" style={delay(0.3)}>
-            <NetworkLink id={net.id} name={net.name} className="text-primary" />
+            <NetworkLink id={net.id} name={net.name} className="text-tx" />
           </div>
           <Sub d={0.9}>
             {formatHours(net.playerHours)} across {formatInt(net.servers)} servers
@@ -399,8 +399,8 @@ function buildSlides(r: WrappedReport, instant: boolean): Slide[] {
           <ul className="space-y-4">
             {r.newcomers.slice(0, 3).map((n, i) => (
               <li key={n.id} className="wr-rise min-w-0" style={delay(0.4 + i * 0.8)}>
-                <ServerLink id={n.id} name={n.name} className="block truncate text-xl sm:text-4xl font-bold text-primary" />
-                <div className="text-xs sm:text-sm text-tertiary">
+                <ServerLink id={n.id} name={n.name} className="block truncate text-xl sm:text-4xl font-bold text-tx" />
+                <div className="text-xs sm:text-sm text-dim">
                   since {formatUtcDate(n.firstSeen)} · {formatHours(n.playerHours)}
                 </div>
               </li>
@@ -535,13 +535,13 @@ const WrappedStory: React.FC<Props> = ({ report, onSkip }) => {
       onPointerCancel={(e) => finishPointer(e, true)}
       onPointerLeave={(e) => down.current && finishPointer(e, true)}
       onContextMenu={(e) => e.preventDefault()}
-      className="relative h-full w-full overflow-hidden bg-[#0a0a0a] text-primary select-none outline-none touch-pan-y"
+      className="relative h-full w-full overflow-hidden bg-bg text-tx select-none outline-none touch-pan-y"
     >
       {/* Animated accent glow */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="wr-glow absolute -top-1/4 -left-1/4 w-[80%] h-[80%] rounded-full bg-accent/30 blur-[120px]" />
+        <div className="wr-glow absolute -top-1/4 -left-1/4 w-[80%] h-[80%] rounded-full bg-acc/30 blur-[120px]" />
         <div
-          className="wr-glow absolute -bottom-1/4 -right-1/4 w-[70%] h-[70%] rounded-full bg-[#ff2e63]/20 blur-[120px]"
+          className="wr-glow absolute -bottom-1/4 -right-1/4 w-[70%] h-[70%] rounded-full bg-acc2/20 blur-[120px]"
           style={{ animationDelay: "-4s" }}
         />
       </div>
@@ -549,13 +549,13 @@ const WrappedStory: React.FC<Props> = ({ report, onSkip }) => {
       {/* Progress segments */}
       <div className="absolute top-0 inset-x-0 z-10 px-3 pt-3 flex gap-1" aria-hidden>
         {Array.from({ length: total }, (_, i) => (
-          <div key={i} className="h-1 flex-1 rounded-full bg-white/20 overflow-hidden">
+          <div key={i} className="h-1 flex-1 rounded-full bg-tx/20 overflow-hidden">
             {i < index || (i === index && (isOutro || !autoplay)) ? (
-              <div className="h-full w-full bg-white" />
+              <div className="h-full w-full bg-tx" />
             ) : i === index ? (
               <div
                 key={`${replayKey}-${index}`}
-                className="wr-progress h-full w-full bg-white"
+                className="wr-progress h-full w-full bg-tx"
                 style={{
                   animationDuration: `${current?.ms ?? 0}ms`,
                   animationPlayState: running ? "running" : "paused",
@@ -569,7 +569,7 @@ const WrappedStory: React.FC<Props> = ({ report, onSkip }) => {
 
       {/* Top controls */}
       <div className="absolute top-6 inset-x-0 z-10 px-3 flex items-center justify-between text-sm">
-        <span className="text-white/60 tabular-nums" aria-hidden>
+        <span className="text-tx/60 tabular-nums" aria-hidden>
           {index + 1} / {total}
         </span>
         <div className="flex gap-2">
@@ -578,7 +578,7 @@ const WrappedStory: React.FC<Props> = ({ report, onSkip }) => {
               type="button"
               onClick={() => setPaused((p) => !p)}
               aria-label={paused ? "Resume story" : "Pause story"}
-              className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 cursor-pointer"
+              className="px-3 py-1 rounded-full bg-tx/10 hover:bg-tx/20 cursor-pointer"
             >
               {paused ? "Play" : "Pause"}
             </button>
@@ -586,7 +586,7 @@ const WrappedStory: React.FC<Props> = ({ report, onSkip }) => {
           <button
             type="button"
             onClick={onSkip}
-            className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 cursor-pointer"
+            className="px-3 py-1 rounded-full bg-tx/10 hover:bg-tx/20 cursor-pointer"
           >
             Skip
           </button>
@@ -610,14 +610,14 @@ const WrappedStory: React.FC<Props> = ({ report, onSkip }) => {
               <button
                 type="button"
                 onClick={onSkip}
-                className="px-5 py-3 rounded-full bg-accent text-black font-bold hover:brightness-110 cursor-pointer"
+                className="px-5 py-3 rounded-full bg-acc text-onacc font-bold hover:brightness-110 cursor-pointer"
               >
                 See full summary
               </button>
               <button
                 type="button"
                 onClick={replay}
-                className="px-5 py-3 rounded-full bg-white/10 hover:bg-white/20 font-semibold cursor-pointer"
+                className="px-5 py-3 rounded-full bg-tx/10 hover:bg-tx/20 font-semibold cursor-pointer"
               >
                 Replay
               </button>
@@ -632,7 +632,7 @@ const WrappedStory: React.FC<Props> = ({ report, onSkip }) => {
         onClick={prev}
         disabled={index === 0}
         aria-label="Previous slide"
-        className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 cursor-pointer"
+        className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 items-center justify-center rounded-full bg-tx/10 hover:bg-tx/20 disabled:opacity-30 cursor-pointer"
       >
         {"‹"}
       </button>
@@ -641,7 +641,7 @@ const WrappedStory: React.FC<Props> = ({ report, onSkip }) => {
         onClick={next}
         disabled={isOutro}
         aria-label="Next slide"
-        className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 cursor-pointer"
+        className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 items-center justify-center rounded-full bg-tx/10 hover:bg-tx/20 disabled:opacity-30 cursor-pointer"
       >
         {"›"}
       </button>

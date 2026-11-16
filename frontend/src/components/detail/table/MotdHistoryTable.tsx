@@ -78,55 +78,55 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: bool
       <input
         type="text"
         placeholder="Search MOTD, description, or mode..."
-        className="w-full p-2 sm:p-3 mb-3 sm:mb-4 bg-surface-secondary border border-default rounded text-primary placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-accent transition-all text-sm"
+        className="w-full p-2 sm:p-3 mb-3 sm:mb-4 bg-surf border border-bd rounded text-tx placeholder:text-dim focus:outline-none focus:ring-2 focus:ring-acc transition-all text-sm"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
 
       {paginatedHistory.length > 0 ? (
         <>
-          <div className="overflow-x-auto card-base shadow-lg -mx-1 px-1">
+          <div className="overflow-x-auto bg-surf border border-bd rounded-ui shadow-lg -mx-1 px-1">
             <table className="w-full divide-y divide-subtle">
-              <thead className="bg-surface-secondary border-default">
+              <thead className="bg-surf border-bd">
                 <tr>
                   <th
                     scope="col"
-                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider"
+                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-dim uppercase tracking-wider"
                   >
                     MOTD
                   </th>
                   <th
                     scope="col"
-                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden sm:table-cell"
+                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-dim uppercase tracking-wider hidden sm:table-cell"
                   >
                     Description
                   </th>
                   <th
                     scope="col"
-                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden lg:table-cell"
+                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-dim uppercase tracking-wider hidden lg:table-cell"
                   >
                     From - To
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-surface-primary divide-y divide-subtle">
+              <tbody className="bg-surf divide-y divide-subtle">
                 {paginatedHistory.map((item, index) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-accent-muted transition-colors border-default"
+                    className="hover:bg-acc/12 transition-colors border-bd"
                   >
                     <td
                       className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium user-select-text ${
                         hasNameChanged(item, index)
-                          ? "text-accent bg-accent-muted"
-                          : "text-primary"
+                          ? "text-acc bg-acc/12"
+                          : "text-tx"
                       }`}
                     >
                       <div className="wrap-break-word max-w-30 sm:max-w-none">
                         {String(removeColors(item.serverName) + (hasNameChanged(item, index) ? " ●" : ""))}
                       </div>
                       <div
-                        className="text-xs text-tertiary mt-1 truncate max-w-30 sm:hidden"
+                        className="text-xs text-dim mt-1 truncate max-w-30 sm:hidden"
                         title={String(removeColors(item.description))}
                       >
                         {String(removeColors(item.description))}
@@ -135,14 +135,14 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: bool
                     <td
                       className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm max-w-50 truncate hidden sm:table-cell user-select-text ${
                         hasDescriptionChanged(item, index)
-                          ? "text-accent bg-accent-muted"
-                          : "text-secondary"
+                          ? "text-acc bg-acc/12"
+                          : "text-dim"
                       }`}
                       title={String(removeColors(item.description))}
                     >
                       {String(removeColors(item.description) + (hasDescriptionChanged(item, index) ? " ●" : ""))}
                     </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-tertiary hidden lg:table-cell user-select-text">
+                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-dim hidden lg:table-cell user-select-text">
                       {formatDateTimeHuman(item.validFrom)} -{" "}
                       {item.validTo
                         ? formatDateTimeHuman(item.validTo)
@@ -156,7 +156,7 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: bool
 
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 gap-2">
-              <div className="text-xs text-tertiary text-center sm:text-left">
+              <div className="text-xs text-dim text-center sm:text-left">
                 {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
                 {Math.min(currentPage * ITEMS_PER_PAGE, filteredHistory.length)}{" "}
                 of {filteredHistory.length}
@@ -167,13 +167,13 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: bool
                   disabled={currentPage === 1}
                   className={`px-2.5 py-1 text-xs ${
                     currentPage === 1
-                      ? "bg-surface-tertiary text-tertiary border border-subtle cursor-not-allowed rounded"
-                      : "button-secondary"
+                      ? "bg-surf2 text-dim border border-bd cursor-not-allowed rounded"
+                      : "btn"
                   }`}
                 >
                   ←
                 </button>
-                <span className="px-2 py-1 text-xs text-tertiary">
+                <span className="px-2 py-1 text-xs text-dim">
                   {currentPage}/{totalPages}
                 </span>
                 <button
@@ -183,8 +183,8 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: bool
                   disabled={currentPage === totalPages}
                   className={`px-2.5 py-1 text-xs ${
                     currentPage === totalPages
-                      ? "bg-surface-tertiary text-tertiary border border-subtle cursor-not-allowed rounded"
-                      : "button-secondary"
+                      ? "bg-surf2 text-dim border border-bd cursor-not-allowed rounded"
+                      : "btn"
                   }`}
                 >
                   →
@@ -198,7 +198,7 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: bool
           <LoadingSpinner showText={false} size="small" />
         </div>
       ) : (
-        <p className="text-tertiary text-center py-6 sm:py-8 text-sm">
+        <p className="text-dim text-center py-6 sm:py-8 text-sm">
           {error ?? "No MOTD history available or matching your search."}
         </p>
       )}

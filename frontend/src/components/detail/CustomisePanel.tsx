@@ -22,9 +22,9 @@ const STATUS_LABEL: Record<OwnerImage["status"], string> = {
   rejected: "Rejected",
 };
 const STATUS_CLASS: Record<OwnerImage["status"], string> = {
-  pending: "text-secondary border-subtle",
-  approved: "text-status-online border-status-online",
-  rejected: "text-status-offline border-status-offline",
+  pending: "text-dim border-bd",
+  approved: "text-good border-good/40",
+  rejected: "text-bad border-bad/40",
 };
 
 /** Pending/rejected files 404 for non-admin owners, so a failed load shows a placeholder. */
@@ -32,7 +32,7 @@ const Thumb: React.FC<{ image: OwnerImage }> = ({ image }) => {
   const [failed, setFailed] = useState(false);
   if (failed) {
     return (
-      <div className="w-full aspect-video bg-surface-tertiary rounded flex items-center justify-center text-xs text-tertiary">
+      <div className="w-full aspect-video bg-surf2 rounded flex items-center justify-center text-xs text-dim">
         No preview
       </div>
     );
@@ -165,22 +165,22 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
   return (
     <details
       onToggle={handleToggle}
-      className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6"
+      className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6"
     >
-      <summary className="cursor-pointer text-base sm:text-lg font-semibold text-primary">
+      <summary className="cursor-pointer text-base sm:text-lg font-semibold text-tx">
         {isNetwork ? "Customise network defaults" : "Customise this server"}
       </summary>
 
       <div className="mt-3 sm:mt-4 flex flex-col gap-4 text-xs sm:text-sm">
         {!isNetwork && (
-          <p className="text-tertiary">Empty fields fall back to the network's defaults.</p>
+          <p className="text-dim">Empty fields fall back to the network's defaults.</p>
         )}
-        {loading && <div className="text-tertiary">Loading…</div>}
+        {loading && <div className="text-dim">Loading…</div>}
 
         {state && (
           <>
             <div className="flex flex-col gap-2">
-              <span className="text-secondary">Accent colour</span>
+              <span className="text-dim">Accent colour</span>
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="color"
@@ -191,7 +191,7 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
                     setAccent(e.target.value);
                     setHexText(e.target.value);
                   }}
-                  className="h-8 w-10 bg-surface-tertiary border border-subtle rounded"
+                  className="h-8 w-10 bg-surf2 border border-bd rounded"
                 />
                 <input
                   type="text"
@@ -200,11 +200,11 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
                   placeholder="#ff6b35"
                   disabled={busy}
                   onChange={(e) => setHex(e.target.value.trim())}
-                  className="w-28 bg-surface-tertiary border border-subtle rounded p-2 text-primary"
+                  className="w-28 bg-surf2 border border-bd rounded p-2 text-tx"
                 />
                 <button
                   type="button"
-                  className="button-secondary px-2 py-1"
+                  className="btn px-2 py-1"
                   disabled={busy || accent === null}
                   onClick={() => {
                     setAccent(null);
@@ -214,22 +214,22 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
                   Use {defaultName}
                 </button>
               </div>
-              {accent === null && <span className="text-tertiary">Using the {defaultName}.</span>}
+              {accent === null && <span className="text-dim">Using the {defaultName}.</span>}
             </div>
 
             <div className="flex flex-col gap-2">
-              <span className="text-secondary">Background image</span>
+              <span className="text-dim">Background image</span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => setBackgroundId(null)}
-                  className={`border rounded p-2 text-left bg-surface-tertiary ${
-                    backgroundId === null ? "border-accent" : "border-subtle"
+                  className={`border rounded p-2 text-left bg-surf2 ${
+                    backgroundId === null ? "border-acc" : "border-bd"
                   }`}
                 >
-                  <div className="w-full aspect-video flex items-center justify-center text-tertiary">None</div>
-                  <div className="mt-1 text-tertiary">Use {defaultName}</div>
+                  <div className="w-full aspect-video flex items-center justify-center text-dim">None</div>
+                  <div className="mt-1 text-dim">Use {defaultName}</div>
                 </button>
                 {state.images.map((image) => {
                   const selectable = image.status === "approved";
@@ -240,8 +240,8 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
                       disabled={busy || !selectable}
                       aria-pressed={backgroundId === image.id}
                       onClick={() => setBackgroundId(image.id)}
-                      className={`border rounded p-2 text-left bg-surface-tertiary ${
-                        backgroundId === image.id ? "border-accent" : "border-subtle"
+                      className={`border rounded p-2 text-left bg-surf2 ${
+                        backgroundId === image.id ? "border-acc" : "border-bd"
                       } ${selectable ? "" : "cursor-not-allowed"}`}
                     >
                       <Thumb image={image} />
@@ -250,14 +250,14 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
                           {STATUS_LABEL[image.status]}
                         </span>
                         {image.status === "rejected" && image.rejectReason && (
-                          <span className="text-tertiary wrap-break-word">{image.rejectReason}</span>
+                          <span className="text-dim wrap-break-word">{image.rejectReason}</span>
                         )}
                       </div>
                     </button>
                   );
                 })}
               </div>
-              {state.images.length === 0 && <span className="text-tertiary">No images uploaded yet.</span>}
+              {state.images.length === 0 && <span className="text-dim">No images uploaded yet.</span>}
 
               <div className="flex flex-wrap items-center gap-2">
                 <input
@@ -269,31 +269,31 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
                 />
                 <button
                   type="button"
-                  className="button-secondary px-2 py-1 disabled:opacity-50"
+                  className="btn px-2 py-1 disabled:opacity-50"
                   disabled={busy}
                   onClick={() => fileInput.current?.click()}
                 >
                   {uploading ? "Uploading…" : "Upload an image"}
                 </button>
-                <span className="text-tertiary">PNG, JPEG or WebP, up to 2 MB. Images need admin approval.</span>
+                <span className="text-dim">PNG, JPEG or WebP, up to 2 MB. Images need admin approval.</span>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                className="button-accent px-3 py-1.5 disabled:opacity-50"
+                className="btn-acc px-3 py-1.5 disabled:opacity-50"
                 disabled={busy}
                 onClick={() => void handleSave()}
               >
                 {saving ? "Saving…" : "Save"}
               </button>
-              {notice && <span className="text-status-online">{notice}</span>}
+              {notice && <span className="text-good">{notice}</span>}
             </div>
           </>
         )}
 
-        {error && <div className="text-status-offline">{error}</div>}
+        {error && <div className="text-bad">{error}</div>}
       </div>
     </details>
   );

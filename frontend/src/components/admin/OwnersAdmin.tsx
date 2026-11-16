@@ -34,8 +34,8 @@ export const UserLabel: React.FC<{ avatarUrl: string; name: string; sub: string 
   <div className="flex items-center gap-2 min-w-0">
     <img src={avatarUrl} alt="" className="w-7 h-7 rounded-full shrink-0" loading="lazy" />
     <div className="flex flex-col min-w-0">
-      <span className="text-sm text-primary truncate">{name}</span>
-      <span className="text-xs text-tertiary truncate">{sub}</span>
+      <span className="text-sm text-tx truncate">{name}</span>
+      <span className="text-xs text-dim truncate">{sub}</span>
     </div>
   </div>
 );
@@ -46,7 +46,7 @@ export const TargetLabel: React.FC<{ target: OwnerEntry["target"] }> = ({ target
       <Link
         to="/network/$networkId"
         params={{ networkId: String(target.networkId) }}
-        className="text-accent hover:underline"
+        className="text-acc hover:underline"
       >
         Network: {target.name ?? `#${target.networkId}`}
       </Link>
@@ -57,11 +57,11 @@ export const TargetLabel: React.FC<{ target: OwnerEntry["target"] }> = ({ target
       <Link
         to="/server/$serverId"
         params={{ serverId: String(target.serverId) }}
-        className="text-accent hover:underline truncate"
+        className="text-acc hover:underline truncate"
       >
         Server: {target.name ?? `#${target.serverId}`}
       </Link>
-      {target.address && <span className="text-xs text-tertiary truncate">{target.address}</span>}
+      {target.address && <span className="text-xs text-dim truncate">{target.address}</span>}
     </span>
   );
 };
@@ -102,7 +102,7 @@ const UserPicker: React.FC<{
 
   if (selected) {
     return (
-      <div className="flex items-center justify-between gap-2 bg-surface-tertiary border border-subtle rounded p-2">
+      <div className="flex items-center justify-between gap-2 bg-surf2 border border-bd rounded p-2">
         <UserLabel
           avatarUrl={selected.avatarUrl}
           name={selected.globalName ?? selected.username}
@@ -110,7 +110,7 @@ const UserPicker: React.FC<{
         />
         <button
           type="button"
-          className="button-secondary text-xs px-2 py-1"
+          className="btn text-xs px-2 py-1"
           disabled={disabled}
           onClick={() => onSelect(null)}
         >
@@ -129,15 +129,15 @@ const UserPicker: React.FC<{
         maxLength={64}
         placeholder="Search by name or Discord ID"
         disabled={disabled}
-        className="w-full bg-surface-tertiary border border-subtle rounded p-2 text-sm text-primary"
+        className="w-full bg-surf2 border border-bd rounded p-2 text-sm text-tx"
       />
       {q.trim() && (
-        <ul className="border border-subtle rounded divide-y divide-[var(--color-border-subtle)] max-h-64 overflow-y-auto">
+        <ul className="border border-bd rounded divide-y divide-bd max-h-64 overflow-y-auto">
           {results.map((user) => (
             <li key={user.id}>
               <button
                 type="button"
-                className="w-full text-left p-2 hover:bg-surface-tertiary"
+                className="w-full text-left p-2 hover:bg-surf2"
                 onClick={() => {
                   onSelect(user);
                   setQ("");
@@ -152,9 +152,9 @@ const UserPicker: React.FC<{
             </li>
           ))}
           {!searching && results.length === 0 && (
-            <li className="p-2 text-sm text-tertiary">No users found. They need to have logged in once.</li>
+            <li className="p-2 text-sm text-dim">No users found. They need to have logged in once.</li>
           )}
-          {searching && results.length === 0 && <li className="p-2 text-sm text-tertiary">Searching…</li>}
+          {searching && results.length === 0 && <li className="p-2 text-sm text-dim">Searching…</li>}
         </ul>
       )}
     </div>
@@ -198,23 +198,23 @@ const AssignOwnerForm: React.FC<{ onAssigned: () => void }> = ({ onAssigned }) =
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-3 bg-surface-secondary border border-subtle rounded p-3 sm:p-4"
+      className="flex flex-col gap-3 bg-surf border border-bd rounded p-3 sm:p-4"
     >
-      <h2 className="text-base font-semibold text-primary">Assign an owner</h2>
+      <h2 className="text-base font-semibold text-tx">Assign an owner</h2>
 
       <div className="flex flex-col gap-1">
-        <span className="text-xs sm:text-sm text-secondary">User</span>
+        <span className="text-xs sm:text-sm text-dim">User</span>
         <UserPicker selected={user} onSelect={setUser} disabled={submitting} />
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="text-xs sm:text-sm text-secondary">Owns</span>
+        <span className="text-xs sm:text-sm text-dim">Owns</span>
         <div className="flex flex-wrap gap-2">
           <select
             value={target?.kind ?? kind}
             onChange={(e) => setKind(e.target.value as TargetKind)}
             disabled={submitting}
-            className="bg-surface-tertiary border border-subtle rounded p-2 text-sm text-primary"
+            className="bg-surf2 border border-bd rounded p-2 text-sm text-tx"
           >
             <option value="network">Network</option>
             <option value="server">Server</option>
@@ -225,21 +225,21 @@ const AssignOwnerForm: React.FC<{ onAssigned: () => void }> = ({ onAssigned }) =
             onChange={(e) => setTargetText(e.target.value)}
             placeholder={`${kind === "network" ? "Network" : "Server"} ID or page URL`}
             disabled={submitting}
-            className="flex-1 min-w-40 bg-surface-tertiary border border-subtle rounded p-2 text-sm text-primary"
+            className="flex-1 min-w-40 bg-surf2 border border-bd rounded p-2 text-sm text-tx"
           />
         </div>
-        <span className="text-xs text-tertiary">
+        <span className="text-xs text-dim">
           A network owner manages every server in it. A server owner manages that server, including its old
           addresses.
         </span>
       </div>
 
-      {error && <div className="text-sm text-status-offline">{error}</div>}
+      {error && <div className="text-sm text-bad">{error}</div>}
 
       <div>
         <button
           type="submit"
-          className="button-accent text-xs sm:text-sm px-3 py-1.5 disabled:opacity-50"
+          className="btn-acc text-xs sm:text-sm px-3 py-1.5 disabled:opacity-50"
           disabled={submitting || !user || !target}
         >
           Assign
@@ -298,33 +298,33 @@ const OwnersAdmin: React.FC = () => {
       <AssignOwnerForm onAssigned={() => void load()} />
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-base font-semibold text-primary">
-          Owners{owners ? <span className="text-tertiary font-normal"> ({owners.length})</span> : null}
+        <h2 className="text-base font-semibold text-tx">
+          Owners{owners ? <span className="text-dim font-normal"> ({owners.length})</span> : null}
         </h2>
 
-        {loadError && <div className="text-sm text-status-offline">{loadError}</div>}
-        {removeError && <div className="text-sm text-status-offline">{removeError}</div>}
-        {!owners && !loadError && <div className="text-sm text-tertiary">Loading…</div>}
-        {owners?.length === 0 && <div className="text-sm text-tertiary">No owners assigned yet.</div>}
+        {loadError && <div className="text-sm text-bad">{loadError}</div>}
+        {removeError && <div className="text-sm text-bad">{removeError}</div>}
+        {!owners && !loadError && <div className="text-sm text-dim">Loading…</div>}
+        {owners?.length === 0 && <div className="text-sm text-dim">No owners assigned yet.</div>}
 
         {owners && owners.length > 0 && (
           <ul className="flex flex-col gap-2">
             {owners.map((entry) => (
               <li
                 key={entry.id}
-                className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 bg-surface-secondary border border-subtle rounded p-2 sm:p-3"
+                className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 bg-surf border border-bd rounded p-2 sm:p-3"
               >
                 <UserLabel avatarUrl={entry.user.avatarUrl} name={entry.user.name} sub={entry.user.discordId} />
                 <div className="flex flex-col min-w-0 text-sm">
                   <TargetLabel target={entry.target} />
-                  <span className="text-xs text-tertiary">
+                  <span className="text-xs text-dim">
                     {dateFormat.format(entry.createdAt)}
                     {entry.createdBy ? ` · by ${entry.createdBy.name}` : ""}
                   </span>
                 </div>
                 <button
                   type="button"
-                  className="button-secondary text-xs px-2 py-1 justify-self-start sm:justify-self-end disabled:opacity-50"
+                  className="btn text-xs px-2 py-1 justify-self-start sm:justify-self-end disabled:opacity-50"
                   disabled={removingId === entry.id}
                   onClick={() => void handleRemove(entry)}
                 >

@@ -30,8 +30,8 @@ const WindowTabs: React.FC<{ active: LeaderboardWindow }> = ({ active }) => (
         replace
         className={`px-3 py-1 text-sm rounded border transition-colors ${
           w === active
-            ? "bg-accent/20 text-accent border-accent/40"
-            : "text-secondary border-subtle hover:text-accent hover:border-accent/50"
+            ? "bg-acc/20 text-acc border-acc/40"
+            : "text-dim border-bd hover:text-acc hover:border-acc/50"
         }`}
       >
         {w}
@@ -50,7 +50,7 @@ const MapName: React.FC<{ row: MapRow }> = ({ row }) => (
   <div className="flex items-center gap-2 min-w-0">
     <span className="truncate max-w-[14rem]"><MindustryText text={row.mapName} /></span>
     {row.mode && (
-      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-surface-tertiary border border-subtle text-secondary shrink-0">
+      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-surf2 border border-bd text-dim shrink-0">
         {row.mode}
       </span>
     )}
@@ -66,28 +66,28 @@ const mapColumns: Column<MapRow>[] = [
 const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: LeaderboardWindow }> = ({ report, window: w }) => {
   const s = report.windows[w];
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
+    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surf">
       <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
-        <header className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6">
+        <header className="bg-surf border border-bd rounded p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-primary">Leaderboard</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-tx">Leaderboard</h1>
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 to="/wrapped/$year"
                 params={{ year: String(new Date(report.generatedAt).getUTCFullYear()) }}
-                className="px-3 py-1 text-sm rounded border bg-accent text-white border-accent hover:opacity-90"
+                className="px-3 py-1 text-sm rounded border bg-acc text-onacc border-acc hover:opacity-90"
               >
                 {new Date(report.generatedAt).getUTCFullYear()} Wrapped →
               </Link>
               <WindowTabs active={w} />
             </div>
           </div>
-          <p className="text-xs sm:text-sm text-tertiary mt-2">
+          <p className="text-xs sm:text-sm text-dim mt-2">
             {/* Relative time depends on the clock, so server and browser may differ. */}
             Updated <span suppressHydrationWarning>{formatRelativeTime(report.generatedAt)}</span> · next refresh{" "}
             {formatUtcTime(report.nextRefreshAt)} UTC
           </p>
-          <p className="text-xs text-tertiary">Compared with the {PREVIOUS[w]}.</p>
+          <p className="text-xs text-dim">Compared with the {PREVIOUS[w]}.</p>
         </header>
 
         <HeadlineCards headline={s.headline} />
@@ -141,17 +141,17 @@ const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: Leaderboard
                 return (
                   <li key={m.mode}>
                     <div className="flex justify-between text-sm gap-2">
-                      <span className="truncate text-primary">{m.mode}</span>
+                      <span className="truncate text-tx">{m.mode}</span>
                       <span className="tabular-nums whitespace-nowrap">
                         {(m.share * 100).toFixed(1)}%{" "}
-                        <span className={`text-xs ${pp >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        <span className={`text-xs ${pp >= 0 ? "text-good" : "text-bad"}`}>
                           {pp >= 0 ? "+" : "−"}
                           {Math.abs(pp).toFixed(1)} pp
                         </span>
                       </span>
                     </div>
-                    <div className="h-2 rounded bg-surface-tertiary overflow-hidden">
-                      <div className="h-full bg-accent" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
+                    <div className="h-2 rounded bg-surf2 overflow-hidden">
+                      <div className="h-full bg-acc" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
                     </div>
                   </li>
                 );
@@ -171,7 +171,7 @@ const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: Leaderboard
                     <Link
                       to="/network/$networkId"
                       params={{ networkId: String(r.id) }}
-                      className="text-primary hover:underline block truncate max-w-[16rem]"
+                      className="text-tx hover:underline block truncate max-w-[16rem]"
                     >
                       {r.name}
                     </Link>

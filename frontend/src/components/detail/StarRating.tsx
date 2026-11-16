@@ -10,7 +10,7 @@ const StarIcon: React.FC<{ filled: boolean; size: number }> = ({ filled, size })
     viewBox="0 0 24 24"
     fill="currentColor"
     aria-hidden="true"
-    className={filled ? "text-accent" : "text-tertiary"}
+    className={filled ? "text-acc" : "text-dim"}
     style={{ width: size, height: size }}
   >
     <path d={STAR_PATH} />
@@ -55,7 +55,7 @@ export const StarRatingDisplay: React.FC<StarRatingDisplayProps> = ({ value, siz
 /** Same as {@link StarRatingDisplay}, but compact and without the hover effect. Single filled star, always, with text showing the rating at decimal precision */
 export const CompactStarRatingDisplay: React.FC<StarRatingDisplayProps> = ({ value, size = 16, className = "" }) => {
   return (
-    <span className={`inline-flex items-center gap-1 text-accent font-bold ${className}`}>
+    <span className={`inline-flex items-center gap-1 text-acc font-bold ${className}`}>
       <StarIcon filled size={size} />
       <span>{(value === -1 ? 'N/A' : Math.max(0, Math.min(5, value)).toFixed(1))}</span>
     </span>

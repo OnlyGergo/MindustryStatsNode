@@ -23,13 +23,13 @@ const ImageCard: React.FC<{
   onApprove: () => void;
   onReject: () => void;
 }> = ({ image, busy, onApprove, onReject }) => (
-  <li className="grid grid-cols-1 sm:grid-cols-[12rem_minmax(0,1fr)_auto] gap-3 bg-surface-secondary border border-subtle rounded p-2 sm:p-3">
+  <li className="grid grid-cols-1 sm:grid-cols-[12rem_minmax(0,1fr)_auto] gap-3 bg-surf border border-bd rounded p-2 sm:p-3">
     <a href={image.url} target="_blank" rel="noopener noreferrer" className="block">
       <img
         src={image.url}
         alt="Uploaded background"
         loading="lazy"
-        className="w-full aspect-video object-cover rounded bg-surface-tertiary"
+        className="w-full aspect-video object-cover rounded bg-surf2"
       />
     </a>
 
@@ -41,15 +41,15 @@ const ImageCard: React.FC<{
           sub={image.uploader.discordId}
         />
       ) : (
-        <span className="text-tertiary">Uploader deleted their account</span>
+        <span className="text-dim">Uploader deleted their account</span>
       )}
       <TargetLabel target={image.target} />
-      <span className="text-xs text-tertiary">
+      <span className="text-xs text-dim">
         {image.width}×{image.height} · {formatBytes(image.bytes)} · {image.mime} ·{" "}
         {dateFormat.format(image.createdAt)}
       </span>
       {image.status !== "pending" && (
-        <span className="text-xs text-secondary wrap-break-word">
+        <span className="text-xs text-dim wrap-break-word">
           {image.status === "approved" ? "Approved" : "Rejected"}
           {image.reviewedBy ? ` by ${image.reviewedBy.name}` : ""}
           {image.reviewedAt ? ` · ${dateFormat.format(image.reviewedAt)}` : ""}
@@ -62,7 +62,7 @@ const ImageCard: React.FC<{
       {image.status === "pending" && (
         <button
           type="button"
-          className="button-accent text-xs px-2 py-1 disabled:opacity-50"
+          className="btn-acc text-xs px-2 py-1 disabled:opacity-50"
           disabled={busy}
           onClick={onApprove}
         >
@@ -72,7 +72,7 @@ const ImageCard: React.FC<{
       {image.status !== "rejected" && (
         <button
           type="button"
-          className="button-secondary text-xs px-2 py-1 disabled:opacity-50"
+          className="btn text-xs px-2 py-1 disabled:opacity-50"
           disabled={busy}
           onClick={onReject}
         >
@@ -149,7 +149,7 @@ const ImagesAdmin: React.FC = () => {
             key={f.status}
             type="button"
             aria-pressed={status === f.status}
-            className={`${status === f.status ? "button-accent" : "button-secondary"} text-xs sm:text-sm px-3 py-1.5`}
+            className={`${status === f.status ? "btn-acc" : "btn"} text-xs sm:text-sm px-3 py-1.5`}
             onClick={() => setStatus(f.status)}
           >
             {f.label}
@@ -158,15 +158,15 @@ const ImagesAdmin: React.FC = () => {
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-base font-semibold text-primary">
+        <h2 className="text-base font-semibold text-tx">
           {FILTERS.find((f) => f.status === status)?.label} images
-          {images ? <span className="text-tertiary font-normal"> ({images.length})</span> : null}
+          {images ? <span className="text-dim font-normal"> ({images.length})</span> : null}
         </h2>
 
-        {loadError && <div className="text-sm text-status-offline">{loadError}</div>}
-        {actionError && <div className="text-sm text-status-offline">{actionError}</div>}
-        {!images && !loadError && <div className="text-sm text-tertiary">Loading…</div>}
-        {images?.length === 0 && <div className="text-sm text-tertiary">Nothing here.</div>}
+        {loadError && <div className="text-sm text-bad">{loadError}</div>}
+        {actionError && <div className="text-sm text-bad">{actionError}</div>}
+        {!images && !loadError && <div className="text-sm text-dim">Loading…</div>}
+        {images?.length === 0 && <div className="text-sm text-dim">Nothing here.</div>}
 
         {images && images.length > 0 && (
           <ul className="flex flex-col gap-2">

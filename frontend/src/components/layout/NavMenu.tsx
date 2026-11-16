@@ -13,9 +13,9 @@ const NavMenu: React.FC = () => {
           key={item.to}
           to={item.to}
           className="flex items-center gap-1.5 text-sm font-medium py-2 px-1 border-b-2 transition-colors"
-          activeProps={{ className: "text-accent border-accent" }}
+          activeProps={{ className: "text-acc border-acc" }}
           inactiveProps={{
-            className: "text-secondary border-transparent hover:text-accent hover:border-accent/50",
+            className: "text-dim border-transparent hover:text-acc hover:border-acc/50",
           }}
         >
           {item.icon}

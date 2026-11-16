@@ -42,9 +42,9 @@ const NetworkServerList: React.FC<{ networkId: number }> = ({ networkId }) => {
   };
 
   const renderRows = (list: ServerElement[]) => (
-    <div className="divide-y divide-subtle border border-subtle rounded overflow-hidden">
+    <div className="divide-y divide-subtle border border-bd rounded overflow-hidden">
       {list.map((server) => (
-        <div key={server.id} className="border border-subtle">
+        <div key={server.id} className="border border-bd">
           <ServerItem server={server} isSelected={false} />
         </div>
       ))}
@@ -52,11 +52,11 @@ const NetworkServerList: React.FC<{ networkId: number }> = ({ networkId }) => {
   );
 
   return (
-    <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
+    <div className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
-        <h2 className="text-base sm:text-lg font-semibold text-primary">Servers</h2>
+        <h2 className="text-base sm:text-lg font-semibold text-tx">Servers</h2>
         <div className="flex flex-wrap items-center gap-1 text-xs sm:text-sm" role="group" aria-label="Sort servers">
-          <span className="text-tertiary mr-1">Sort:</span>
+          <span className="text-dim mr-1">Sort:</span>
           {SORT_OPTIONS.map((option) => {
             const active = option.key === criteria;
             return (
@@ -67,7 +67,7 @@ const NetworkServerList: React.FC<{ networkId: number }> = ({ networkId }) => {
                 aria-pressed={active}
                 title={active ? option.directionLabels[direction] : option.serverHint}
                 className={`px-2 py-1 rounded border ${
-                  active ? "bg-accent-muted border-default text-primary" : "border-subtle text-tertiary hover:text-secondary"
+                  active ? "bg-acc/12 border-bd text-tx" : "border-bd text-dim hover:text-dim"
                 }`}
               >
                 {option.label}
@@ -79,19 +79,19 @@ const NetworkServerList: React.FC<{ networkId: number }> = ({ networkId }) => {
       </div>
 
       {loading && <LoadingSpinner showText={false} />}
-      {error && <p className="text-sm text-status-offline">{error}</p>}
+      {error && <p className="text-sm text-bad">{error}</p>}
 
       {!loading && !error && (
         <>
           {online.length > 0 ? (
             renderRows(online)
           ) : (
-            <p className="text-sm text-tertiary">No servers are online right now.</p>
+            <p className="text-sm text-dim">No servers are online right now.</p>
           )}
 
           {offline.length > 0 && (
             <details className="mt-4">
-              <summary className="cursor-pointer text-sm text-secondary hover:text-primary">
+              <summary className="cursor-pointer text-sm text-dim hover:text-tx">
                 {offline.length} offline server{offline.length === 1 ? "" : "s"}
               </summary>
               <div className="mt-2">{renderRows(offline)}</div>

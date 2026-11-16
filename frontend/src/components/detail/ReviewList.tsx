@@ -35,13 +35,13 @@ const ReviewList: React.FC<ReviewListProps> = ({
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs sm:text-sm text-tertiary">
+        <span className="text-xs sm:text-sm text-dim">
           {total} review{total === 1 ? "" : "s"}
         </span>
         <select
           value={sort}
           onChange={(e) => onSortChange(e.target.value as ReviewSort)}
-          className="bg-surface-tertiary border border-subtle rounded px-2 py-1 text-xs sm:text-sm text-primary"
+          className="bg-surf2 border border-bd rounded px-2 py-1 text-xs sm:text-sm text-tx"
           aria-label="Sort reviews"
         >
           {(Object.keys(SORT_LABELS) as ReviewSort[]).map((key) => (
@@ -51,15 +51,15 @@ const ReviewList: React.FC<ReviewListProps> = ({
       </div>
 
       {loading && reviews.length === 0 && (
-        <div className="text-sm text-tertiary">Loading…</div>
+        <div className="text-sm text-dim">Loading…</div>
       )}
       {!loading && reviews.length === 0 && (
-        <div className="text-sm text-tertiary">No reviews yet</div>
+        <div className="text-sm text-dim">No reviews yet</div>
       )}
 
       <div className="flex flex-col gap-3">
         {reviews.map((review) => (
-          <div key={review.id} className="border border-subtle rounded p-3 sm:p-4 bg-surface-tertiary">
+          <div key={review.id} className="border border-bd rounded p-3 sm:p-4 bg-surf2">
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2 min-w-0">
                 {review.author ? (
@@ -75,25 +75,25 @@ const ReviewList: React.FC<ReviewListProps> = ({
                       href={review.author.profileUrl}
                       target="_blank"
                       rel="noopener noreferrer nofollow"
-                      className="text-sm font-medium text-primary hover:text-accent truncate"
+                      className="text-sm font-medium text-tx hover:text-acc truncate"
                     >
                       {review.author.name}
                     </a>
                   </>
                 ) : (
                   <>
-                    <span className="w-6 h-6 rounded-full bg-surface-secondary shrink-0" aria-hidden="true" />
-                    <span className="text-sm font-medium text-secondary">Anonymous</span>
+                    <span className="w-6 h-6 rounded-full bg-surf shrink-0" aria-hidden="true" />
+                    <span className="text-sm font-medium text-dim">Anonymous</span>
                   </>
                 )}
               </div>
-              <span className="text-xs text-tertiary shrink-0">{formatDate(review.updatedAt)}</span>
+              <span className="text-xs text-dim shrink-0">{formatDate(review.updatedAt)}</span>
             </div>
 
             <StarRatingDisplay value={review.rating} size={14} className="mb-2" />
 
             {review.body && (
-              <p className="text-sm text-secondary whitespace-pre-line wrap-break-word">{review.body}</p>
+              <p className="text-sm text-dim whitespace-pre-line wrap-break-word">{review.body}</p>
             )}
 
             <ReviewReply
@@ -113,16 +113,16 @@ const ReviewList: React.FC<ReviewListProps> = ({
         <div className="flex items-center justify-center gap-3 mt-1">
           <button
             type="button"
-            className="button-secondary text-xs sm:text-sm px-2 sm:px-3 py-1 disabled:opacity-50"
+            className="btn text-xs sm:text-sm px-2 sm:px-3 py-1 disabled:opacity-50"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
           >
             Prev
           </button>
-          <span className="text-xs sm:text-sm text-tertiary">Page {page} of {totalPages}</span>
+          <span className="text-xs sm:text-sm text-dim">Page {page} of {totalPages}</span>
           <button
             type="button"
-            className="button-secondary text-xs sm:text-sm px-2 sm:px-3 py-1 disabled:opacity-50"
+            className="btn text-xs sm:text-sm px-2 sm:px-3 py-1 disabled:opacity-50"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
           >

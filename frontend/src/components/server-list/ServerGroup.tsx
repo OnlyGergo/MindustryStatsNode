@@ -31,19 +31,19 @@ const ServerGroup: React.FC<{
   return (
     <div
       data-group={name}
-      className={`card-base overflow-hidden transition-colors ${
-        isSelected ? "border-accent" : "border-default"
+      className={`bg-surf border border-bd rounded-ui overflow-hidden transition-colors ${
+        isSelected ? "border-acc" : "border-bd"
       }`}
     >
       <div
-        className={`bg-surface-secondary px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-accent-hover transition-colors ${
-          expanded ? "border-b border-subtle" : ""
+        className={`bg-surf px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-acc/18 transition-colors ${
+          expanded ? "border-b border-bd" : ""
         }`}
         onClick={() => onToggleExpand(name)}
       >
         <div>
-          <h3 className="font-semibold text-primary text-sm">{name}</h3>
-          <p className="text-xs text-secondary">
+          <h3 className="font-semibold text-tx text-sm">{name}</h3>
+          <p className="text-xs text-dim">
             {onlineServersCount}/{servers.length} online, {totalPlayers} players
           </p>
         </div>
@@ -52,7 +52,7 @@ const ServerGroup: React.FC<{
             to="/network/$networkId"
             params={{ networkId: String(networkId) }}
             onClick={(e) => e.stopPropagation()}
-            className={`p-1.5 ${isSelected ? "button-accent" : "button-secondary"}`}
+            className={`p-1.5 ${isSelected ? "btn-acc" : "btn"}`}
             title="View network graph"
           >
             <svg
@@ -69,11 +69,11 @@ const ServerGroup: React.FC<{
               />
             </svg>
           </Link>
-          <span className="text-lg font-bold text-accent">
+          <span className="text-lg font-bold text-acc">
             {totalPlayers}
           </span>
           <svg
-            className={`h-4 w-4 text-accent transform transition-transform ${
+            className={`h-4 w-4 text-acc transform transition-transform ${
               expanded ? "rotate-180" : ""
             }`}
             fill="none"
