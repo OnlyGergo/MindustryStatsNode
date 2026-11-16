@@ -135,7 +135,7 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
 
   const handleSave = async () => {
     if (hexText && !ACCENT_COLOR_RE.test(hexText)) {
-      setError("Accent colour must look like #1a2b3c.");
+      setError("Accent colour must look like #1a2b3c."); // theme-ok: example text
       return;
     }
     setSaving(true);
