@@ -102,7 +102,7 @@ const ReviewActions: React.FC<ReviewActionsProps> = ({ serverId, reviewId, onRem
             onChange={(e) => setReason(e.target.value as ReportReason)}
             disabled={busy}
             aria-label="Reason for reporting"
-            className="bg-surf border border-bd rounded px-2 py-1 text-xs sm:text-sm text-tx"
+            className="field w-auto"
           >
             <option value="" disabled>Why are you reporting this review?</option>
             {REPORT_REASONS.map((key) => (
@@ -116,7 +116,7 @@ const ReviewActions: React.FC<ReviewActionsProps> = ({ serverId, reviewId, onRem
             rows={2}
             placeholder="Anything the moderator should know (optional)"
             disabled={busy}
-            className="w-full bg-surf border border-bd rounded p-2 text-xs sm:text-sm text-tx resize-y"
+            className="field p-2 resize-y"
           />
           <div className="flex gap-2">
             <button

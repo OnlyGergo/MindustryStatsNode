@@ -100,7 +100,7 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
             placeholder="Reply publicly to this review"
             disabled={busy}
             autoFocus
-            className="w-full bg-surf border border-bd rounded p-2 text-sm text-tx resize-y"
+            className="field text-sm p-2 resize-y"
           />
           <div className="flex justify-between gap-2 mt-0.5">
             <span className="text-xs text-bad">

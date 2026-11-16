@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { MindustryText } from "../MindustryText.tsx";
 import type { ServerRef } from "../../../../common/models/leaderboard.ts";
 import { formatSigned } from "./format.ts";
+import Panel from "../ui/Panel.tsx";
 
 /** ▲n / ▼n / NEW / — from rank vs previous rank (lower rank number = better). */
 export const Movement: React.FC<{ rank: number; prevRank: number | null }> = ({ rank, prevRank }) => {
@@ -23,7 +24,7 @@ export const ServerName: React.FC<{ server: ServerRef }> = ({ server }) => (
     <Link
       to="/server/$serverId"
       params={{ serverId: String(server.id) }}
-      className="text-tx hover:underline block truncate max-w-[16rem]"
+      className="text-tx font-semibold hover:underline block truncate max-w-[16rem]"
     >
       {server.name ? <MindustryText text={server.name} /> : `Server #${server.id}`}
     </Link>
@@ -31,7 +32,7 @@ export const ServerName: React.FC<{ server: ServerRef }> = ({ server }) => (
       <Link
         to="/network/$networkId"
         params={{ networkId: String(server.networkId) }}
-        className="text-xs text-dim hover:text-acc hover:underline block truncate max-w-[16rem]"
+        className="text-[11px] text-dim hover:text-acc hover:underline block truncate max-w-[16rem]"
       >
         {server.networkName}
       </Link>
@@ -67,9 +68,9 @@ interface RankTableProps<T> {
 export function RankTable<T>({ rows, rowKey, columns, rank, movement }: RankTableProps<T>) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="w-full text-[13px]">
         <thead>
-          <tr className="text-xs text-dim border-b border-bd">
+          <tr className="label-caps">
             {rank && <th className="text-left font-normal py-1 pr-2 w-8">#</th>}
             {movement && <th className="text-left font-normal py-1 pr-2 w-10" />}
             {columns.map((c) => (
@@ -83,8 +84,8 @@ export function RankTable<T>({ rows, rowKey, columns, rank, movement }: RankTabl
           {rows.map((row, i) => {
             const m = movement?.(row);
             return (
-              <tr key={rowKey(row)} className="border-b border-bd last:border-0">
-                {rank && <td className="py-1.5 pr-2 text-dim tabular-nums">{rank(row, i)}</td>}
+              <tr key={rowKey(row)} className="border-t border-bd">
+                {rank && <td className="py-1.5 pr-2 font-head font-bold text-lg leading-none text-acc">{rank(row, i)}</td>}
                 {m && (
                   <td className="py-1.5 pr-2">
                     <Movement rank={m.rank} prevRank={m.prevRank} />
@@ -113,10 +114,7 @@ export const Section: React.FC<{ title: string; description: string; empty: bool
   empty,
   children,
 }) => (
-  <section className="bg-surf border border-bd rounded p-3 sm:p-4 min-w-0">
-    <h2 className="text-lg font-semibold text-tx">{title}</h2>
-    <p className="text-xs text-dim mb-3">{description}</p>
+  <Panel title={title} size="md" controls={<span className="text-xs text-dim">{description}</span>}>
     {empty ? <p className="text-sm text-dim">Nothing this time</p> : children}
-  </section>
+  </Panel>
 );
-

@@ -43,20 +43,20 @@ export const ChartSidebarLegend: React.FC<ChartSidebarLegendProps> = ({
                     placeholder="Search gamemodes..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full max-w-full bg-surf2 border border-bd rounded px-3 py-1.5 text-xs sm:text-sm text-tx placeholder:text-dim focus:border-acc transition-colors"
+                    className="field"
                 />
             </div>
 
             <div className="flex flex-wrap gap-2 mb-3">
                 <button
                     onClick={() => onChange(new Set(gamemodes))}
-                    className="btn flex-1 min-w-0 text-xs sm:text-sm px-2 sm:px-3 py-1"
+                    className="btn flex-1 min-w-0 text-[11px] text-dim"
                 >
                     Select All
                 </button>
                 <button
                     onClick={() => onChange(new Set())}
-                    className="btn flex-1 min-w-0 text-xs sm:text-sm px-2 sm:px-3 py-1"
+                    className="btn flex-1 min-w-0 text-[11px] text-dim"
                 >
                     Clear All
                 </button>

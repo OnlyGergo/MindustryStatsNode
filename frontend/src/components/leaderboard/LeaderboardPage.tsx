@@ -12,6 +12,7 @@ import { formatRelativeTime } from "../../util/general.ts";
 import HeadlineCards from "./HeadlineCards.tsx";
 import { Delta, RankTable, Section, ServerName } from "./RankTable.tsx";
 import type { Column } from "./RankTable.tsx";
+import PageHead from "../ui/PageHead.tsx";
 import { flagEmoji, formatHours, formatInt, formatUtcDate, formatUtcDateTime, formatUtcTime } from "./format.ts";
 
 const PREVIOUS: Record<LeaderboardWindow, string> = {
@@ -21,18 +22,15 @@ const PREVIOUS: Record<LeaderboardWindow, string> = {
 };
 
 const WindowTabs: React.FC<{ active: LeaderboardWindow }> = ({ active }) => (
-  <nav className="flex gap-1" aria-label="Time window">
+  <nav className="seg" aria-label="Time window">
     {LEADERBOARD_WINDOWS.map((w) => (
       <Link
         key={w}
         to="/leaderboard"
         search={(prev) => ({ ...prev, w })}
         replace
-        className={`px-3 py-1 text-sm rounded border transition-colors ${
-          w === active
-            ? "bg-acc/20 text-acc border-acc/40"
-            : "text-dim border-bd hover:text-acc hover:border-acc/50"
-        }`}
+        aria-current={w === active ? "page" : undefined}
+        className={`seg-btn ${w === active ? "relative bg-acc border-acc text-onacc hover:text-onacc" : ""}`}
       >
         {w}
       </Link>
@@ -50,7 +48,7 @@ const MapName: React.FC<{ row: MapRow }> = ({ row }) => (
   <div className="flex items-center gap-2 min-w-0">
     <span className="truncate max-w-[14rem]"><MindustryText text={row.mapName} /></span>
     {row.mode && (
-      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-surf2 border border-bd text-dim shrink-0">
+      <span className="tag text-[10px] uppercase shrink-0">
         {row.mode}
       </span>
     )}
@@ -66,33 +64,34 @@ const mapColumns: Column<MapRow>[] = [
 const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: LeaderboardWindow }> = ({ report, window: w }) => {
   const s = report.windows[w];
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surf">
-      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
-        <header className="bg-surf border border-bd rounded p-4 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-tx">Leaderboard</h1>
-            <div className="flex flex-wrap items-center gap-3">
+    <div className="page-scroll">
+      <div className="page">
+        <PageHead
+          title="Leaderboard"
+          sub={
+            <>
+              {/* Relative time depends on the clock, so server and browser may differ. */}
+              Updated <span suppressHydrationWarning>{formatRelativeTime(report.generatedAt)}</span> · next refresh{" "}
+              {formatUtcTime(report.nextRefreshAt)} UTC · vs the {PREVIOUS[w]}
+            </>
+          }
+          right={
+            <>
               <Link
                 to="/wrapped/$year"
                 params={{ year: String(new Date(report.generatedAt).getUTCFullYear()) }}
-                className="px-3 py-1 text-sm rounded border bg-acc text-onacc border-acc hover:opacity-90"
+                className="btn-fill"
               >
                 {new Date(report.generatedAt).getUTCFullYear()} Wrapped →
               </Link>
               <WindowTabs active={w} />
-            </div>
-          </div>
-          <p className="text-xs sm:text-sm text-dim mt-2">
-            {/* Relative time depends on the clock, so server and browser may differ. */}
-            Updated <span suppressHydrationWarning>{formatRelativeTime(report.generatedAt)}</span> · next refresh{" "}
-            {formatUtcTime(report.nextRefreshAt)} UTC
-          </p>
-          <p className="text-xs text-dim">Compared with the {PREVIOUS[w]}.</p>
-        </header>
+            </>
+          }
+        />
 
         <HeadlineCards headline={s.headline} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="panel-row">
           <Section title="Top servers" description="Most player-hours in this window." empty={!s.topServers.length}>
             <RankTable
               rows={s.topServers}
@@ -106,7 +105,7 @@ const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: Leaderboard
             />
           </Section>
 
-          <div className="space-y-4 sm:space-y-6 min-w-0">
+          <div className="panel-md flex flex-col gap-3 min-w-0">
             <Section title="Top movers" description={`Biggest gain in player-hours vs the ${PREVIOUS[w]}.`} empty={!s.movers.length}>
               <RankTable rows={s.movers} rowKey={(r) => r.id} columns={moverColumns} />
             </Section>
@@ -135,13 +134,13 @@ const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: Leaderboard
           </Section>
 
           <Section title="Gamemode share" description="Share of all player-hours, and the change in percentage points." empty={!s.modes.length}>
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {s.modes.map((m) => {
                 const pp = Math.round((m.share - m.prevShare) * 1000) / 10;
                 return (
                   <li key={m.mode}>
-                    <div className="flex justify-between text-sm gap-2">
-                      <span className="truncate text-tx">{m.mode}</span>
+                    <div className="flex justify-between text-xs gap-2">
+                      <b className="truncate font-semibold text-tx">{m.mode}</b>
                       <span className="tabular-nums whitespace-nowrap">
                         {(m.share * 100).toFixed(1)}%{" "}
                         <span className={`text-xs ${pp >= 0 ? "text-good" : "text-bad"}`}>
@@ -150,8 +149,8 @@ const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: Leaderboard
                         </span>
                       </span>
                     </div>
-                    <div className="h-2 rounded bg-surf2 overflow-hidden">
-                      <div className="h-full bg-acc" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
+                    <div className="track mt-0.5">
+                      <i className="track-fill" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
                     </div>
                   </li>
                 );

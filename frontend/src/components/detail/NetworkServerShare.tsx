@@ -3,18 +3,18 @@ import { useNetworkServerHistory } from "../../hooks/api/useNetworkServerHistory
 import { ChartSuspense } from "../ChartSuspense.tsx";
 import HistoryRangeControls from "./HistoryRangeControls.tsx";
 import { useNearViewport } from "../../hooks/useNearViewport.ts";
+import Panel from "../ui/Panel.tsx";
 
 const NetworkServerShareChart = lazy(() => import("./NetworkServerShareChart.tsx"));
 
 /** "Players by server" card: range controls plus the lazily loaded stacked chart. */
 const NetworkServerShare = ({ networkId }: { networkId: number }) => {
-  const [ref, near] = useNearViewport<HTMLDivElement>();
+  const [ref, near] = useNearViewport<HTMLElement>();
   const { data, loading, fetchError, ...range } =
     useNetworkServerHistory(networkId, near);
 
   return (
-    <div ref={ref} className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
-      <h2 className="text-base sm:text-lg font-semibold text-tx mb-3 sm:mb-4">Players by server</h2>
+    <Panel ref={ref} title="Players by server" size="lg">
       <div className="h-[26rem] sm:h-[30rem] flex flex-col">
         <HistoryRangeControls
           idPrefix="network-share"
@@ -27,7 +27,7 @@ const NetworkServerShare = ({ networkId }: { networkId: number }) => {
           </ChartSuspense>
         </div>
       </div>
-    </div>
+    </Panel>
   );
 };
 

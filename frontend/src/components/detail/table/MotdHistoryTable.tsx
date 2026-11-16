@@ -74,49 +74,49 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: bool
   }, [searchTerm]);
 
   return (
-    <div className="w-full overflow-hidden">
+    <div className="w-full">
       <input
         type="text"
         placeholder="Search MOTD, description, or mode..."
-        className="w-full p-2 sm:p-3 mb-3 sm:mb-4 bg-surf border border-bd rounded text-tx placeholder:text-dim focus:outline-none focus:ring-2 focus:ring-acc transition-all text-sm"
+        className="field mb-2"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
 
       {paginatedHistory.length > 0 ? (
         <>
-          <div className="overflow-x-auto bg-surf border border-bd rounded-ui shadow-lg -mx-1 px-1">
-            <table className="w-full divide-y divide-subtle">
+          <div className="overflow-x-auto -mx-3">
+            <table className="w-full divide-y divide-bd">
               <thead className="bg-surf border-bd">
                 <tr>
                   <th
                     scope="col"
-                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-dim uppercase tracking-wider"
+                    className="px-3 py-1.5 text-left label-caps font-normal"
                   >
                     MOTD
                   </th>
                   <th
                     scope="col"
-                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-dim uppercase tracking-wider hidden sm:table-cell"
+                    className="px-3 py-1.5 text-left label-caps font-normal hidden sm:table-cell"
                   >
                     Description
                   </th>
                   <th
                     scope="col"
-                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-dim uppercase tracking-wider hidden lg:table-cell"
+                    className="px-3 py-1.5 text-left label-caps font-normal hidden lg:table-cell"
                   >
                     From - To
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-surf divide-y divide-subtle">
+              <tbody className="bg-surf divide-y divide-bd">
                 {paginatedHistory.map((item, index) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-acc/12 transition-colors border-bd"
+                    className="hover:bg-surf2 transition-colors"
                   >
                     <td
-                      className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium user-select-text ${
+                      className={`px-3 py-1.5 text-xs sm:text-sm font-medium user-select-text ${
                         hasNameChanged(item, index)
                           ? "text-acc bg-acc/12"
                           : "text-tx"
@@ -133,7 +133,7 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: bool
                       </div>
                     </td>
                     <td
-                      className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm max-w-50 truncate hidden sm:table-cell user-select-text ${
+                      className={`px-3 py-1.5 text-xs sm:text-sm max-w-50 truncate hidden sm:table-cell user-select-text ${
                         hasDescriptionChanged(item, index)
                           ? "text-acc bg-acc/12"
                           : "text-dim"
@@ -142,7 +142,7 @@ const MotdHistoryTable: React.FC<{ motdHistory: ServerMotdData[]; loading?: bool
                     >
                       {String(removeColors(item.description) + (hasDescriptionChanged(item, index) ? " ●" : ""))}
                     </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-dim hidden lg:table-cell user-select-text">
+                    <td className="px-3 py-1.5 whitespace-nowrap text-xs sm:text-sm text-dim hidden lg:table-cell user-select-text">
                       {formatDateTimeHuman(item.validFrom)} -{" "}
                       {item.validTo
                         ? formatDateTimeHuman(item.validTo)

@@ -91,6 +91,14 @@ body {
 
 /* ---------- Macro classes (see THEME.md) ---------- */
 
+/* Page scaffold: the scrolling main area and its column of sections. */
+@utility page-scroll {
+  @apply h-full overflow-y-auto;
+}
+@utility page {
+  @apply max-w-[1400px] mx-auto px-3 pt-3 pb-6 split:px-4 split:pt-3.5 flex flex-col gap-3;
+}
+
 /* Panels: the box every section lives in. */
 @utility panel {
   @apply bg-surf border border-bd rounded-ui px-3 py-2.5 min-w-0;

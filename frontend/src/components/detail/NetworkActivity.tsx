@@ -3,6 +3,8 @@ import { NetworkActivityCell } from "../../../../common/models/networkAnalytics.
 import { useNetworkActivity } from "../../hooks/api/useNetworkAnalytics.ts";
 import { LoadingSpinner } from "../LoadingSpinner.tsx";
 import { useNearViewport } from "../../hooks/useNearViewport.ts";
+import Panel from "../ui/Panel.tsx";
+import Segmented from "../ui/Segmented.tsx";
 
 const DAYS = [7, 28, 90] as const;
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -29,7 +31,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 const NetworkActivity = ({ networkId }: { networkId: number }) => {
   const [days, setDays] = useState<7 | 28 | 90>(28);
-  const [ref, near] = useNearViewport<HTMLDivElement>();
+  const [ref, near] = useNearViewport<HTMLElement>();
   const { data, loading, error } = useNetworkActivity(networkId, days, near);
 
   const tz = useMemo(() => {
@@ -49,26 +51,20 @@ const NetworkActivity = ({ networkId }: { networkId: number }) => {
   }, [data]);
 
   return (
-    <div ref={ref} className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
-        <div>
-          <h2 className="text-base sm:text-lg font-semibold text-tx">When it's busy</h2>
-          <p className="text-xs text-dim">Average players by weekday and hour, in {tz}</p>
-        </div>
-        <div className="flex gap-2" role="group" aria-label="Activity window">
-          {DAYS.map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDays(d)}
-              aria-pressed={days === d}
-              className={`px-3 py-1 text-sm ${days === d ? "btn-acc" : "btn"}`}
-            >
-              {d}d
-            </button>
-          ))}
-        </div>
-      </div>
+    <Panel
+      ref={ref}
+      title="When it’s busy"
+      size="md"
+      controls={
+        <Segmented
+          aria-label="Activity window"
+          options={DAYS.map((d) => ({ value: d, label: `${d}d` }))}
+          value={days}
+          onChange={setDays}
+        />
+      }
+    >
+      <p className="text-xs text-dim mb-1.5">Avg players by weekday and hour · {tz}</p>
 
       <div className="relative min-h-24">
         {loading && <LoadingSpinner showText={false} />}
@@ -76,48 +72,51 @@ const NetworkActivity = ({ networkId }: { networkId: number }) => {
         {!loading && !error && max === 0 && <p className="text-sm text-dim">No activity data for this window.</p>}
 
         {!error && max > 0 && (
-          <div className={`overflow-x-auto ${loading ? "opacity-30" : ""}`}>
-            <div className="min-w-[34rem]">
-              <div className="grid gap-px" style={{ gridTemplateColumns: "2.5rem repeat(24, minmax(0, 1fr))" }}>
-                <div />
-                {HOURS.map((h) => (
-                  <div key={h} className="text-[10px] text-dim text-center">
-                    {h % 3 === 0 ? pad(h) : ""}
-                  </div>
-                ))}
-                {WEEKDAYS.map((name, i) => (
-                  <Row key={name} name={name} dow={i + 1} grid={grid} max={max} />
-                ))}
-              </div>
-              <div className="flex items-center gap-2 mt-3 text-xs text-dim">
-                <span>Quieter</span>
-                {[0.1, 0.3, 0.5, 0.75, 1].map((f) => (
-                  <span key={f} className="inline-block w-5 h-3 rounded-sm border border-bd" style={{ background: shade(f) }} />
-                ))}
-                <span>Busier (max {Math.round(max).toLocaleString()})</span>
-              </div>
+          <div className={loading ? "opacity-30" : ""}>
+            <div className="grid gap-0.5 items-center" style={{ gridTemplateColumns: "30px repeat(24, minmax(0, 1fr))" }}>
+              <div />
+              {HOURS.map((h) => (
+                <div key={h} className="text-[10px] text-dim whitespace-nowrap">
+                  {h % 3 === 0 ? pad(h) : ""}
+                </div>
+              ))}
+              {WEEKDAYS.map((name, i) => (
+                <Row key={name} name={name} dow={i + 1} grid={grid} max={max} />
+              ))}
+            </div>
+            <div className="flex items-center gap-1 mt-2 text-[11px] text-dim">
+              <span>Quieter</span>
+              {[0.18, 0.41, 0.65, 0.9, 1].map((f) => (
+                <i key={f} className="block w-3.5 h-2 rounded-xs" style={{ background: shade(f) }} />
+              ))}
+              <span>Busier (max {Math.round(max).toLocaleString()})</span>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </Panel>
   );
 };
 
-/** Accent at increasing strength; the title on each cell carries the exact value. */
+/**
+ * Accent at increasing strength, with the busiest cells in the lighter --top.
+ * The title on each cell carries the exact value.
+ */
 const shade = (fraction: number): string =>
-  `color-mix(in srgb, var(--acc) ${Math.round(8 + fraction * 92)}%, transparent)`;
+  fraction > 0.92
+    ? "var(--top)"
+    : `color-mix(in srgb, var(--acc) ${Math.round(Math.max(0.1, fraction) * 85)}%, transparent)`;
 
 const Row = ({ name, dow, grid, max }: { name: string; dow: number; grid: Map<string, number>; max: number }) => (
   <>
-    <div className="text-xs text-dim pr-1 flex items-center">{name}</div>
+    <div className="text-[11px] text-dim">{name}</div>
     {HOURS.map((h) => {
       const v = grid.get(`${dow}-${h}`);
       return (
         <div
           key={h}
           title={v == null ? `${name} ${pad(h)}:00 – no data` : `${name} ${pad(h)}:00 – avg ${Math.round(v).toLocaleString()}`}
-          className="h-5 sm:h-6 rounded-sm bg-surf2"
+          className="h-[17px] rounded-xs bg-surf2"
           style={v == null ? undefined : { background: shade(v / max) }}
         />
       );

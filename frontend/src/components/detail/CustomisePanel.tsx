@@ -165,7 +165,7 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
   return (
     <details
       onToggle={handleToggle}
-      className="bg-surf border border-bd rounded p-4 sm:p-6 mb-4 sm:mb-6"
+      className="panel"
     >
       <summary className="cursor-pointer text-base sm:text-lg font-semibold text-tx">
         {isNetwork ? "Customise network defaults" : "Customise this server"}

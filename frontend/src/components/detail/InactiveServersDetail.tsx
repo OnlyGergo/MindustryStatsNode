@@ -2,6 +2,8 @@ import React from "react";
 import CopyButton from "../CopyButton.tsx";
 import { useInactiveServersData } from "../../hooks/useInactiveServersData.ts";
 import { useNavigate } from "@tanstack/react-router";
+import Panel from "../ui/Panel.tsx";
+import PageHead from "../ui/PageHead.tsx";
 
 const InactiveServersDetail: React.FC = () => {
   const { inactiveServers, stats, loading, error } = useInactiveServersData();
@@ -29,120 +31,76 @@ const InactiveServersDetail: React.FC = () => {
   }
 
   return (
-    <div className="h-full overflow-auto p-6 bg-surf">
-      <h1 className="text-2xl font-bold text-tx mb-6">Inactive Servers</h1>
+    <div className="page-scroll">
+      <div className="page">
+        <PageHead
+          title="Inactive servers"
+          sub={`Servers that have stopped reporting, ${inactiveServers.length} in total`}
+        />
 
-      {/* Server List Statistics */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold text-tx mb-4">
-          Server List Statistics
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <div key={stat.id} className="bg-surf border border-bd rounded-ui p-4">
-              <h3 className="text-sm font-medium text-dim mb-1">
-                {stat.display_name}
-              </h3>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-tx">
-                  {stat.active_servers}
-                </span>
-                <span className="text-dim">/ {stat.total_servers}</span>
-              </div>
-              <div className="mt-2">
-                <div className="w-full bg-surf2 rounded h-2">
-                  <div
-                    className="bg-acc h-2 rounded"
-                    style={{ width: `${stat.active_percentage}%` }}
-                  />
+        <Panel title="Server list statistics">
+          {/* Cells wrap and grow, so any number of lists fills the row. */}
+          <div className="flex flex-wrap -mx-3 -my-1">
+            {stats.map((stat) => (
+              <div key={stat.id} className="flex-[1_1_180px] px-3.5 py-2 border-l border-bd first:border-l-0">
+                <div className="text-xs text-dim">{stat.display_name}</div>
+                <div className="font-head font-bold text-[22px] leading-tight">
+                  {stat.active_servers} <small className="text-[13px] text-dim font-sans font-normal">/ {stat.total_servers}</small>
                 </div>
-                <p className="text-xs text-dim mt-1">
-                  {stat.active_percentage}% active
-                </p>
+                <div className="track my-1">
+                  <i className="track-fill" style={{ width: `${stat.active_percentage}%` }} />
+                </div>
+                <div className="text-xs text-dim">{stat.active_percentage}% active</div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Inactive Servers Table */}
-      <div>
-        <h2 className="text-xl font-semibold text-tx mb-4">
-          Inactive Servers ({inactiveServers.length})
-        </h2>
-        {inactiveServers.length === 0 ? (
-          <div className="bg-surf border border-bd rounded-ui p-8 text-center">
-            <p className="text-dim">No inactive servers found</p>
+            ))}
           </div>
-        ) : (
-          <div className="bg-surf border border-bd rounded-ui overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
+        </Panel>
+
+        <Panel title={`Inactive servers (${inactiveServers.length})`}>
+          {inactiveServers.length === 0 ? (
+            <p className="text-dim text-center py-6">No inactive servers found</p>
+          ) : (
+            <div className="overflow-x-auto -mx-3">
+              <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="border-b border-bd">
-                    <th className="px-6 py-3 text-left text-xs font-medium text-dim uppercase tracking-wider">
-                      Group
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-dim uppercase tracking-wider">
-                      Last Seen
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-dim uppercase tracking-wider">
-                      Server Lists
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-dim uppercase tracking-wider">
-                      Details
-                    </th>
+                  <tr className="label-caps text-left">
+                    <th className="px-3 pb-1.5 font-normal">Group</th>
+                    <th className="px-3 pb-1.5 font-normal">Last seen</th>
+                    <th className="px-3 pb-1.5 font-normal">Server lists</th>
+                    <th className="px-3 pb-1.5" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-subtle">
+                <tbody>
                   {inactiveServers.map((server) => (
-                    <tr key={server.id} className="hover:bg-acc/18 transition-colors border-bd">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-dim">
-                          {server.group_name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-dim">
-                          {formatDate(server.lastSeen)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
+                    <tr key={server.id} className="border-t border-bd hover:bg-surf2 transition-colors">
+                      <td className="px-3 py-1.5 font-semibold text-tx">{server.group_name}</td>
+                      <td className="px-3 py-1.5 text-xs text-dim whitespace-nowrap">{formatDate(server.lastSeen)}</td>
+                      <td className="px-3 py-1.5">
                         <div className="flex flex-wrap gap-1">
                           {server.serverLists.length > 0 ? (
                             server.serverLists.map((list) => (
-                              <span
-                                key={list.id}
-                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-surf2 text-dim"
-                              >
-                                {list.display_name}
-                              </span>
+                              <span key={list.id} className="tag">{list.display_name}</span>
                             ))
                           ) : (
-                            <span className="text-sm text-dim">
-                              Unknown
-                            </span>
+                            <span className="text-xs text-dim">Unknown</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap inline-flex items-center">
-                        <div className="text-sm font-medium text-tx">
-                          <CopyButton text={`${server.host}:${server.port}`} className="bg-acc/12 hover:bg-acc/18 text-acc px-3 py-1 rounded transition-colors border border-acc shrink-0 text-sm" />
+                      <td className="px-3 py-1.5">
+                        <div className="flex gap-1.5 justify-end">
+                          <CopyButton text={`${server.host}:${server.port}`} className="btn-acc" />
+                          <button onClick={() => navigator({ to: `/server/${server.id}` })} className="btn">
+                            View
+                          </button>
                         </div>
-                        <button
-                          onClick={() => navigator({ to: `/server/${server.id}` })}
-                          className="bg-acc/12 hover:bg-acc/18 text-acc px-3 py-1 rounded transition-colors border border-acc shrink-0 text-sm ml-2"
-                        >
-                          View
-                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          )}
+        </Panel>
       </div>
     </div>
   );

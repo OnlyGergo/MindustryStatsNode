@@ -11,8 +11,8 @@ const monthName = (ms: number): string =>
 
 /** One story card: a title, one fact, content. */
 const Card: React.FC<{ title: string; note?: string; children: React.ReactNode }> = ({ title, note, children }) => (
-  <section className="bg-surf border border-bd rounded p-4 sm:p-8 min-w-0">
-    <h2 className="text-sm uppercase tracking-wide text-dim">{title}</h2>
+  <section className="panel p-4 sm:p-6">
+    <h2 className="label-caps text-[11px]">{title}</h2>
     {note && <p className="text-xs text-dim">{note}</p>}
     <div className="mt-3 sm:mt-4">{children}</div>
   </section>
@@ -20,7 +20,7 @@ const Card: React.FC<{ title: string; note?: string; children: React.ReactNode }
 
 const Big: React.FC<{ value: React.ReactNode; label: string; hint?: React.ReactNode }> = ({ value, label, hint }) => (
   <div className="min-w-0">
-    <div className="text-3xl sm:text-5xl font-bold text-acc tabular-nums break-words">{value}</div>
+    <div className="font-head text-3xl sm:text-5xl font-bold text-acc break-words">{value}</div>
     <div className="text-sm text-dim">{label}</div>
     {hint && <div className="text-xs text-dim">{hint}</div>}
   </div>
@@ -30,7 +30,7 @@ const MapName: React.FC<{ row: MapRow }> = ({ row }) => (
   <div className="flex items-center gap-2 min-w-0">
     <span className="truncate max-w-[12rem] sm:max-w-[16rem]"><MindustryText text={row.mapName} /></span>
     {row.mode && (
-      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-surf2 border border-bd text-dim shrink-0">
+      <span className="tag text-[10px] uppercase shrink-0">
         {row.mode}
       </span>
     )}
@@ -44,10 +44,10 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
   const maxMonth = Math.max(1, ...r.months.map((m) => m.playerHours));
 
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surf">
-      <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6">
-        <header className="bg-surf border border-bd rounded p-6 sm:p-12 text-center">
-          <h1 className="text-4xl sm:text-6xl font-bold text-acc">{r.year} Wrapped</h1>
+    <div className="page-scroll">
+      <div className="page max-w-3xl">
+        <header className="panel p-6 sm:p-12 text-center">
+          <h1 className="font-head text-4xl sm:text-6xl font-bold text-acc">{r.year} Wrapped</h1>
           <p className="text-sm sm:text-base text-dim mt-2">
             {r.final ? `The year in Mindustry, ${r.year}.` : `so far · as of ${formatUtcDate(r.asOf)}`}
           </p>
@@ -55,7 +55,7 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
             <button
               type="button"
               onClick={onPlayStory}
-              className="mt-4 px-4 py-1.5 rounded-full bg-acc/12 border border-acc/40 text-acc text-sm hover:bg-acc/18 cursor-pointer"
+              className="btn-fill mt-4 rounded-full px-4 py-1.5"
             >
               Play story
             </button>
@@ -63,7 +63,7 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
         </header>
 
         <Card title="The year in numbers">
-          <div className="grid grid-cols-2 gap-4 sm:gap-6">
+          <div className="flex flex-wrap gap-4 sm:gap-6 *:flex-[1_1_10rem]">
             <Big value={formatHours(r.headline.playerHours)} label="player-hours" />
             <Big
               value={formatInt(r.headline.peakPlayers)}
@@ -91,7 +91,7 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
                 {winner.networkName}
               </Link>
             )}
-            <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="flex flex-wrap gap-4 mt-4 *:flex-[1_1_10rem]">
               <Big value={formatHours(winner.playerHours)} label="player-hours" />
               {winnerBest && (
                 <Big
@@ -201,7 +201,7 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
                   {r.mapPerMode.map((m) => (
                     <span
                       key={m.mode}
-                      className="inline-flex items-center gap-1.5 max-w-full px-2 py-1 rounded bg-surf2 border border-bd text-xs"
+                      className="tag inline-flex items-center gap-1.5 max-w-full"
                     >
                       <span className="uppercase text-dim shrink-0">{m.mode}</span>
                       <span className="text-tx truncate"><MindustryText text={m.mapName} /></span>
@@ -222,8 +222,8 @@ const WrappedPage: React.FC<{ report: WrappedReport; onPlayStory?: () => void }>
                     <span className="truncate text-tx">{m.mode}</span>
                     <span className="tabular-nums whitespace-nowrap">{(m.share * 100).toFixed(1)}%</span>
                   </div>
-                  <div className="h-2 rounded bg-surf2 overflow-hidden">
-                    <div className="h-full bg-acc" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
+                  <div className="track mt-0.5">
+                    <i className="track-fill" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
                   </div>
                 </li>
               ))}
