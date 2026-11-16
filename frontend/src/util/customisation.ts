@@ -6,12 +6,7 @@ import {
   uploadUrl,
   type PublicCustomisation,
 } from "../../../common/models/customisation.ts";
-
-/** "#rrggbb" + alpha -> rgba(). Caller has already validated the hex. */
-const rgba = (hex: string, alpha: number): string => {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-};
+import { alpha, DEFAULT_THEME, themeVars, withAccent } from "../../../common/theme.ts";
 
 /** Only ever a same-origin `/uploads/<uuid>`; anything else is dropped. */
 const safeBackgroundUrl = (url: string | null | undefined): string | null => {
@@ -21,33 +16,31 @@ const safeBackgroundUrl = (url: string | null | undefined): string | null => {
 };
 
 /**
- * Scoped CSS variables (and background) for a server/network page. The backend validates
- * too, but these values land in a style attribute, so they are re-checked here.
- * Variable names match the @theme block in index.css; the utilities read them via var().
+ * Theme overrides (and background) for a server/network page, applied on a wrapper
+ * element that also gets `data-theme` (see THEME.md). The backend validates too, but
+ * these values land in a style attribute, so they are re-checked here.
  */
 export const customisationStyle = (c: PublicCustomisation | null): React.CSSProperties | undefined => {
   if (!c) return undefined;
   const style: Record<string, string> = {};
 
   if (c.accentColor && ACCENT_COLOR_RE.test(c.accentColor)) {
-    const hex = c.accentColor.toLowerCase();
-    style["--color-accent"] = hex;
-    style["--color-accent-muted"] = rgba(hex, 0.12);
-    style["--color-accent-border"] = rgba(hex, 0.25);
-    style["--color-accent-hover"] = rgba(hex, 0.18);
-    style["--scrollbar"] = hex + "3f";
+    // --onacc is derived from the accent's luminance, so text on accent fills stays readable.
+    Object.assign(style, themeVars(withAccent({}, c.accentColor.toLowerCase())));
   }
 
   const bg = safeBackgroundUrl(c.backgroundUrl);
   if (bg) {
-    style["backgroundImage"] = `linear-gradient(rgba(15, 15, 15, 0.82), rgba(15, 15, 15, 0.82)), url("${bg}")`;
+    style["backgroundImage"] =
+      `linear-gradient(color-mix(in srgb, var(--bg) 82%, transparent), color-mix(in srgb, var(--bg) 82%, transparent)), url("${bg}")`;
     style["backgroundSize"] = "cover";
     style["backgroundPosition"] = "center";
     style["backgroundAttachment"] = "fixed";
-    // Translucent cards so the image shows through but text stays readable.
-    style["--color-surface-1"] = "rgba(22, 22, 22, 0.88)";
-    style["--color-surface-2"] = "rgba(29, 29, 29, 0.9)";
-    style["--color-surface-3"] = "rgba(37, 37, 37, 0.9)";
+    // Translucent surfaces so the image shows through but text stays readable. Concrete
+    // values from the site theme: `--surf: color-mix(var(--surf) ...)` would be a cycle.
+    style["--surf"] = alpha(DEFAULT_THEME.surf, 0.88);
+    style["--surf2"] = alpha(DEFAULT_THEME.surf2, 0.9);
+    style["--sidebg"] = alpha(DEFAULT_THEME.sidebg, 0.85);
   }
 
   return Object.keys(style).length > 0 ? (style as React.CSSProperties) : undefined;

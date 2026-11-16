@@ -57,11 +57,12 @@ function hexChannels(hex: string): [number, number, number] {
 /** WCAG relative luminance (0 = black, 1 = white) of a #rgb/#rrggbb colour. */
 export function lum(hex: string): number {
     if (!HEX_RE.test(hex)) return 0;
-    const [r, g, b] = hexChannels(hex).map((v) => {
+    const lin = (v: number) => {
         const c = v / 255;
         return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const [r, g, b] = hexChannels(hex);
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 }
 
 /** Readable text colour for an --acc fill: near-black on light accents, white on dark ones. */
@@ -75,7 +76,7 @@ export function alpha(hex: string, a: number): string {
 }
 
 /** Same theme with a custom accent; --onacc is re-derived from its luminance. */
-export const withAccent = <T extends ThemeColours>(theme: T, acc: string): T =>
+export const withAccent = <T extends Partial<ThemeColours>>(theme: T, acc: string): T & Pick<ThemeColours, "acc" | "onacc"> =>
     ({ ...theme, acc, onacc: onAccentFor(acc) });
 
 export type ThemeVars = Record<`--${ThemeToken}`, string>;

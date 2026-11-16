@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import { api } from "../../util/api.ts";
 import { apiErrorMessage } from "../../util/apiError.ts";
+import { DEFAULT_THEME } from "../../../../common/theme.ts";
 import { ACCENT_COLOR_RE, type OwnerCustomisationState, type OwnerImage } from "../../../../common/models/customisation.ts";
 
 type Target = { networkId: number } | { serverId: number };
@@ -12,7 +13,7 @@ interface CustomisePanelProps {
 }
 
 const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
-const FALLBACK_COLOR = "#ff6b35";
+const FALLBACK_COLOR = DEFAULT_THEME.acc;
 
 const forbidden = "You don't have permission to customise this.";
 
@@ -197,7 +198,7 @@ const CustomisePanel: React.FC<CustomisePanelProps> = ({ target, onSaved }) => {
                   type="text"
                   value={hexText}
                   maxLength={7}
-                  placeholder="#ff6b35"
+                  placeholder={DEFAULT_THEME.acc}
                   disabled={busy}
                   onChange={(e) => setHex(e.target.value.trim())}
                   className="w-28 bg-surf2 border border-bd rounded p-2 text-tx"
