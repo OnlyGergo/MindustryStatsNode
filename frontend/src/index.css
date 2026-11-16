@@ -1,177 +1,204 @@
 @import "tailwindcss";
 
+/*
+ * Theme: see THEME.md. Every colour is a CSS variable whose value comes from
+ * common/theme.ts (themeVars), set on <html> and on any [data-theme] wrapper.
+ * No colour literals in this file or in components.
+ */
+
+/* Tailwind colour utilities point at the runtime variables: bg-surf, text-dim,
+   border-bd, bg-acc/12 ... The default palette is cleared on purpose, so
+   text-red-400 & co. don't exist. */
+@theme inline {
+  --color-*: initial;
+  --color-white: white;
+  --color-black: black;
+  --color-bg: var(--bg);
+  --color-surf: var(--surf);
+  --color-surf2: var(--surf2);
+  --color-bd: var(--bd);
+  --color-tx: var(--tx);
+  --color-dim: var(--dim);
+  --color-acc: var(--acc);
+  --color-acc2: var(--acc2);
+  --color-onacc: var(--onacc);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-sidebg: var(--sidebg);
+  --color-topbg: var(--topbg);
+  --color-top: var(--top);
+  --color-grid: var(--grid);
+  --color-track: var(--track);
+
+  --font-sans: MindustryIcons, Barlow, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-head: MindustryIcons, "Barlow Semi Condensed", Barlow, system-ui, sans-serif;
+}
+
 @theme {
-  /* Layout split: list+detail side by side, inline nav. */
+  /* Layout split: list+detail side by side, inline nav. Below it: mobile. */
   --breakpoint-split: 950px;
-
-  /* Surfaces */
-  --color-bg: #0f0f0f;
-  --color-surface-1: #161616;
-  --color-surface-2: #1d1d1d;
-  --color-surface-3: #252525;
- 
-  /* Orange accent, pre-mixed instead of computed at runtime */
-  --color-accent: #ff6b35;
-  --color-accent-muted: rgba(255, 107, 53, 0.12);
-  --color-accent-border: rgba(255, 107, 53, 0.25);
-  --color-accent-hover: rgba(255, 107, 53, 0.18);
-
-  --scrollbar: #ff6b353f;
- 
-  /* Text */
-  --color-text-primary: #f5f5f5;
-  --color-text-secondary: #9a9a9a;
-  --color-text-tertiary: #6b6b6b;
- 
-  /* Borders */
-  --color-border-subtle: rgba(255, 255, 255, 0.06);
-  --color-border-default: rgba(255, 255, 255, 0.1);
- 
-  /* Radius - the 5px "there but not obvious" roundness */
-  --radius-DEFAULT: 5px;
+  /* The 5px "there but not obvious" roundness: `rounded-ui`. */
+  --radius-ui: 5px;
 }
- 
+
+/* Derived values. Custom properties resolve where they are DECLARED, so this
+   block must repeat on every element that overrides tokens (hence [data-theme]). */
+:root,
+[data-theme] {
+  --top: color-mix(in srgb, var(--acc) 62%, white); /* hottest heatmap cell */
+  --grid: color-mix(in srgb, var(--bd) 80%, var(--bg)); /* chart gridlines */
+  --track: var(--surf2); /* empty part of bars */
+  --acc-line: color-mix(in srgb, var(--acc) 40%, transparent); /* scrollbar */
+}
+
+html {
+  color-scheme: dark;
+}
+
 @font-face {
-    font-family: MindustryIcons;
-    src: url('/src/assets/mindustry_icons.woff2') format("woff2");
-    font-display: swap;
+  font-family: MindustryIcons;
+  src: url("/src/assets/mindustry_icons.woff2") format("woff2");
+  font-display: swap;
+  /* Private-use glyphs only, so Barlow renders everything else. */
+  unicode-range: U+E000-F8FF;
 }
 
-/* Apply system font with Mindustry as fallback for icons */
 body {
-    font-family: MindustryIcons, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    user-select: none;
+  margin: 0;
+  background: var(--bg);
+  color: var(--tx);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
 }
 
-.mindustry-font {
-    font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 1px;
 }
 
-/* Custom scrollbar styling - orange tinted, transparent track */
+/* Scrollbars: accent tinted, transparent track */
 * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar) transparent;
+  scrollbar-width: thin;
+  scrollbar-color: var(--acc-line) transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--acc-line); border-radius: 4px; }
+
+/* ---------- Macro classes (see THEME.md) ---------- */
+
+/* Panels: the box every section lives in. */
+@utility panel {
+  @apply bg-surf border border-bd rounded-ui px-3 py-2.5 min-w-0;
+}
+@utility panel-head {
+  @apply flex flex-wrap items-center justify-between gap-2 mb-2;
+}
+@utility panel-title {
+  @apply font-head font-bold text-[13px] text-tx;
+}
+/* A row of panels that wrap and grow to fill the line: no blank grid cells. */
+@utility panel-row {
+  @apply flex flex-wrap gap-3 items-start;
+}
+/* Panel widths inside a panel-row: grow factor + minimum width before wrapping. */
+@utility panel-sm { flex: 1 1 240px; }
+@utility panel-md { flex: 1 1 320px; }
+@utility panel-lg { flex: 1.3 1 400px; }
+@utility panel-full { flex: 1 1 100%; }
+
+/* Stat strip: one bordered box of label/value cells. The 1px gap shows the
+   bd background as divider lines, and cells grow to fill the last row. */
+@utility strip {
+  @apply flex flex-wrap gap-px bg-bd border border-bd rounded-ui overflow-hidden;
+}
+@utility strip-cell {
+  @apply flex-1 basis-[8.5rem] bg-surf px-3.5 py-1.5 min-w-0;
+}
+@utility strip-label {
+  @apply text-[10px] uppercase tracking-[.06em] text-dim;
+}
+@utility strip-value {
+  @apply font-head font-bold text-lg leading-tight text-tx;
 }
 
-/* Webkit browsers (Chrome, Safari, Edge) */
-*::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+/* Small uppercase label (column headers, control captions). */
+@utility label-caps {
+  @apply text-[10px] uppercase tracking-[.06em] text-dim;
 }
 
-*::-webkit-scrollbar-track {
-    background: transparent;
+/* Buttons */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1 border border-bd rounded-ui text-tx bg-transparent transition-colors cursor-pointer hover:border-acc disabled:opacity-50 disabled:cursor-not-allowed;
+}
+@utility btn-acc {
+  @apply btn border-acc text-acc hover:bg-acc/12;
+}
+@utility btn-fill {
+  @apply btn bg-acc border-acc text-onacc hover:bg-acc/85;
+}
+/* Square icon button, e.g. the network graph button. */
+@utility ib {
+  @apply w-[34px] h-[34px] shrink-0 flex items-center justify-center border border-bd rounded-ui text-dim transition-colors hover:text-acc hover:border-acc;
 }
 
-*::-webkit-scrollbar-thumb {
-    /* Text Primary but 0.3 opacity */
-    background: var(--scrollbar);
-    border-radius: 4px;
+/* Segmented control: a .seg wrapper of .seg-btn buttons with aria-pressed. */
+@utility seg {
+  @apply inline-flex flex-wrap items-center;
+}
+@utility seg-btn {
+  @apply px-2 py-px -ml-px first:ml-0 border border-bd text-[11px] font-semibold text-dim cursor-pointer transition-colors first:rounded-l-ui last:rounded-r-ui hover:text-tx aria-pressed:relative aria-pressed:bg-acc aria-pressed:border-acc aria-pressed:text-onacc;
 }
 
-*::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar);
+/* Status pills and tags */
+@utility pill-good {
+  @apply inline-block text-[11px] text-good border border-good rounded-ui px-1.5 whitespace-nowrap;
+}
+@utility pill-bad {
+  @apply inline-block text-[11px] text-bad border border-bad rounded-ui px-1.5 whitespace-nowrap;
+}
+@utility tag {
+  @apply inline-block text-[11px] text-dim border border-bd rounded-ui px-2 py-px;
 }
 
-*::-webkit-scrollbar-corner {
-    background: transparent;
+/* Bars: <div class="track"><i class="track-fill" style="width:40%"/></div> */
+@utility track {
+  @apply h-[5px] bg-track rounded-sm overflow-hidden;
+}
+@utility track-fill {
+  @apply block h-full bg-acc rounded-sm;
+}
+@utility track-fill-2 {
+  @apply block h-full bg-acc2 rounded-sm;
 }
 
-/* Background utilities */
-@utility bg-surface-primary {
-  background-color: var(--color-surface-1);
-}
-@utility bg-surface-secondary {
-  background-color: var(--color-surface-2);
-}
-@utility bg-surface-tertiary {
-  background-color: var(--color-surface-3);
+/* Text input */
+@utility field {
+  @apply w-full bg-surf2 border border-bd rounded-ui px-2 py-1 text-xs text-tx placeholder:text-dim focus:outline-none focus:border-acc;
 }
 
-/* Accent utilities */
-@utility bg-accent {
-  background-color: var(--color-accent);
-}
-@utility bg-accent-muted {
-  background-color: var(--color-accent-muted);
-}
-@utility bg-accent-hover {
-  background-color: var(--color-accent-hover);
+/* Discord login: the one brand colour that isn't a theme token. */
+@utility btn-discord {
+  background-color: oklch(0.59 0.2 277);
+  color: white;
+  &:hover { background-color: oklch(0.53 0.2 277); }
 }
 
-/* Text utilities */
-@utility text-primary {
-  color: var(--color-text-primary);
+/* uPlot tooltip (util/chartTooltip.ts) */
+.chart-tip {
+  background: color-mix(in srgb, var(--surf) 96%, transparent);
+  border: 1px solid var(--bd);
+  color: var(--tx);
+  box-shadow: 0 10px 30px color-mix(in srgb, black 45%, transparent);
 }
-@utility text-secondary {
-  color: var(--color-text-secondary);
-}
-@utility text-tertiary {
-  color: var(--color-text-tertiary);
-}
-@utility text-accent {
-  color: var(--color-accent);
-}
+.chart-tip .tip-title { color: var(--acc); border-bottom: 1px solid var(--bd); }
+.chart-tip .tip-label { color: var(--dim); }
+.chart-tip .tip-total { color: var(--acc); border-top: 1px solid var(--bd); }
 
-/* Border utilities */
-@utility border-subtle {
-  border-color: var(--color-border-subtle);
-}
-@utility border-default {
-  border-color: var(--color-border-default);
-}
-@utility border-accent {
-  border-color: var(--color-accent-border);
-}
-
-/* card-base has to be a @utility too, since card-interactive composes it below */
-@utility card-base {
-  @apply bg-surface-primary border border-default rounded-[var(--radius-DEFAULT)];
-}
-
-/* Combined interactive elements — these aren't composed further, so plain @layer components is fine */
-@layer components {
-  .card-interactive {
-    @apply card-base hover:bg-accent-hover hover:border-accent transition-all;
-  }
-
-  .button-secondary {
-    @apply bg-surface-primary hover:bg-accent-muted text-secondary hover:text-primary border border-default hover:border-accent rounded-[var(--radius-DEFAULT)] transition-colors;
-  }
-
-  .button-accent {
-    @apply bg-accent-muted hover:bg-accent-hover text-accent border border-accent rounded-[var(--radius-DEFAULT)] transition-all;
-  }
-}
-
-/* Status indicators */
-
-@utility bg-status-online {
-  background-color: var(--color-status-online-bg, rgba(34, 197, 94, 0.2));
-}
-@utility text-status-online {
-  color: var(--color-status-online-text, #4ade80);
-}
-@utility border-status-online {
-  border-color: var(--color-status-online-border, rgba(34, 197, 94, 0.3));
-}
-
-@utility bg-status-offline {
-  background-color: var(--color-status-offline-bg, rgba(239, 68, 68, 0.2));
-}
-@utility text-status-offline {
-  color: var(--color-status-offline-text, #f87171);
-}
-@utility border-status-offline {
-  border-color: var(--color-status-offline-border, rgba(239, 68, 68, 0.3));
-}
-
-@utility focus-ring-accent {
-  &:focus {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 1px;
-  }
-}
 /* Wrapped story: entrance animations, staggered with inline animation-delay. */
 @keyframes wr-rise { from { opacity: 0; transform: translateY(1.5rem); } to { opacity: 1; transform: none; } }
 @keyframes wr-pop { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
