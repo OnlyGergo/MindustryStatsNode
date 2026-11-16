@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
 /**
- * Guard for THEME.md's one rule: every colour in the frontend comes from a theme
+ * Guard for DESIGN.md's one rule: every colour in the frontend comes from a theme
  * token. Flags hex/rgb()/hsl() literals and Tailwind default-palette classes in
  * frontend/src/**.ts(x). Files that legitimately hold colour data are allowlisted;
  * a single line can opt out with a `theme-ok` comment.

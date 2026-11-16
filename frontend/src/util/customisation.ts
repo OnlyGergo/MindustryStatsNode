@@ -17,7 +17,7 @@ const safeBackgroundUrl = (url: string | null | undefined): string | null => {
 
 /**
  * Theme overrides (and background) for a server/network page, applied on a wrapper
- * element that also gets `data-theme` (see THEME.md). The backend validates too, but
+ * element that also gets `data-theme` (see DESIGN.md). The backend validates too, but
  * these values land in a style attribute, so they are re-checked here.
  */
 export const customisationStyle = (c: PublicCustomisation | null): React.CSSProperties | undefined => {

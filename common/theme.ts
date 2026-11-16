@@ -1,6 +1,6 @@
 /**
  * Site theme: the single source of truth for every colour on the site.
- * See THEME.md. A theme is a plain object of the tokens below; `themeVars`
+ * See DESIGN.md. A theme is a plain object of the tokens below; `themeVars`
  * turns one into CSS custom properties for a wrapper element's `style`.
  */
 

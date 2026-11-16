@@ -21,7 +21,7 @@ interface PanelProps {
   children?: React.ReactNode;
 }
 
-/** The box every page section lives in. See THEME.md, "Layout". */
+/** The box every page section lives in. See DESIGN.md, "Layout". */
 export const Panel: React.FC<PanelProps> = ({ title, controls, size, className = "", id, ref, children }) => (
   <section ref={ref} id={id} className={`panel ${size ? SIZE[size] : ""} ${className}`}>
     {(title || controls) && (

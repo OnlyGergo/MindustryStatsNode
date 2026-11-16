@@ -21,7 +21,7 @@ Stars render at 16–26px.
 - Charts read the variables, so nothing re-renders on a theme change.
 - Layout and panels match the preview, with no blank spots and smaller stars.
 - Data fetching and routing stay as they are.
-- `THEME.md` documents all of it.
+- `DESIGN.md` documents all of it.
 
 **Phase 2 (not now):** a palette picker for admins (site-wide) and owners (per network or server). For now, behaviour stays as today: one site theme (moth) plus the owner's accent colour override.
 
@@ -57,7 +57,7 @@ The preset hexes, and `themeVars(moth)` rendered onto `<html>`, are the **only**
   - `--grid` = `color-mix(bd 80%, bg)`.
   - `--track` = `var(--surf2)`.
   - `--acc-soft` = 12%, `--acc-hover` = 18%, `--acc-line` = 40% (the scrollbar thumb).
-  - **Gotcha, which goes in THEME.md:** derived custom properties resolve where they are *declared*. Any element that overrides tokens must carry `data-theme`, or the derived values keep the parent's colours.
+  - **Gotcha, which goes in DESIGN.md:** derived custom properties resolve where they are *declared*. Any element that overrides tokens must carry `data-theme`, or the derived values keep the parent's colours.
 - `.chart-tip` is the uPlot tooltip, styled with `var()`. It replaces the inline hex styles in `chartTooltip.ts`.
 - `.btn-discord` is the one brand exception, kept in CSS rather than in a component.
 
@@ -205,7 +205,7 @@ Reviews (`ReviewSummary/List/Form/Reply/Actions`), `CustomisePanel`, `EmptyState
 5. **Charts.** Add `themeColors.ts`, then update chartHelpers, the four charts, the tooltip, the heatmap and the useUPlot redraw. Commit as `feat: charts read theme variables`.
 6. **Customisation.** Update `customisation.ts`, `useBodyCustomisations` and `CustomisePanel`. Commit as `refactor: customisation sets theme tokens`.
 7. **Docs and guard.**
-   - Write `THEME.md` at the root:
+   - Write `DESIGN.md` at the root:
      - tokens table with meaning
      - derived values and the `data-theme` gotcha
      - the 8 presets and how to add one
@@ -217,7 +217,7 @@ Reviews (`ReviewSummary/List/Form/Reply/Actions`), `CustomisePanel`, `EmptyState
      - the phase-2 notes
    - Add a short Theme section to `CLAUDE.md` pointing at it, and fix its stale "detail page wrapper" note.
    - Add `frontend/src/util/noHardcodedColours.test.ts`. It greps `frontend/src` for hex, `rgb(`, `hsl(` and default-palette classes. The allowlist is `common/theme.ts`, `util/mindustryText.ts` (game colour tags are data) and `util/themeColors.ts`.
-   - Commit as `docs: add THEME.md and colour guard`.
+   - Commit as `docs: add DESIGN.md and colour guard`.
 
 ## Verification
 - Root `bun run typecheck`, `bun run test` (including the new theme and colour-guard tests), and `bun run build`.

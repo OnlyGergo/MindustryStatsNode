@@ -6,7 +6,7 @@ import { alpha, type ThemeToken } from "../../../common/theme.ts";
  * a canvas, and canvas fill/stroke styles can't resolve var() (or be trusted
  * with color-mix()). Everything here reads the 13 base tokens off an element,
  * so a chart inside a [data-theme] wrapper gets that wrapper's theme.
- * See THEME.md, "Charts".
+ * See DESIGN.md, "Charts".
  */
 
 export { alpha };

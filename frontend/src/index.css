@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Theme: see THEME.md. Every colour is a CSS variable whose value comes from
+ * Theme: see DESIGN.md. Every colour is a CSS variable whose value comes from
  * common/theme.ts (themeVars), set on <html> and on any [data-theme] wrapper.
  * No colour literals in this file or in components.
  */
@@ -89,7 +89,7 @@ body {
 *::-webkit-scrollbar-corner { background: transparent; }
 *::-webkit-scrollbar-thumb { background: var(--acc-line); border-radius: 4px; }
 
-/* ---------- Macro classes (see THEME.md) ---------- */
+/* ---------- Macro classes (see DESIGN.md) ---------- */
 
 /* Page scaffold: the scrolling main area and its column of sections. */
 @utility page-scroll {
