@@ -28,7 +28,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: FONTS_URL },
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      // The tab variant (bolder, cropped) from `bun run icons`; favicon.svg stays the top bar logo.
+      { rel: "icon", type: "image/svg+xml", href: "/favicon-tab.svg" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
