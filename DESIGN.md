@@ -93,6 +93,7 @@ These are Tailwind `@utility` classes, so they take variants (`hover:`, `split:`
 | `panel-head` / `panel-title` | the title row of a panel: title on the left, controls on the right, wrapping |
 | `panel-row` | a row of panels that wrap and grow: **use this instead of `grid-cols-N`** |
 | `panel-sm` / `panel-md` / `panel-lg` / `panel-full` | panel width in a `panel-row`: flex `1 1 240px` / `1 1 320px` / `1.3 1 400px` / `1 1 100%` |
+| `panel-masonry` | CSS-columns masonry for many panels of uneven, data-driven height (leaderboard): no holes beside short panels; size classes don't apply inside |
 | `strip` / `strip-cell` / `strip-label` / `strip-value` | stat strip: one box of label/value cells divided by 1px lines |
 
 **Controls**

@@ -45,8 +45,10 @@ const moverColumns: Column<MoverRow>[] = [
 ];
 
 const MapName: React.FC<{ row: MapRow }> = ({ row }) => (
-  <div className="flex items-center gap-2 min-w-0">
-    <span className="truncate max-w-[14rem]"><MindustryText text={row.mapName} /></span>
+  // min-w: a narrow column scrolls the table rather than crushing the name a letter per line;
+  // the mode tag wraps under the name when there's no room beside it.
+  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-[9rem]">
+    <span className="block truncate max-w-[14rem]"><MindustryText text={row.mapName} /></span>
     {row.mode && (
       <span className="tag text-[10px] uppercase shrink-0">
         {row.mode}
@@ -105,32 +107,35 @@ const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: Leaderboard
             />
           </Section>
 
+          {/* Top + rising maps stack to about Top servers' height, so neither column leaves a hole. */}
           <div className="panel-md flex flex-col gap-3 min-w-0">
-            <Section title="Top movers" description={`Biggest gain in player-hours vs the ${PREVIOUS[w]}.`} empty={!s.movers.length}>
-              <RankTable rows={s.movers} rowKey={(r) => r.id} columns={moverColumns} />
+            <Section title="Top maps" description="Most-played maps by player-hours." empty={!s.topMaps.length}>
+              <RankTable
+                rows={s.topMaps}
+                rowKey={(r) => `${r.mapName}|${r.mode ?? ""}`}
+                rank={(r) => r.rank}
+                movement={(r) => r}
+                columns={mapColumns}
+              />
             </Section>
-            <Section title="Top losers" description={`Biggest drop in player-hours vs the ${PREVIOUS[w]}.`} empty={!s.losers.length}>
-              <RankTable rows={s.losers} rowKey={(r) => r.id} columns={moverColumns} />
+            <Section title="Rising maps" description={`Maps climbing fastest vs the ${PREVIOUS[w]}.`} empty={!s.risingMaps.length}>
+              <RankTable
+                rows={s.risingMaps}
+                rowKey={(r) => `${r.mapName}|${r.mode ?? ""}`}
+                movement={(r) => r}
+                columns={mapColumns}
+              />
             </Section>
           </div>
+        </div>
 
-          <Section title="Top maps" description="Most-played maps by player-hours." empty={!s.topMaps.length}>
-            <RankTable
-              rows={s.topMaps}
-              rowKey={(r) => `${r.mapName}|${r.mode ?? ""}`}
-              rank={(r) => r.rank}
-              movement={(r) => r}
-              columns={mapColumns}
-            />
+        {/* Everything else varies in length day to day, so it packs into columns instead of ragged rows. */}
+        <div className="panel-masonry">
+          <Section title="Top movers" description={`Biggest gain in player-hours vs the ${PREVIOUS[w]}.`} empty={!s.movers.length}>
+            <RankTable rows={s.movers} rowKey={(r) => r.id} columns={moverColumns} />
           </Section>
-
-          <Section title="Rising maps" description={`Maps climbing fastest vs the ${PREVIOUS[w]}.`} empty={!s.risingMaps.length}>
-            <RankTable
-              rows={s.risingMaps}
-              rowKey={(r) => `${r.mapName}|${r.mode ?? ""}`}
-              movement={(r) => r}
-              columns={mapColumns}
-            />
+          <Section title="Top losers" description={`Biggest drop in player-hours vs the ${PREVIOUS[w]}.`} empty={!s.losers.length}>
+            <RankTable rows={s.losers} rowKey={(r) => r.id} columns={moverColumns} />
           </Section>
 
           <Section title="Gamemode share" description="Share of all player-hours, and the change in percentage points." empty={!s.modes.length}>

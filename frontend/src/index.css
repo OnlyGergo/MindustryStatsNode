@@ -119,6 +119,20 @@ body {
 @utility panel-lg { flex: 1.3 1 400px; }
 @utility panel-full { flex: 1 1 100%; }
 
+/* Masonry of panels with uneven heights (CSS columns): each column packs its
+   panels top to bottom, so a short table never leaves a hole beside a long one.
+   Panel size classes don't apply inside it; the column width decides. */
+@utility panel-masonry {
+  columns: 360px;
+  column-gap: 0.75rem;
+  & > * {
+    break-inside: avoid;
+    margin-bottom: 0.75rem;
+    width: 100%;
+    display: inline-block;
+  }
+}
+
 /* Stat strip: one bordered box of label/value cells. The 1px gap shows the
    bd background as divider lines, and cells grow to fill the last row. */
 @utility strip {
