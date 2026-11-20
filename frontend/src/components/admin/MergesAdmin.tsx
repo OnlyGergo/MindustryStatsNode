@@ -132,7 +132,8 @@ const SearchInput: React.FC<{
   placeholder: string;
   disabled?: boolean;
   autoFocus?: boolean;
-}> = ({ value, onChange, placeholder, disabled, autoFocus }) => (
+  onEnter?: () => void;
+}> = ({ value, onChange, placeholder, disabled, autoFocus, onEnter }) => (
   <div className="relative">
     <input
       type="search"
@@ -140,6 +141,12 @@ const SearchInput: React.FC<{
       autoComplete="off"
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && onEnter) {
+          e.preventDefault();
+          onEnter();
+        }
+      }}
       placeholder={placeholder}
       disabled={disabled}
       autoFocus={autoFocus}
@@ -162,13 +169,31 @@ const SearchInput: React.FC<{
 const FamilyPicker: React.FC<{
   label: string;
   families: MergeFamily[] | null;
+  familiesError: string | null;
+  onRetry: () => void;
   haystacks: Map<number, string>;
   selected: MergeFamily | null;
   onSelect: (f: MergeFamily | null) => void;
   disabled: boolean;
-}> = ({ label, families, haystacks, selected, onSelect, disabled }) => {
+}> = ({ label, families, familiesError, onRetry, haystacks, selected, onSelect, disabled }) => {
   const [query, setQuery] = useState("");
   const deferred = useDeferredValue(query);
+
+  const pick = (f: MergeFamily) => {
+    onSelect(f);
+    setQuery("");
+  };
+
+  // A pasted id or /server/<id> URL names exactly one server: select it straight
+  // away rather than leaving it as a lone result the admin still has to click.
+  useEffect(() => {
+    if (!families || selected) return;
+    const id = parseServerId(query);
+    if (id == null || !/\bserver\/\d+/.test(query)) return;
+    const exact = families.find((f) => f.id === id);
+    if (exact) pick(exact);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [families, query, selected]);
 
   const results = useMemo(() => {
     if (!families || !deferred.trim()) return [];
@@ -206,9 +231,21 @@ const FamilyPicker: React.FC<{
       <SearchInput
         value={query}
         onChange={setQuery}
-        placeholder={families ? "Name, MOTD, host, id or URL" : "Loading servers…"}
+        onEnter={() => results[0] && pick(results[0])}
+        placeholder={families ? "Name, MOTD, host, id or URL" : familiesError ? "Couldn't load servers" : "Loading servers…"}
         disabled={disabled || !families}
       />
+      {!families && familiesError && (
+        <div className="text-xs text-bad flex items-center gap-2">
+          {familiesError}
+          <button type="button" className="btn text-xs px-2 py-0.5" onClick={onRetry}>
+            Retry
+          </button>
+        </div>
+      )}
+      {families && query.trim() && results.length > 0 && (
+        <span className="text-xs text-dim">Click a result (or press Enter for the first) to pick it.</span>
+      )}
       {deferred.trim() && families && (
         <ul className="flex flex-col border border-bd rounded divide-y divide-bd max-h-96 overflow-y-auto overscroll-contain">
           {results.length === 0 && <li className="p-3 text-xs text-dim">No servers match.</li>}
@@ -217,10 +254,7 @@ const FamilyPicker: React.FC<{
               <button
                 type="button"
                 className="w-full text-left p-2 sm:p-2 min-h-11 hover:bg-surf2 flex flex-col gap-0.5"
-                onClick={() => {
-                  onSelect(f);
-                  setQuery("");
-                }}
+                onClick={() => pick(f)}
               >
                 <span className="text-sm text-tx truncate">
                   <ServerName name={f.name} />
@@ -248,6 +282,7 @@ const MergesAdmin: React.FC = () => {
   const [merged, setMerged] = useState<MergedFamily[] | null>(null);
   const [families, setFamilies] = useState<MergeFamily[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [familiesError, setFamiliesError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
@@ -259,20 +294,29 @@ const MergesAdmin: React.FC = () => {
   const [manualSource, setManualSource] = useState<MergeFamily | null>(null);
   const [manualTarget, setManualTarget] = useState<MergeFamily | null>(null);
 
+  /** The family list on its own, so the manual picker never waits on (or dies with) the suggestion query. */
+  const loadFamilies = useCallback(async () => {
+    setFamiliesError(null);
+    try {
+      const f = await api.api.admin.families.get();
+      if (f.error) return setFamiliesError(errorMessageFor(f.status, f.error.value));
+      setFamilies(f.data as MergeFamily[]);
+    } catch {
+      setFamiliesError("Couldn't load servers.");
+    }
+  }, []);
+
+  // Each list loads and fails on its own: one slow or failing query must not
+  // leave the other tabs stuck on "Loading…".
   const load = useCallback(async () => {
     setLoadError(null);
-    const [s, m, f] = await Promise.all([
-      api.api.admin["merge-suggestions"].get(),
-      api.api.admin["merged-families"].get(),
-      api.api.admin.families.get(),
-    ]);
-    if (s.error) return setLoadError(errorMessageFor(s.status, s.error.value));
-    if (m.error) return setLoadError(errorMessageFor(m.status, m.error.value));
-    if (f.error) return setLoadError(errorMessageFor(f.status, f.error.value));
-    setSuggestions(s.data as MergeSuggestion[]);
-    setMerged(m.data as MergedFamily[]);
-    setFamilies(f.data as MergeFamily[]);
-  }, []);
+    const fail = (status: number, value: unknown) => setLoadError(errorMessageFor(status, value));
+    await Promise.all([
+      api.api.admin["merge-suggestions"].get().then((s) => (s.error ? fail(s.status, s.error.value) : setSuggestions(s.data as MergeSuggestion[]))),
+      api.api.admin["merged-families"].get().then((m) => (m.error ? fail(m.status, m.error.value) : setMerged(m.data as MergedFamily[]))),
+      loadFamilies(),
+    ]).catch(() => setLoadError("Something went wrong loading the merge lists."));
+  }, [loadFamilies]);
 
   useEffect(() => {
     void load();
@@ -334,7 +378,8 @@ const MergesAdmin: React.FC = () => {
         return false;
       }
       setMessage({ kind: "ok", text: okText });
-      await load();
+      // Reload in the background: the write is done, so the page shouldn't stay disabled while the lists refetch.
+      void load();
       return true;
     } catch {
       setMessage({ kind: "error", text: "Something went wrong. Please try again." });
@@ -513,6 +558,8 @@ const MergesAdmin: React.FC = () => {
             <FamilyPicker
               label="Server A"
               families={families}
+              familiesError={familiesError}
+              onRetry={() => void loadFamilies()}
               haystacks={familyHaystacks}
               selected={manualSource}
               onSelect={setManualSource}
@@ -521,6 +568,8 @@ const MergesAdmin: React.FC = () => {
             <FamilyPicker
               label="Server B"
               families={families}
+              familiesError={familiesError}
+              onRetry={() => void loadFamilies()}
               haystacks={familyHaystacks}
               selected={manualTarget}
               onSelect={setManualTarget}
@@ -534,16 +583,26 @@ const MergesAdmin: React.FC = () => {
               <PairView older={manualPair.older} newer={manualPair.newer} olderLabel="Into (older, keeps id)" newerLabel="Merge (newer)" />
             </div>
           )}
-          <div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <button
               type="button"
               className="btn-acc text-sm px-4 py-2 sm:py-1 w-full sm:w-auto"
               disabled={busy || !manualPair}
               onClick={() => void handleManualMerge()}
             >
-              Merge
+              {busy ? "Merging…" : "Merge"}
             </button>
+            {!manualPair && !sameFamily && (
+              <span className="text-xs text-dim">
+                {!manualSource && !manualTarget
+                  ? "Pick server A and server B first."
+                  : `Pick server ${manualSource ? "B" : "A"} too.`}
+              </span>
+            )}
           </div>
+          {message && (
+            <div className={`text-sm ${message.kind === "ok" ? "text-good" : "text-bad"}`}>{message.text}</div>
+          )}
         </section>
       )}
 
