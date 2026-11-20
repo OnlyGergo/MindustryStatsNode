@@ -6,6 +6,7 @@ dist
 /backend/node_modules/
 /frontend/node_modules/
 /backend/logs/
+/logs/
 .kilo
 /plans
 /backend/public/
