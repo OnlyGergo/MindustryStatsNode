@@ -45,6 +45,9 @@ type ServerData struct {
 	// ResolvedIP is the IPv4 address the query actually reached, so an IP row
 	// and a domain row of one server can be matched up (servers.resolved_ip).
 	ResolvedIP netip.Addr
+	// ResolvedPort is the port that answered: the listed one, or the SRV
+	// record's when the address only works through _mindustry._tcp.
+	ResolvedPort int
 }
 
 // Poller holds the query timeout and the geoip database; it is safe for
@@ -59,6 +62,8 @@ type Poller struct {
 	// server that is simply gone, as failedServersCache did.
 	mu            sync.Mutex
 	failedServers map[string]struct{}
+
+	srv srvCache
 }
 
 func New(timeout time.Duration, geo *geoip.Lookup) *Poller {
@@ -68,6 +73,7 @@ func New(timeout time.Duration, geo *geoip.Lookup) *Poller {
 		log:           logging.New("Mindustry Service"),
 		resolver:      net.DefaultResolver,
 		failedServers: make(map[string]struct{}),
+		srv:           newSRVCache(),
 	}
 }
 
@@ -82,6 +88,32 @@ func (p *Poller) Query(ctx context.Context, host string, port int, serverKey str
 		return nil, &InvalidPortError{Host: host, Port: port}
 	}
 
+	// A host that answered through its SRV record last time is tried that way
+	// first, so it does not pay the direct attempt's timeout on every cycle.
+	if p.srvEligible(host, port) && p.prefersSRV(host) {
+		if data := p.querySRV(ctx, host, port, serverKey); data != nil {
+			return data, nil
+		}
+		if ctx.Err() != nil {
+			return nil, nil
+		}
+	}
+
+	data, err := p.queryDirect(ctx, host, port, serverKey)
+	if err != nil || data != nil {
+		if data != nil {
+			p.setPrefersSRV(host, false)
+		}
+		return data, err
+	}
+	if ctx.Err() != nil || !p.srvEligible(host, port) || p.prefersSRV(host) {
+		return nil, nil
+	}
+	return p.querySRV(ctx, host, port, serverKey), nil
+}
+
+// queryDirect resolves host's A record and queries it on port.
+func (p *Poller) queryDirect(ctx context.Context, host string, port int, serverKey string) (*ServerData, error) {
 	addr, err := p.resolveHost(ctx, host)
 	if err != nil {
 		return nil, err
@@ -89,13 +121,38 @@ func (p *Poller) Query(ctx context.Context, host string, port int, serverKey str
 	if !addr.IsValid() {
 		return nil, nil
 	}
+	return p.queryAddr(ctx, host, port, addr, port, serverKey), nil
+}
 
+// querySRV is the Mindustry client's fallback: a hostname on the default port
+// may point at _mindustry._tcp.<host>, tried in the record's priority/weight
+// order.  The row keeps the address as listed; only the poll is redirected.
+func (p *Poller) querySRV(ctx context.Context, host string, port int, serverKey string) *ServerData {
+	for _, target := range p.lookupSRV(ctx, host) {
+		addr, err := p.resolveHost(ctx, target.host)
+		if err != nil || !addr.IsValid() {
+			continue
+		}
+		if data := p.queryAddr(ctx, host, port, addr, target.port, serverKey); data != nil {
+			p.setPrefersSRV(host, true)
+			return data
+		}
+		if ctx.Err() != nil {
+			return nil
+		}
+	}
+	return nil
+}
+
+// queryAddr sends the info request to addr:dialPort.  host and port are the
+// row's listed address, which is what the result is recorded under.
+func (p *Poller) queryAddr(ctx context.Context, host string, port int, addr netip.Addr, dialPort int, serverKey string) *ServerData {
 	start := time.Now()
 
-	conn, err := net.DialUDP("udp4", nil, net.UDPAddrFromAddrPort(netip.AddrPortFrom(addr, uint16(port))))
+	conn, err := net.DialUDP("udp4", nil, net.UDPAddrFromAddrPort(netip.AddrPortFrom(addr, uint16(dialPort))))
 	if err != nil {
 		p.noteSocketError(serverKey, err)
-		return nil, nil
+		return nil
 	}
 	defer conn.Close()
 
@@ -105,7 +162,7 @@ func (p *Poller) Query(ctx context.Context, host string, port int, serverKey str
 	}
 	if err := conn.SetDeadline(deadline); err != nil {
 		p.noteSocketError(serverKey, err)
-		return nil, nil
+		return nil
 	}
 
 	// A cancelled context has to interrupt the blocking read, or shutdown waits
@@ -115,7 +172,7 @@ func (p *Poller) Query(ctx context.Context, host string, port int, serverKey str
 
 	if _, err := conn.Write(queryPacket); err != nil {
 		p.noteSocketError(serverKey, err)
-		return nil, nil
+		return nil
 	}
 
 	// Mindustry's info response fits comfortably; anything larger is not one.
@@ -126,17 +183,18 @@ func (p *Poller) Query(ctx context.Context, host string, port int, serverKey str
 		if !errors.Is(err, context.Canceled) && !isTimeout(err) {
 			p.noteSocketError(serverKey, err)
 		}
-		return nil, nil
+		return nil
 	}
 
 	data, err := p.decode(buf[:n], host, port, int(time.Since(start).Milliseconds()), addr)
 	if err != nil {
 		p.log.Error("Failed to parse packet", "server", serverKey, "err", err)
-		return nil, nil
+		return nil
 	}
+	data.ResolvedPort = dialPort
 
 	p.clearFailure(serverKey)
-	return data, nil
+	return data
 }
 
 // decode walks the response in the exact order mindustryService.ts read it.

@@ -70,6 +70,8 @@ function familiesSql(familyFilter = 'TRUE'): string {
                    lm.host, lm.port, n.name, n.description,
                    CASE WHEN fam.last_seen > now() - make_interval(days => ${SAME_ENDPOINT_RECENT_DAYS})
                         THEN host(lm.resolved_ip) END AS endpoint_ip,
+                   -- The port that answered: an SRV record can point the listed host:6567 elsewhere.
+                   COALESCE(lm.resolved_port, lm.port) AS endpoint_port,
                    ${normSql('n.name')} AS norm,
                    ${normSql('n.description')} AS desc_norm
             FROM fam
@@ -116,7 +118,7 @@ export async function getMergeSuggestions(): Promise<MergeSuggestion[]> {
             UNION
             SELECT a.id, b.id FROM f a JOIN f b ON a.desc_norm = b.desc_norm AND a.id < b.id
             UNION
-            SELECT a.id, b.id FROM f a JOIN f b ON a.endpoint_ip = b.endpoint_ip AND a.port = b.port AND a.id < b.id
+            SELECT a.id, b.id FROM f a JOIN f b ON a.endpoint_ip = b.endpoint_ip AND a.endpoint_port = b.endpoint_port AND a.id < b.id
         ),
         ordered AS (
             -- target = the older family (it keeps the root), source = the newer one
@@ -138,7 +140,7 @@ export async function getMergeSuggestions(): Promise<MergeSuggestion[]> {
                    -- Both answered on the same IP:port recently. Unlike same_host this
                    -- is strong on its own: a shared hosting IP still gives each server
                    -- its own port, and both being live together is the whole point.
-                   COALESCE(t.endpoint_ip = s.endpoint_ip AND t.port = s.port, FALSE) AS same_endpoint,
+                   COALESCE(t.endpoint_ip = s.endpoint_ip AND t.endpoint_port = s.endpoint_port, FALSE) AS same_endpoint,
                    COALESCE(t.last_seen < s.first_seen OR s.last_seen < t.first_seen, FALSE) AS disjoint,
                    -- The handover: the newer one turned up within a day of the older one's
                    -- last sighting, on either side (a short gap or a short overlap).

@@ -100,6 +100,7 @@ export function liveMemberSql(where?: string | null): string {
            s.port,
            s.country_code,
            s.resolved_ip,
+           s.resolved_port,
            s.updated_at
     FROM server_canonical sc
     JOIN servers s ON s.id = sc.server_id

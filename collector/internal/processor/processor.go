@@ -168,6 +168,8 @@ func buildBatch(raws []collector.RawServerData) batch {
 			resolved.set(raw.ServerID, repository.ResolvedIPUpdate{
 				ServerID:   raw.ServerID,
 				ResolvedIP: data.ResolvedIP.String(),
+				// Zero only from callers that build ServerData by hand.
+				ResolvedPort: resolvedPort(data.ResolvedPort, raw.Port),
 			})
 		}
 
@@ -313,4 +315,12 @@ func int32Ptr(v int32) *int32 { return &v }
 func intPtr(v int) *int       { return &v }
 func stringPtr(v string) *string {
 	return &v
+}
+
+// resolvedPort is the port that answered, falling back to the listed one.
+func resolvedPort(answered, listed int) int {
+	if answered > 0 {
+		return answered
+	}
+	return listed
 }

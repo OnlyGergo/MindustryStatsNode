@@ -226,10 +226,12 @@ func (r *Repository) BulkUpdateCountryCodes(ctx context.Context, updates []Count
 	return err
 }
 
-// ResolvedIPUpdate pairs a server with the IPv4 address its query reached.
+// ResolvedIPUpdate pairs a server with the IPv4 address and port its query
+// reached; the port differs from servers.port only through an SRV record.
 type ResolvedIPUpdate struct {
-	ServerID   int    `json:"server_id"`
-	ResolvedIP string `json:"resolved_ip"`
+	ServerID     int    `json:"server_id"`
+	ResolvedIP   string `json:"resolved_ip"`
+	ResolvedPort int    `json:"resolved_port"`
 }
 
 // BulkUpdateResolvedIPs writes servers.resolved_ip for the servers that
@@ -247,10 +249,12 @@ func (r *Repository) BulkUpdateResolvedIPs(ctx context.Context, updates []Resolv
 
 	_, err = r.exec(ctx, r.pool, "bulkUpdateResolvedIPs", `
 		UPDATE servers s
-		SET resolved_ip = x.resolved_ip
-		FROM jsonb_to_recordset($1::jsonb) AS x(server_id int, resolved_ip inet)
+		SET resolved_ip = x.resolved_ip,
+		    resolved_port = x.resolved_port
+		FROM jsonb_to_recordset($1::jsonb) AS x(server_id int, resolved_ip inet, resolved_port int)
 		WHERE s.id = x.server_id
-		  AND s.resolved_ip IS DISTINCT FROM x.resolved_ip
+		  AND (s.resolved_ip IS DISTINCT FROM x.resolved_ip
+		       OR s.resolved_port IS DISTINCT FROM x.resolved_port)
 	`, payload)
 	return err
 }
