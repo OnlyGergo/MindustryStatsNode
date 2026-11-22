@@ -1,41 +1,34 @@
 import { useEffect } from 'react';
 import { customisationStyle } from '../util/customisation';
 import { PublicCustomisation } from '../../../common/models/customisation';
+import { notifyThemeChange } from '../util/themeColors';
 
 interface UseBodyCustomisationProps {
   customisation: PublicCustomisation | null | undefined;
 }
 
+const cssName = (property: string) =>
+  property.startsWith('--') ? property : property.replace(/([A-Z])/g, '-$1').toLowerCase();
+
+/**
+ * Applies a server/network page's customisation to <body>, the wrapper the whole
+ * page (sidebar included) inherits from. `data-theme` makes index.css re-derive
+ * --top/--grid/... from the overridden tokens; charts redraw on the event.
+ */
 export function useBodyCustomisation({ customisation }: UseBodyCustomisationProps) {
   useEffect(() => {
-    // 1. Get the dynamic styles object using your existing function
     const styles = customisationStyle(customisation ?? null) as Record<string, string> | undefined;
-    
     if (!styles) return;
 
-    // 2. Apply all properties to the <body> element
-    Object.entries(styles).forEach(([property, value]) => {
-      // Handle standard CSS properties vs CSS variables
-      if (property.startsWith('--')) {
-        document.body.style.setProperty(property, value);
-      } else {
-        // camelCase properties (e.g., backgroundImage) need to match CSS names (background-image)
-        // or be set directly via indexing if your environment allows.
-        const kebabProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-        document.body.style.setProperty(kebabProperty, value);
-      }
-    });
+    const body = document.body;
+    Object.entries(styles).forEach(([property, value]) => body.style.setProperty(cssName(property), value));
+    body.setAttribute('data-theme', '');
+    notifyThemeChange();
 
-    // 3. Cleanup Callback: Remove exactly what we applied when navigating away or updating
     return () => {
-      Object.keys(styles).forEach((property) => {
-        if (property.startsWith('--')) {
-          document.body.style.removeProperty(property);
-        } else {
-          const kebabProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-          document.body.style.removeProperty(kebabProperty);
-        }
-      });
+      Object.keys(styles).forEach((property) => body.style.removeProperty(cssName(property)));
+      body.removeAttribute('data-theme');
+      notifyThemeChange();
     };
-  }, [customisation]); // Fires again safely if the user's customisation data updates live
+  }, [customisation]);
 }

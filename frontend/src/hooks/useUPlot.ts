@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import uPlot from "uplot";
+import { THEME_CHANGE_EVENT } from "../util/themeColors.ts";
 import { createChartTooltip, type TooltipConfig } from "../util/chartTooltip.ts";
 
 /** Below this chart width, axes switch to bigger labels, fewer ticks and compact counts. */
@@ -104,7 +105,13 @@ export function useUPlot(spec: UPlotSpec) {
         });
         ro.observe(outer);
 
+        // Colours are functions that read the theme variables on every draw
+        // (see util/themeColors.ts), so a theme change only needs a redraw.
+        const onTheme = () => plot.redraw(false);
+        window.addEventListener(THEME_CHANGE_EVENT, onTheme);
+
         return () => {
+            window.removeEventListener(THEME_CHANGE_EVENT, onTheme);
             ro.disconnect();
             detachTouch();
             tooltip.remove();

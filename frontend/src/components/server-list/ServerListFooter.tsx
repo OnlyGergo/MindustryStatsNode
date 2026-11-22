@@ -4,13 +4,13 @@ import { formatRelativeTime } from "../../util/general.ts";
 
 /** Desktop-only; below `split` the commit/source links live in the nav menu. */
 const ServerListFooter: React.FC<{ lastUpdated: Date }> = ({ lastUpdated }) => (
-  <div className="hidden split:block px-3 py-2 border-t border-default shrink-0">
-    <p className="text-xs text-tertiary flex items-center justify-between">
-    <span>Last Updated: {formatRelativeTime(lastUpdated)}</span>
+  <div className="hidden split:block px-3 py-2 border-t border-bd shrink-0">
+    <p className="text-[11px] text-dim flex items-center justify-between gap-2">
+    <span>Updated {formatRelativeTime(lastUpdated)}</span>
           <span>
             Commit:{" "}
 
-            <a className="hover:underline hover:text-accent"
+            <a className="hover:underline hover:text-acc"
               target="_blank"
               rel="noopener noreferrer"
               href={`${SOURCE}/commit/${COMMIT}`}
@@ -23,7 +23,7 @@ const ServerListFooter: React.FC<{ lastUpdated: Date }> = ({ lastUpdated }) => (
             href={SOURCE}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 hover:text-accent transition-colors"
+            className="flex items-center gap-1 hover:text-acc transition-colors"
             title="View source on GitHub"
           >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" className="hover:scale-110 transition-transform">

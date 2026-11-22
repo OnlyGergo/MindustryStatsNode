@@ -4,6 +4,7 @@ import "uplot/dist/uPlot.min.css";
 import { ServerHistory } from "../../../../common/models/serverData.ts";
 import { buildTimeAxes, countTicks } from "../../util/chartHelpers.ts";
 import { useUPlot } from "../../hooks/useUPlot.ts";
+import { alpha, cssToken, tokenAlpha, tokenStroke } from "../../util/themeColors.ts";
 import { UPlotFrame } from "../UPlotFrame.tsx";
 
 interface PlayerHistoryChartProps {
@@ -11,9 +12,6 @@ interface PlayerHistoryChartProps {
   loading: boolean;
 }
 
-const COLOR = "rgb(249, 115, 22)";
-const OFFLINE_FILL = "rgba(239, 68, 68, 0.1)";
-const OFFLINE_COLOR = "rgb(239, 68, 68)";
 
 /**
  * A null bucket means offline (every server in scope, for a network) or no
@@ -49,7 +47,7 @@ const offlineBands = (): uPlot.Plugin => ({
         if (runs.length === 0) return;
         const { ctx, bbox } = u;
         ctx.save();
-        ctx.fillStyle = OFFLINE_FILL;
+        ctx.fillStyle = alpha(cssToken(u.root, "bad"), 0.1);
         for (const [a, b] of runs) {
           const x0 = Math.max(bbox.left, u.valToPos(a, "x", true));
           const x1 = Math.min(bbox.left + bbox.width, u.valToPos(b, "x", true));
@@ -82,14 +80,14 @@ const PlayerHistoryChart = ({ data, loading }: PlayerHistoryChartProps) => {
         { label: "Time" },
         {
           label: "Players",
-          stroke: COLOR,
-          fill: "rgba(249, 115, 22, 0.1)",
+          stroke: tokenStroke("acc"),
+          fill: tokenAlpha("acc", 0.12),
           width: 2,
           spanGaps: false,
           points: { show: markers, size: 5 },
         },
       ],
-      axes: buildTimeAxes(narrow, countTicks(narrow), "rgba(249, 115, 22, 0.08)"),
+      axes: buildTimeAxes(narrow, countTicks(narrow)),
       scales: {
         x: { time: true },
         y: { range: (_u, _min, max) => [0, Math.max(max * 1.05, 1)] },
@@ -102,11 +100,11 @@ const PlayerHistoryChart = ({ data, loading }: PlayerHistoryChartProps) => {
       const ys = u.data[1] as (number | null)[];
       const raw = ys[idx];
       const title = new Date((u.data[0] as number[])[idx] * 1000).toLocaleString();
-      if (raw != null) return { title, rows: [{ label: "Players", value: raw, color: COLOR }] };
+      if (raw != null) return { title, rows: [{ label: "Players", value: raw, color: cssToken(u.root, "acc") }] };
       // Only inside a shaded run: not before tracking began, not in the future.
       const t = (u.data[0] as number[])[idx];
       if (!offlineRuns(u.data[0] as number[], ys).some(([a, b]) => t >= a && t < b)) return null;
-      return { title, rows: [{ label: "Status", value: 0, color: OFFLINE_COLOR, display: "Offline" }] };
+      return { title, rows: [{ label: "Status", value: 0, color: cssToken(u.root, "bad"), display: "Offline" }] };
     },
   });
 
@@ -115,7 +113,7 @@ const PlayerHistoryChart = ({ data, loading }: PlayerHistoryChartProps) => {
       <UPlotFrame outerRef={outerRef} mountRef={mountRef} loading={loading} />
 
       {!loading && data.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center text-tertiary text-xs font-medium z-20">
+        <div className="absolute inset-0 flex items-center justify-center text-dim text-xs font-medium z-20">
           No data available for this range.
         </div>
       )}

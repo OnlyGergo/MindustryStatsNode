@@ -4,6 +4,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
 import { VitePWA } from 'vite-plugin-pwa';
+import { DEFAULT_THEME } from '../common/theme.ts';
 
 const backend = { target: 'http://localhost:3000', changeOrigin: true };
 
@@ -45,8 +46,8 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         orientation: 'any',
-        background_color: '#0f0f0f',
-        theme_color: '#0f0f0f',
+        background_color: DEFAULT_THEME.bg,
+        theme_color: DEFAULT_THEME.topbg,
         categories: ['games', 'utilities'],
         lang: 'en',
         icons: [

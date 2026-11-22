@@ -33,12 +33,12 @@ const parseServerId = (text: string): number | null => {
 };
 
 const HubCard: React.FC<{ family: HubFamily; children?: React.ReactNode }> = ({ family, children }) => (
-  <div className="border border-subtle rounded p-3 bg-surface-secondary flex flex-col gap-1 min-w-0">
+  <div className="border border-bd rounded p-3 bg-surf flex flex-col gap-1 min-w-0">
     {family.matches.length > 0 && (
       <div className="flex flex-wrap items-center gap-1 text-xs">
-        <span className="text-tertiary">Keyword in</span>
+        <span className="text-dim">Keyword in</span>
         {family.matches.map((m) => (
-          <span key={m} className="px-1.5 py-0.5 rounded bg-surface-tertiary text-secondary">{MATCH_LABELS[m]}</span>
+          <span key={m} className="px-1.5 py-0.5 rounded bg-surf2 text-dim">{MATCH_LABELS[m]}</span>
         ))}
       </div>
     )}
@@ -46,16 +46,16 @@ const HubCard: React.FC<{ family: HubFamily; children?: React.ReactNode }> = ({ 
       to="/server/$serverId"
       params={{ serverId: String(family.id) }}
       target="_blank"
-      className="block text-sm text-primary truncate hover:underline"
+      className="block text-sm text-tx truncate hover:underline"
     >
-      {family.name ? <MindustryText text={family.name} /> : <span className="text-tertiary">(no name)</span>}
+      {family.name ? <MindustryText text={family.name} /> : <span className="text-dim">(no name)</span>}
     </Link>
     {family.description && (
-      <div className="text-xs text-secondary line-clamp-2 break-words">
+      <div className="text-xs text-dim line-clamp-2 break-words">
         <MindustryText text={family.description} />
       </div>
     )}
-    <div className="text-xs text-tertiary truncate">
+    <div className="text-xs text-dim truncate">
       <span className="font-mono">#{family.id} · {family.host}:{family.port}</span>
       {family.mapName && <> · map <MindustryText text={family.mapName} /></>}
       {" · last seen "}{formatDate(family.lastSeen)}
@@ -147,19 +147,19 @@ const HubsAdmin: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-3 sm:p-4 max-w-4xl">
-      <p className="text-sm text-secondary">
+      <p className="text-sm text-dim">
         Hubs and lobbies only forward players to other servers, so counting them would count those players twice. A hub
         stays listed but is left out of global and network player totals. It applies to the whole server family.
       </p>
 
       {message && (
-        <div className={`text-sm ${message.kind === "ok" ? "text-status-online" : "text-status-offline"}`}>{message.text}</div>
+        <div className={`text-sm ${message.kind === "ok" ? "text-good" : "text-bad"}`}>{message.text}</div>
       )}
-      {loadError && <div className="text-sm text-status-offline">{loadError}</div>}
+      {loadError && <div className="text-sm text-bad">{loadError}</div>}
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-primary">Mark by id</h2>
-        <div className="border border-subtle rounded p-3 sm:p-4 bg-surface-secondary flex flex-col gap-2">
+        <h2 className="text-lg font-semibold text-tx">Mark by id</h2>
+        <div className="border border-bd rounded p-3 sm:p-4 bg-surf flex flex-col gap-2">
           <input
             type="text"
             inputMode="numeric"
@@ -167,17 +167,17 @@ const HubsAdmin: React.FC = () => {
             value={lookupText}
             onChange={(e) => setLookupText(e.target.value)}
             disabled={busy}
-            className="bg-surface-tertiary border border-subtle rounded p-2 text-sm text-primary"
+            className="bg-surf2 border border-bd rounded p-2 text-sm text-tx"
           />
-          {lookup.error && <span className="text-xs text-status-offline">{lookup.error}</span>}
+          {lookup.error && <span className="text-xs text-bad">{lookup.error}</span>}
           {lookup.family && (
             <HubCard family={lookup.family}>
               {lookup.family.isHub ? (
-                <button type="button" className="button-secondary text-sm px-3 py-1" disabled={busy} onClick={() => void unmark(lookup.family!)}>
+                <button type="button" className="btn text-sm px-3 py-1" disabled={busy} onClick={() => void unmark(lookup.family!)}>
                   Unmark hub
                 </button>
               ) : (
-                <button type="button" className="button-accent text-sm px-3 py-1" disabled={busy} onClick={() => void mark(lookup.family!)}>
+                <button type="button" className="btn-acc text-sm px-3 py-1" disabled={busy} onClick={() => void mark(lookup.family!)}>
                   Mark as hub
                 </button>
               )}
@@ -188,20 +188,20 @@ const HubsAdmin: React.FC = () => {
 
       <section className="flex flex-col gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-primary">Suggestions</h2>
-          <p className="text-xs text-tertiary">
+          <h2 className="text-lg font-semibold text-tx">Suggestions</h2>
+          <p className="text-xs text-dim">
             Servers with {HUB_KEYWORDS.map((k) => `“${k}”`).join(" or ")} in their name, description or current map. Most
             matches first.
           </p>
         </div>
-        {suggestions === null && !loadError && <div className="text-secondary text-sm">Loading…</div>}
-        {suggestions?.length === 0 && <div className="text-secondary text-sm">No suggestions right now.</div>}
+        {suggestions === null && !loadError && <div className="text-dim text-sm">Loading…</div>}
+        {suggestions?.length === 0 && <div className="text-dim text-sm">No suggestions right now.</div>}
         {suggestions?.map((f) => (
           <HubCard key={f.id} family={f}>
-            <button type="button" className="button-accent text-sm px-3 py-1" disabled={busy} onClick={() => void mark(f)}>
+            <button type="button" className="btn-acc text-sm px-3 py-1" disabled={busy} onClick={() => void mark(f)}>
               Mark as hub
             </button>
-            <button type="button" className="button-secondary text-sm px-3 py-1" disabled={busy} onClick={() => void dismiss(f)}>
+            <button type="button" className="btn text-sm px-3 py-1" disabled={busy} onClick={() => void dismiss(f)}>
               Not a hub
             </button>
           </HubCard>
@@ -209,12 +209,12 @@ const HubsAdmin: React.FC = () => {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-primary">Marked hubs</h2>
-        {hubs === null && !loadError && <div className="text-secondary text-sm">Loading…</div>}
-        {hubs?.length === 0 && <div className="text-secondary text-sm">No servers are marked as hubs.</div>}
+        <h2 className="text-lg font-semibold text-tx">Marked hubs</h2>
+        {hubs === null && !loadError && <div className="text-dim text-sm">Loading…</div>}
+        {hubs?.length === 0 && <div className="text-dim text-sm">No servers are marked as hubs.</div>}
         {hubs?.map((f) => (
           <HubCard key={f.id} family={f}>
-            <button type="button" className="button-secondary text-sm px-3 py-1" disabled={busy} onClick={() => void unmark(f)}>
+            <button type="button" className="btn text-sm px-3 py-1" disabled={busy} onClick={() => void unmark(f)}>
               Unmark
             </button>
           </HubCard>

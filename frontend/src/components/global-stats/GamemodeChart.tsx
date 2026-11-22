@@ -8,11 +8,11 @@ import {
     buildTimeAxes,
     buildUPlotData,
     countTicks,
-    getModeColor,
     SHARE_Y_AXIS_VALUES,
     ViewMode,
     shareTooltipRows,
 } from "../../util/chartHelpers.ts";
+import { cssToken, labelColor, tokenStroke } from "../../util/themeColors.ts";
 import { useUPlot } from "../../hooks/useUPlot.ts";
 import { UPlotFrame } from "../UPlotFrame.tsx";
 
@@ -24,7 +24,6 @@ interface GamemodeChartProps {
     visibleModes: Set<string>;
 }
 
-const AGG_COLOR = "#f97316";
 
 // uPlot rendering half of GlobalStatsChart's gamemode graph - kept in its own
 // module so it's only fetched lazily on the client (see ChartSuspense.tsx).
@@ -56,7 +55,7 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({ pivot, loading, error, vi
                 { label: "Time" },
                 ...labels.map((label): uPlot.Series => ({
                     label,
-                    stroke: isAgg ? AGG_COLOR : getModeColor(label),
+                    stroke: isAgg ? tokenStroke("acc") : (u) => labelColor(u.root, label),
                     width: 2,
                     show: isAgg || visibleModes.has(label),
                     spanGaps: false,
@@ -76,13 +75,13 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({ pivot, loading, error, vi
         }),
         tooltip: (u, idx) => {
             const title = new Date((u.data[0] as number[])[idx] * 1000).toLocaleString();
-            if (share) return { title, rows: shareTooltipRows(share, idx) };
+            if (share) return { title, rows: shareTooltipRows(share, idx, u.root) };
             const rows = labels
                 .map((label, si) => ({
                     label,
                     show: isAgg || u.series[si + 1].show,
                     value: (u.data[si + 1] as (number | null)[])[idx],
-                    color: isAgg ? AGG_COLOR : getModeColor(label),
+                    color: isAgg ? cssToken(u.root, "acc") : labelColor(u.root, label),
                 }))
                 .filter((r): r is typeof r & { value: number } => r.show === true && r.value != null && r.value > 0)
                 .map(({ label, value, color }) => ({ label, value, color }))
@@ -96,7 +95,7 @@ const GamemodeChart: React.FC<GamemodeChartProps> = ({ pivot, loading, error, vi
             <UPlotFrame outerRef={outerRef} mountRef={mountRef} loading={loading} />
 
             {error && (
-              <div className="absolute inset-0 flex items-center justify-center text-status-offline text-xs font-semibold z-20">
+              <div className="absolute inset-0 flex items-center justify-center text-bad text-xs font-semibold z-20">
                 {error}
               </div>
             )}

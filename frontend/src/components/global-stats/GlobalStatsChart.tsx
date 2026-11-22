@@ -7,6 +7,9 @@ import { ChartSidebarLegend } from "./ChartSidebarLegend.tsx";
 import { ChartSuspense } from "../ChartSuspense.tsx";
 import { GamemodeInfo } from "../../../../common/models/GlobalStatsTypes.ts";
 import type { InitialChartData } from "../../hooks/useChartData.ts";
+import Panel from "../ui/Panel.tsx";
+import PageHead from "../ui/PageHead.tsx";
+import StatStrip from "../ui/StatStrip.tsx";
 
 // uPlot touches the DOM at render time and isn't SSR-safe without extra
 // native deps, so these charts live in their own modules, loaded lazily
@@ -78,72 +81,39 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
 
   const [visibleServerGroups, setVisibleServerGroups] = useVisibleSet(sortedServerGroups);
 
+  const chartTitle =
+      viewMode === "share" ? "Player share by gamemode"
+      : viewMode === "lines" ? "Playercounts by gamemode"
+      : "Aggregated global playercounts";
+
+  // Chart + legend pairs: stacked on mobile, side by side at lg with the legend
+  // scrolling at the chart's height.
+  const pairRow = "flex flex-col lg:flex-row gap-3 lg:h-[60vh] lg:min-h-115";
+
   return (
-      <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-            <div className="min-w-0 mb-4">
-              <h1 className="text-xl sm:text-2xl font-bold text-primary wrap-break-word">
-                Global Stats
-              </h1>
-            </div>
+      <div className="page-scroll">
+        <div className="page">
+          <PageHead title="Global stats" sub="Player counts across every tracked server, by gamemode" />
 
-            <ChartControls
-                selectedRange={selectedRange}
-                onRangeChange={setSelectedRange}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                selectedGamemode={selectedGamemode}
-                onGamemodeChange={setSelectedGamemode}
-                gamemodeList={gamemodeList}
-            />
-          </div>
+          <ChartControls
+              selectedRange={selectedRange}
+              onRangeChange={setSelectedRange}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              selectedGamemode={selectedGamemode}
+              onGamemodeChange={setSelectedGamemode}
+              gamemodeList={gamemodeList}
+          />
 
-          {/* Summary tiles */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
-            <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex items-center justify-between gap-3 sm:gap-4">
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm text-tertiary">
-                  Period Peak High
-                </div>
-                <div className="text-xl sm:text-2xl font-bold text-accent wrap-break-word">
-                  {loading ? "..." : nf.format(pivot.peakPlayers)}
-                </div>
-              </div>
-              <div className="shrink-0 bg-accent-muted text-accent border border-accent rounded p-2 sm:p-3">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-            </div>
+          <StatStrip
+              items={[
+                { label: "Period peak high", value: loading ? "…" : nf.format(pivot.peakPlayers) },
+                { label: "Tracked gamemodes", value: gamemodeList?.length ?? 0, sub: "modes" },
+              ]}
+          />
 
-            <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex items-center justify-between gap-3 sm:gap-4">
-              <div className="min-w-0">
-                <div className="text-xs sm:text-sm text-tertiary">
-                  Tracked Gamemodes
-                </div>
-                <div className="text-xl sm:text-2xl font-bold text-accent wrap-break-word">
-                  {gamemodeList?.length ?? 0}{" "}
-                  <span className="text-xs sm:text-sm font-normal text-tertiary">modes</span>
-                </div>
-              </div>
-              <div className="shrink-0 bg-surface-tertiary text-secondary border border-subtle rounded p-2 sm:p-3">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Gamemode chart + legend */}
-          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:items-stretch lg:min-h-115 lg:h-[60vh] mb-4 sm:mb-6">
-            <div className="flex-1 min-w-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col">
-              <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4 wrap-break-word">
-                {viewMode === "share"
-                    ? "Player Share by Gamemode"
-                    : viewMode === "lines" ? "Playercounts by Gamemode" : "Aggregated Global Playercounts"}
-              </h2>
+          <div className={pairRow}>
+            <Panel title={chartTitle} className="flex-1 min-h-0 flex flex-col">
               <div className="relative w-full h-72 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
                 <ChartSuspense>
                   <GamemodeChart
@@ -155,13 +125,14 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
                   />
                 </ChartSuspense>
               </div>
-            </div>
+            </Panel>
 
             {viewMode !== "aggregated" && (
-                <div className="w-full lg:w-76 shrink-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col overflow-hidden">
-                  <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
-                    Gamemodes
-                  </h2>
+                <Panel
+                    title="Gamemodes"
+                    controls={<span className="text-xs text-dim">peak</span>}
+                    className="w-full lg:w-76 shrink-0 flex flex-col overflow-hidden"
+                >
                   <div className="flex-1 min-h-0">
                     <ChartSidebarLegend
                         gamemodes={sortedGamemodes}
@@ -170,20 +141,20 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
                         onChange={setVisibleModes}
                     />
                   </div>
-                </div>
+                </Panel>
             )}
           </div>
 
-          {/* Group share chart + legend */}
           {selectedGamemode && (
-              <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 w-full lg:items-stretch lg:min-h-115 lg:h-[60vh] mb-4 sm:mb-6">
-                <div className="flex-1 min-w-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col">
-                  <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4 flex flex-wrap items-center gap-2 min-w-0">
-                    <span>Group Share for</span>
-                    <span className="min-w-0 bg-accent-muted text-accent border border-accent rounded px-2 py-0.5 text-xs sm:text-sm font-medium wrap-break-word">
-                      {selectedGamemode.cleanModeName}
-                    </span>
-                  </h2>
+              <div className={pairRow}>
+                <Panel
+                    title={
+                      <span className="flex flex-wrap items-center gap-2 min-w-0">
+                        Group share for <span className="tag text-acc border-acc">{selectedGamemode.cleanModeName}</span>
+                      </span>
+                    }
+                    className="flex-1 min-h-0 flex flex-col"
+                >
                   <div className="relative w-full h-72 sm:h-96 lg:h-auto lg:flex-1 lg:min-h-0">
                     <ChartSuspense>
                       <ServerShareChart
@@ -194,12 +165,9 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
                       />
                     </ChartSuspense>
                   </div>
-                </div>
+                </Panel>
 
-                <div className="w-full lg:w-76 shrink-0 bg-surface-secondary border border-subtle rounded p-4 sm:p-6 flex flex-col overflow-hidden">
-                  <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
-                    Server Groups
-                  </h2>
+                <Panel title="Server groups" className="w-full lg:w-76 shrink-0 flex flex-col overflow-hidden">
                   <div className="flex-1 min-h-0">
                     <ChartSidebarLegend
                         gamemodes={sortedServerGroups}
@@ -208,7 +176,7 @@ const GlobalStatsChart: React.FC<GlobalStatsChartProps> = ({gamemodeList, initia
                         onChange={setVisibleServerGroups}
                     />
                   </div>
-                </div>
+                </Panel>
               </div>
           )}
         </div>

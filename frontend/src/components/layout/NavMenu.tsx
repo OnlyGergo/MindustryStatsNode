@@ -7,18 +7,15 @@ const NavMenu: React.FC = () => {
   const items = useVisibleNavItems();
 
   return (
-    <nav className="hidden split:flex items-center gap-2 sm:gap-3 shrink-0">
+    <nav aria-label="Pages" className="hidden split:flex items-center gap-0.5 mr-2 shrink-0">
       {items.map((item) => (
         <Link
           key={item.to}
           to={item.to}
-          className="flex items-center gap-1.5 text-sm font-medium py-2 px-1 border-b-2 transition-colors"
-          activeProps={{ className: "text-accent border-accent" }}
-          inactiveProps={{
-            className: "text-secondary border-transparent hover:text-accent hover:border-accent/50",
-          }}
+          className="px-2.5 py-1 rounded-ui text-xs font-semibold transition-colors"
+          activeProps={{ className: "text-tx bg-surf2 shadow-[inset_0_-2px_0_var(--acc)]", "aria-current": "page" }}
+          inactiveProps={{ className: "text-dim hover:text-tx" }}
         >
-          {item.icon}
           {item.label}
         </Link>
       ))}

@@ -22,6 +22,9 @@ import { useAuth } from "../../context/AuthContext.tsx";
 import { getModeName } from "../../../../common/Gamemode.ts";
 import { MindustryText } from "../MindustryText.tsx";
 import { removeColors } from "../../util/mindustry.ts";
+import Panel from "../ui/Panel.tsx";
+import PageHead from "../ui/PageHead.tsx";
+import StatStrip, { type StatItem } from "../ui/StatStrip.tsx";
 
 // Below the fold, so fetched after hydration rather than holding up SSR.
 // The tables search client-side, so take the newest 100 of each in one go.
@@ -47,10 +50,6 @@ const ServerDetail: React.FC<{
       ? `Offline - Last Seen ${formatDate(serverDataElement.lastSeen)}`
       : "Offline";
   
-  const statusClass = serverDataElement.online
-    ? "bg-status-online text-status-online border-status-online"
-    : "bg-status-offline text-status-offline border-status-offline";
-
   const formatUptime = (percentage: number) => {
     return `${percentage.toFixed(1)}%`;
   };
@@ -67,97 +66,70 @@ const ServerDetail: React.FC<{
     "Failed to load MOTD history",
   );
 
+  const peaks = serverDataElement.playerPeaks;
+  const uptime = serverDataElement.uptime;
+  const networkName = serverDataElement.name;
+
+  const stats: StatItem[] = [
+    ...(serverData
+      ? [
+          { label: "Map", value: <MindustryText text={serverData.mapName || "Unknown"} /> },
+          { label: "Wave", value: serverData.wave || "0" },
+          {
+            label: "Mode",
+            value: String(removeColors(serverData.modeName)) || getModeName(serverData.modeName, serverData.mode),
+          },
+          { label: "Version", value: `${serverData.versionType ?? ""} ${serverData.version ?? ""}`.trim() || "-" },
+        ]
+      : []),
+    { label: "Peak today", value: peaks?.daily ?? "-" },
+    { label: "Peak this week", value: peaks?.weekly ?? "-" },
+    { label: "Peak all time", value: peaks?.allTime ?? "-" },
+    { label: "Uptime 24h", value: uptime?.last24h !== undefined ? formatUptime(uptime.last24h) : "-" },
+    { label: "Uptime 7d", value: uptime?.last7d !== undefined ? formatUptime(uptime.last7d) : "-" },
+  ];
+
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
-            <div className="flex-1 min-w-0">
-              {serverData?.serverName && (
-                <h1 className="text-xl sm:text-2xl font-bold text-primary mb-2 wrap-break-word">
-                  <MindustryText text={serverData.serverName}/>
-                </h1>
+    <div className="page-scroll">
+      <div className="page">
+        <PageHead
+          title={
+            <span className="flex flex-wrap items-baseline gap-x-2 wrap-break-word">
+              {networkName && (
+                <>
+                  <span>{networkName}</span>
+                  <span className="text-dim font-normal">›</span>
+                </>
               )}
-              {serverData?.description && (
-                <p className="text-secondary mb-4 text-sm sm:text-base wrap-break-word">
-                  <MindustryText text={serverData.description}/>
-                </p>
-              )}
+              <span className="text-acc">
+                <MindustryText text={serverData?.serverName ?? `${serverDataElement.host}:${serverDataElement.port}`} />
+              </span>
+            </span>
+          }
+          sub={serverData?.description && <MindustryText text={serverData.description} />}
+          right={
+            serverDataElement.online &&
+            serverData && (
+              <div className="text-right leading-none">
+                <span className="font-head font-bold text-[34px] text-acc">{serverData.players}</span>
+                <div className="text-xs text-dim mt-0.5">players online</div>
+              </div>
+            )
+          }
+        />
 
-              {/* Action buttons */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                  <span
-                    className={`${statusClass} text-xs sm:text-sm px-2 sm:px-3 py-1 rounded border`}
-                  >
-                    {serverStatus}
-                  </span>
-                  {serverDataElement.online && serverData && (
-                    <>
-                      <span className="text-xs sm:text-sm text-tertiary">
-                        {serverData.players}/{serverData.playerLimit} players
-                      </span>
-                      <span className="text-xs sm:text-sm text-tertiary">
-                        {serverData.ping}ms
-                      </span>
-                    </>
-                  )}
-                </div>
-                <CopyButton
-                  text={`${serverDataElement.host}:${serverDataElement.port}`}
-                  className="button-secondary text-xs sm:text-sm px-2 sm:px-3 py-1"
-                />
-                <ShareButton
-                  serverId={serverDataElement.id}
-                  className="button-accent text-xs sm:text-sm px-2 sm:px-3 py-1"
-                />
-              </div>
-            </div>
-
-            {serverDataElement.online && serverData && (
-              <div className="text-left sm:text-right shrink-0">
-                <div className="text-3xl sm:text-4xl font-bold text-accent">
-                  {String(serverData.players)}
-                </div>
-                <div className="text-xs sm:text-sm text-tertiary">
-                  players online
-                </div>
-              </div>
-            )}
-          </div>
-
-          {serverData && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm">
-              <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
-                <span className="text-tertiary">Map: </span>
-                <span className="font-medium text-primary wrap-break-word">
-                  <MindustryText text={serverData.mapName || "Unknown"}/>
-                </span>
-              </div>
-              <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
-                <span className="text-tertiary">Wave: </span>
-                <span className="font-medium text-primary">
-                  {serverData.wave || "0"}
-                </span>
-              </div>
-              <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
-                <span className="text-tertiary">Mode: </span>
-                <span className="font-medium text-primary wrap-break-word">
-                  {String(removeColors(serverData.modeName)) ||
-                    getModeName(serverData.modeName, serverData.mode)}
-                </span>
-              </div>
-              <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded">
-                <span className="text-tertiary">Version: </span>
-                <span className="font-medium text-primary">
-                  {String(serverData.versionType) || ""}{" "}
-                  {String(serverData.version) || ""}
-                </span>
-              </div>
-            </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className={`${serverDataElement.online ? "pill-good" : "pill-bad"} font-semibold px-2.5`}>{serverStatus}</span>
+          {serverDataElement.online && serverData && (
+            <span className="text-dim">
+              {serverData.players} / {serverData.playerLimit} players · {serverData.ping}ms
+            </span>
           )}
+          <CopyButton text={`${serverDataElement.host}:${serverDataElement.port}`} className="btn" />
+          <ShareButton serverId={serverDataElement.id} className="btn-acc" />
         </div>
+
+        <StatStrip items={stats} />
 
         {canCustomise && (
           <CustomisePanel
@@ -166,78 +138,17 @@ const ServerDetail: React.FC<{
           />
         )}
 
-        {/* Player Peaks and Uptime */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
-          <div className="bg-surface-secondary border border-subtle p-4 sm:p-6 rounded">
-            <h4 className="font-medium mb-3 sm:mb-4 text-accent text-base sm:text-lg">
-              Player Peaks
-            </h4>
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-accent">
-                  {serverDataElement?.playerPeaks?.daily ?? "-"}
-                </div>
-                <div className="text-xs sm:text-sm text-tertiary">Today</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-accent">
-                  {serverDataElement?.playerPeaks?.weekly ?? "-"}
-                </div>
-                <div className="text-xs sm:text-sm text-tertiary">
-                  This Week
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-accent">
-                  {serverDataElement?.playerPeaks?.allTime ?? "-"}
-                </div>
-                <div className="text-xs sm:text-sm text-tertiary">All Time</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-surface-secondary border border-subtle p-4 sm:p-6 rounded">
-            <h4 className="font-medium mb-3 sm:mb-4 text-status-online text-base sm:text-lg">
-              Server Uptime
-            </h4>
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-status-online">
-                  {serverDataElement?.uptime?.last24h !== undefined ? formatUptime(serverDataElement.uptime.last24h) : "-"}
-                </div>
-                <div className="text-xs sm:text-sm text-tertiary">Last 24h</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-status-online">
-                  {serverDataElement?.uptime?.last7d !== undefined ? formatUptime(serverDataElement.uptime.last7d) : "-"}
-                </div>
-                <div className="text-xs sm:text-sm text-tertiary">
-                  Last 7 Days
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Player History Chart */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
-            Player History
-          </h2>
+        <Panel title="Player history">
           <div className="h-80 sm:h-96">
             <ServerHistoryChart {...serverDataElement} />
           </div>
-        </div>
+        </Panel>
 
-        {/* Reviews */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
-            Reviews
-          </h2>
-          <div className="mb-4 sm:mb-6">
+        <Panel title="Reviews">
+          <div className="mb-4">
             <ReviewSummary summary={reviews.summary} loading={reviews.summaryLoading} />
           </div>
-          <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-subtle">
+          <div className="mb-4 pb-4 border-b border-bd">
             <ReviewForm
               serverId={serverDataElement.id}
               mine={reviews.mine}
@@ -258,22 +169,15 @@ const ServerDetail: React.FC<{
             onSortChange={reviews.setSort}
             onPageChange={reviews.setPage}
           />
-        </div>
+        </Panel>
 
-        {/* Map History Table */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
-            Map History
-          </h2>
-          <MapHistoryTable mapHistory={maps.data ?? []} loading={maps.loading} error={maps.error} />
-        </div>
-
-        {/* MOTD History Table */}
-        <div className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">
-            MOTD History
-          </h2>
-          <MotdHistoryTable motdHistory={motds.data ?? []} loading={motds.loading} error={motds.error} />
+        <div className="panel-row">
+          <Panel title="Map history" size="md">
+            <MapHistoryTable mapHistory={maps.data ?? []} loading={maps.loading} error={maps.error} />
+          </Panel>
+          <Panel title="MOTD history" size="md">
+            <MotdHistoryTable motdHistory={motds.data ?? []} loading={motds.loading} error={motds.error} />
+          </Panel>
         </div>
       </div>
     </div>

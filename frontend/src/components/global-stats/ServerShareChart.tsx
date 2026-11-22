@@ -53,7 +53,7 @@ const ServerShareChart: React.FC<ServerShareChartProps> = ({ data, loading, erro
         }),
         tooltip: (u, idx) => ({
             title: new Date((u.data[0] as number[])[idx] * 1000).toLocaleString(),
-            rows: shareTooltipRows(share, idx),
+            rows: shareTooltipRows(share, idx, u.root),
         }),
     });
 
@@ -62,7 +62,7 @@ const ServerShareChart: React.FC<ServerShareChartProps> = ({ data, loading, erro
             <UPlotFrame outerRef={outerRef} mountRef={mountRef} loading={loading} />
 
             {error && (
-                <div className="absolute inset-0 flex items-center justify-center text-status-offline text-xs font-semibold z-20">
+                <div className="absolute inset-0 flex items-center justify-center text-bad text-xs font-semibold z-20">
                     {error}
                 </div>
             )}

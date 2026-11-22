@@ -9,13 +9,13 @@ const BottomDock: React.FC = () => {
   const items = useVisibleNavItems();
   const onServers = useMatches({ select: (m) => SERVER_ROUTES.has(m[m.length - 1]?.routeId ?? "") });
 
-  const base = "flex-1 min-h-14 flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors";
-  const cls = (active: boolean) => `${base} ${active ? "text-accent" : "text-secondary"}`;
+  const base = "flex-1 flex flex-col items-center gap-[3px] pt-2 pb-3 text-[11px] font-semibold transition-colors [&_svg]:w-[22px] [&_svg]:h-[22px]";
+  const cls = (active: boolean) => `${base} ${active ? "text-acc" : "text-dim"}`;
 
   return (
     <nav
       aria-label="Primary"
-      className="split:hidden shrink-0 flex bg-linear-to-r from-surface-primary/60 to-surface-primary/40 backdrop-blur-md border-t border-default pb-[env(safe-area-inset-bottom)]"
+      className="split:hidden shrink-0 flex bg-topbg border-t border-bd pb-[env(safe-area-inset-bottom)]"
     >
       <Link to="/" className={cls(onServers)} aria-current={onServers ? "page" : undefined}>
         <ServersIcon />
@@ -26,10 +26,10 @@ const BottomDock: React.FC = () => {
           key={item.to}
           to={item.to}
           className={base}
-          activeProps={{ className: "text-accent", "aria-current": "page" }}
-          inactiveProps={{ className: "text-secondary" }}
+          activeProps={{ className: "text-acc", "aria-current": "page" }}
+          inactiveProps={{ className: "text-dim" }}
         >
-          <span className="[&_svg]:w-5 [&_svg]:h-5">{item.icon}</span>
+          {item.icon}
           {item.dockLabel ?? item.label}
         </Link>
       ))}

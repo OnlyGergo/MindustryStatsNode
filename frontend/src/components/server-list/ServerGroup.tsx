@@ -28,69 +28,64 @@ const ServerGroup: React.FC<{
     0,
   );
 
+  const toggle = () => onToggleExpand(name);
+
   return (
     <div
       data-group={name}
-      className={`card-base overflow-hidden transition-colors ${
-        isSelected ? "border-accent" : "border-default"
+      className={`mx-3 mb-2 bg-surf border border-bd rounded-ui overflow-hidden split:m-0 split:bg-transparent split:border-0 split:border-b split:rounded-none ${
+        isSelected ? "split:bg-surf2 split:shadow-[inset_3px_0_0_var(--acc)]" : ""
       }`}
     >
       <div
-        className={`bg-surface-secondary px-4 py-3 flex justify-between items-center cursor-pointer hover:bg-accent-hover transition-colors ${
-          expanded ? "border-b border-subtle" : ""
-        }`}
-        onClick={() => onToggleExpand(name)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        className="flex items-center gap-0.5 py-2.5 pl-3 pr-2 split:py-1.5 split:pr-1.5 cursor-pointer"
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+          e.preventDefault();
+          toggle();
+        }}
       >
-        <div>
-          <h3 className="font-semibold text-primary text-sm">{name}</h3>
-          <p className="text-xs text-secondary">
-            {onlineServersCount}/{servers.length} online, {totalPlayers} players
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Link
-            to="/network/$networkId"
-            params={{ networkId: String(networkId) }}
-            onClick={(e) => e.stopPropagation()}
-            className={`p-1.5 ${isSelected ? "button-accent" : "button-secondary"}`}
-            title="View network graph"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-          </Link>
-          <span className="text-lg font-bold text-accent">
-            {totalPlayers}
+        <div className="flex-1 min-w-0 flex items-center gap-3">
+          <span className="font-head font-bold text-acc text-2xl split:text-[19px] min-w-8 leading-none">{totalPlayers}</span>
+          <span className="min-w-0">
+            <span className="block font-semibold text-[15px] split:text-[13px] text-tx truncate">{name}</span>
+            <span className="block text-xs split:text-[11px] text-dim">
+              {onlineServersCount}/{servers.length} online
+            </span>
           </span>
+        </div>
+        <Link
+          to="/network/$networkId"
+          params={{ networkId: String(networkId) }}
+          onClick={(e) => e.stopPropagation()}
+          className={`ib ${isSelected ? "text-acc border-acc" : ""}`}
+          title="View network graph"
+          aria-label={`Open stats for ${name}`}
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M4 20v-8h4v8zM10 20V5h4v15zM16 20v-5h4v5z" />
+          </svg>
+        </Link>
+        <span className="w-[30px] h-[34px] flex items-center justify-center text-acc" aria-hidden="true">
           <svg
-            className={`h-4 w-4 text-accent transform transition-transform ${
-              expanded ? "rotate-180" : ""
-            }`}
+            className={`w-[18px] h-[18px] transition-transform ${expanded ? "rotate-180" : ""}`}
+            viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            viewBox="0 0 24 24"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M19 9l-7 7-7-7"
-            />
+            <path d="M6 9l6 6 6-6" />
           </svg>
-        </div>
+        </span>
       </div>
       {/* Rendered even when collapsed, so every server link is in the SSR HTML for crawlers. */}
-      <div className={expanded ? "divide-y divide-subtle" : "hidden"}>
+      <div className={expanded ? "border-t border-bd bg-bg divide-y divide-bd" : "hidden"}>
         {servers.map((server) => (
           <ServerItem
             key={`${server.host}-${server.port}`}

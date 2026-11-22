@@ -69,22 +69,22 @@ const matchesTerms = (haystack: string, terms: string[]) => terms.every((t) => h
 const termsOf = (query: string) => query.toLowerCase().split(/\s+/).filter(Boolean);
 
 const ServerName: React.FC<{ name: string | null }> = ({ name }) =>
-  name ? <MindustryText text={name} /> : <span className="text-tertiary">(no name)</span>;
+  name ? <MindustryText text={name} /> : <span className="text-dim">(no name)</span>;
 
 const Description: React.FC<{ text: string | null }> = ({ text }) =>
   text && stripMindustry(text).trim() ? (
-    <div className="text-xs text-secondary line-clamp-3 break-words">
+    <div className="text-xs text-dim line-clamp-3 break-words">
       <MindustryText text={text} />
     </div>
   ) : (
-    <div className="text-xs text-tertiary italic">No description</div>
+    <div className="text-xs text-dim italic">No description</div>
   );
 
 const FamilyCard: React.FC<{ family: MergeFamily; label?: string; action?: React.ReactNode }> = ({ family, label, action }) => (
-  <div className="flex-1 min-w-0 border border-subtle rounded p-2 bg-surface-primary flex flex-col gap-1">
+  <div className="flex-1 min-w-0 border border-bd rounded p-2 bg-surf flex flex-col gap-1">
     {(label || action) && (
       <div className="flex items-center justify-between gap-2">
-        {label && <div className="text-xs text-tertiary">{label}</div>}
+        {label && <div className="text-xs text-dim">{label}</div>}
         {action}
       </div>
     )}
@@ -92,13 +92,13 @@ const FamilyCard: React.FC<{ family: MergeFamily; label?: string; action?: React
       to="/server/$serverId"
       params={{ serverId: String(family.id) }}
       target="_blank"
-      className="block text-sm text-primary truncate hover:underline"
+      className="block text-sm text-tx truncate hover:underline"
     >
       <ServerName name={family.name} />
     </Link>
     <Description text={family.description} />
-    <div className="text-xs text-secondary font-mono break-all">#{family.id} · {family.host}:{family.port}</div>
-    <div className="text-xs text-tertiary">
+    <div className="text-xs text-dim font-mono break-all">#{family.id} · {family.host}:{family.port}</div>
+    <div className="text-xs text-dim">
       {formatDate(family.firstSeen)} → {formatDate(family.lastSeen)}
       {family.memberCount > 1 && ` · ${family.memberCount} members`}
     </div>
@@ -118,7 +118,7 @@ const PairView: React.FC<{ older: MergeFamily; newer: MergeFamily; olderLabel: s
 }) => (
   <div className="flex flex-col-reverse sm:flex-row gap-1 sm:gap-2 items-stretch">
     <FamilyCard family={older} label={olderLabel} />
-    <div className="self-center text-tertiary text-lg leading-none" aria-hidden>
+    <div className="self-center text-dim text-lg leading-none" aria-hidden>
       <span className="sm:hidden">↓</span>
       <span className="hidden sm:inline">←</span>
     </div>
@@ -132,7 +132,8 @@ const SearchInput: React.FC<{
   placeholder: string;
   disabled?: boolean;
   autoFocus?: boolean;
-}> = ({ value, onChange, placeholder, disabled, autoFocus }) => (
+  onEnter?: () => void;
+}> = ({ value, onChange, placeholder, disabled, autoFocus, onEnter }) => (
   <div className="relative">
     <input
       type="search"
@@ -140,17 +141,23 @@ const SearchInput: React.FC<{
       autoComplete="off"
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && onEnter) {
+          e.preventDefault();
+          onEnter();
+        }
+      }}
       placeholder={placeholder}
       disabled={disabled}
       autoFocus={autoFocus}
-      className="w-full bg-surface-tertiary border border-subtle rounded px-3 py-2 pr-9 text-base sm:text-sm text-primary focus:outline-none focus:border-accent [&::-webkit-search-cancel-button]:appearance-none"
+      className="w-full bg-surf2 border border-bd rounded px-3 py-2 pr-9 text-base sm:text-sm text-tx focus:outline-none focus:border-acc [&::-webkit-search-cancel-button]:appearance-none"
     />
     {value && (
       <button
         type="button"
         aria-label="Clear search"
         onClick={() => onChange("")}
-        className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 text-tertiary hover:text-primary"
+        className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 text-dim hover:text-tx"
       >
         ✕
       </button>
@@ -162,13 +169,31 @@ const SearchInput: React.FC<{
 const FamilyPicker: React.FC<{
   label: string;
   families: MergeFamily[] | null;
+  familiesError: string | null;
+  onRetry: () => void;
   haystacks: Map<number, string>;
   selected: MergeFamily | null;
   onSelect: (f: MergeFamily | null) => void;
   disabled: boolean;
-}> = ({ label, families, haystacks, selected, onSelect, disabled }) => {
+}> = ({ label, families, familiesError, onRetry, haystacks, selected, onSelect, disabled }) => {
   const [query, setQuery] = useState("");
   const deferred = useDeferredValue(query);
+
+  const pick = (f: MergeFamily) => {
+    onSelect(f);
+    setQuery("");
+  };
+
+  // A pasted id or /server/<id> URL names exactly one server: select it straight
+  // away rather than leaving it as a lone result the admin still has to click.
+  useEffect(() => {
+    if (!families || selected) return;
+    const id = parseServerId(query);
+    if (id == null || !/\bserver\/\d+/.test(query)) return;
+    const exact = families.find((f) => f.id === id);
+    if (exact) pick(exact);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [families, query, selected]);
 
   const results = useMemo(() => {
     if (!families || !deferred.trim()) return [];
@@ -191,7 +216,7 @@ const FamilyPicker: React.FC<{
           family={selected}
           label={label}
           action={
-            <button type="button" className="button-secondary text-xs px-3 py-1" disabled={disabled} onClick={() => onSelect(null)}>
+            <button type="button" className="btn text-xs px-3 py-1" disabled={disabled} onClick={() => onSelect(null)}>
               Change
             </button>
           }
@@ -201,34 +226,43 @@ const FamilyPicker: React.FC<{
   }
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col gap-1 text-sm text-secondary">
+    <div className="flex-1 min-w-0 flex flex-col gap-1 text-sm text-dim">
       <span>{label}</span>
       <SearchInput
         value={query}
         onChange={setQuery}
-        placeholder={families ? "Name, MOTD, host, id or URL" : "Loading servers…"}
+        onEnter={() => results[0] && pick(results[0])}
+        placeholder={families ? "Name, MOTD, host, id or URL" : familiesError ? "Couldn't load servers" : "Loading servers…"}
         disabled={disabled || !families}
       />
+      {!families && familiesError && (
+        <div className="text-xs text-bad flex items-center gap-2">
+          {familiesError}
+          <button type="button" className="btn text-xs px-2 py-0.5" onClick={onRetry}>
+            Retry
+          </button>
+        </div>
+      )}
+      {families && query.trim() && results.length > 0 && (
+        <span className="text-xs text-dim">Click a result (or press Enter for the first) to pick it.</span>
+      )}
       {deferred.trim() && families && (
-        <ul className="flex flex-col border border-subtle rounded divide-y divide-border-subtle max-h-96 overflow-y-auto overscroll-contain">
-          {results.length === 0 && <li className="p-3 text-xs text-tertiary">No servers match.</li>}
+        <ul className="flex flex-col border border-bd rounded divide-y divide-bd max-h-96 overflow-y-auto overscroll-contain">
+          {results.length === 0 && <li className="p-3 text-xs text-dim">No servers match.</li>}
           {results.map((f) => (
             <li key={f.id}>
               <button
                 type="button"
-                className="w-full text-left p-2 sm:p-2 min-h-11 hover:bg-surface-tertiary flex flex-col gap-0.5"
-                onClick={() => {
-                  onSelect(f);
-                  setQuery("");
-                }}
+                className="w-full text-left p-2 sm:p-2 min-h-11 hover:bg-surf2 flex flex-col gap-0.5"
+                onClick={() => pick(f)}
               >
-                <span className="text-sm text-primary truncate">
+                <span className="text-sm text-tx truncate">
                   <ServerName name={f.name} />
                 </span>
-                <span className="text-xs text-secondary font-mono break-all">
+                <span className="text-xs text-dim font-mono break-all">
                   #{f.id} · {f.host}:{f.port}
                 </span>
-                <span className="text-xs text-tertiary">
+                <span className="text-xs text-dim">
                   {formatDate(f.firstSeen)} → {formatDate(f.lastSeen)}
                 </span>
               </button>
@@ -248,6 +282,7 @@ const MergesAdmin: React.FC = () => {
   const [merged, setMerged] = useState<MergedFamily[] | null>(null);
   const [families, setFamilies] = useState<MergeFamily[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [familiesError, setFamiliesError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
@@ -259,20 +294,29 @@ const MergesAdmin: React.FC = () => {
   const [manualSource, setManualSource] = useState<MergeFamily | null>(null);
   const [manualTarget, setManualTarget] = useState<MergeFamily | null>(null);
 
+  /** The family list on its own, so the manual picker never waits on (or dies with) the suggestion query. */
+  const loadFamilies = useCallback(async () => {
+    setFamiliesError(null);
+    try {
+      const f = await api.api.admin.families.get();
+      if (f.error) return setFamiliesError(errorMessageFor(f.status, f.error.value));
+      setFamilies(f.data as MergeFamily[]);
+    } catch {
+      setFamiliesError("Couldn't load servers.");
+    }
+  }, []);
+
+  // Each list loads and fails on its own: one slow or failing query must not
+  // leave the other tabs stuck on "Loading…".
   const load = useCallback(async () => {
     setLoadError(null);
-    const [s, m, f] = await Promise.all([
-      api.api.admin["merge-suggestions"].get(),
-      api.api.admin["merged-families"].get(),
-      api.api.admin.families.get(),
-    ]);
-    if (s.error) return setLoadError(errorMessageFor(s.status, s.error.value));
-    if (m.error) return setLoadError(errorMessageFor(m.status, m.error.value));
-    if (f.error) return setLoadError(errorMessageFor(f.status, f.error.value));
-    setSuggestions(s.data as MergeSuggestion[]);
-    setMerged(m.data as MergedFamily[]);
-    setFamilies(f.data as MergeFamily[]);
-  }, []);
+    const fail = (status: number, value: unknown) => setLoadError(errorMessageFor(status, value));
+    await Promise.all([
+      api.api.admin["merge-suggestions"].get().then((s) => (s.error ? fail(s.status, s.error.value) : setSuggestions(s.data as MergeSuggestion[]))),
+      api.api.admin["merged-families"].get().then((m) => (m.error ? fail(m.status, m.error.value) : setMerged(m.data as MergedFamily[]))),
+      loadFamilies(),
+    ]).catch(() => setLoadError("Something went wrong loading the merge lists."));
+  }, [loadFamilies]);
 
   useEffect(() => {
     void load();
@@ -334,7 +378,8 @@ const MergesAdmin: React.FC = () => {
         return false;
       }
       setMessage({ kind: "ok", text: okText });
-      await load();
+      // Reload in the background: the write is done, so the page shouldn't stay disabled while the lists refetch.
+      void load();
       return true;
     } catch {
       setMessage({ kind: "error", text: "Something went wrong. Please try again." });
@@ -386,19 +431,19 @@ const MergesAdmin: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4 p-3 sm:p-4 max-w-4xl">
-      <p className="text-xs sm:text-sm text-secondary">
+      <p className="text-xs sm:text-sm text-dim">
         Merging folds two server families into one. Stats stay on their original rows and are combined when read, so a
         merge is undone by detaching the member again. The older family always keeps its id.
       </p>
 
       {message && (
-        <div className={`text-sm ${message.kind === "ok" ? "text-status-online" : "text-status-offline"}`} role="status">
+        <div className={`text-sm ${message.kind === "ok" ? "text-good" : "text-bad"}`} role="status">
           {message.text}
         </div>
       )}
-      {loadError && <div className="text-sm text-status-offline">{loadError}</div>}
+      {loadError && <div className="text-sm text-bad">{loadError}</div>}
 
-      <div className="sticky top-0 z-10 -mx-3 sm:mx-0 px-3 sm:px-0 py-2 bg-surface-primary flex flex-col gap-2 border-b border-subtle">
+      <div className="sticky top-0 z-10 -mx-3 sm:mx-0 px-3 sm:px-0 py-2 bg-surf flex flex-col gap-2 border-b border-bd">
         <div className="grid grid-cols-3 gap-1" role="tablist">
           {tabs.map((t) => (
             <button
@@ -406,7 +451,7 @@ const MergesAdmin: React.FC = () => {
               type="button"
               role="tab"
               aria-selected={tab === t.id}
-              className={`${tab === t.id ? "button-accent" : "button-secondary"} text-sm px-2 py-1.5 sm:py-2 leading-tight`}
+              className={`${tab === t.id ? "btn-acc" : "btn"} text-sm px-2 py-1.5 sm:py-2 leading-tight`}
               onClick={() => setTab(t.id)}
             >
               {t.label}
@@ -427,7 +472,7 @@ const MergesAdmin: React.FC = () => {
                   key={reason}
                   type="button"
                   aria-pressed={on}
-                  className={`${on ? "button-accent" : "button-secondary"} shrink-0 whitespace-nowrap text-xs px-3 py-1.5 rounded-full`}
+                  className={`${on ? "btn-acc" : "btn"} shrink-0 whitespace-nowrap text-xs px-3 py-1.5 rounded-full`}
                   onClick={() => toggleFilter(reason)}
                 >
                   {on && "✓ "}
@@ -442,13 +487,13 @@ const MergesAdmin: React.FC = () => {
 
       {tab === "suggestions" && (
         <section className="flex flex-col gap-2">
-          <p className="text-xs text-tertiary">
+          <p className="text-xs text-dim">
             Same name, or a shared host or MOTD with the timing to back it. Every selected tag must match.
             {suggestions && ` Showing ${visibleSuggestions.length} of ${searchedCount}${terms.length ? " matching" : ""}.`}
           </p>
-          {suggestions === null && !loadError && <div className="text-secondary text-sm">Loading…</div>}
+          {suggestions === null && !loadError && <div className="text-dim text-sm">Loading…</div>}
           {suggestions && visibleSuggestions.length === 0 && (
-            <div className="text-secondary text-sm">
+            <div className="text-dim text-sm">
               Nothing matches.
               {filters.size > 0 && (
                 <button type="button" className="ml-2 underline" onClick={() => setFilters(new Set())}>
@@ -460,24 +505,24 @@ const MergesAdmin: React.FC = () => {
           {visibleSuggestions.slice(0, shown).map((s) => {
             const handover = handoverText(s);
             return (
-              <div key={`${s.source.id}-${s.target.id}`} className="border border-subtle rounded p-3 bg-surface-secondary flex flex-col gap-2">
+              <div key={`${s.source.id}-${s.target.id}`} className="border border-bd rounded p-3 bg-surf flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   {s.reasons.map((r) => (
                     <span
                       key={r}
-                      className={`px-1.5 py-0.5 rounded ${filters.has(r) ? "bg-accent-muted text-accent" : "bg-surface-tertiary text-secondary"}`}
+                      className={`px-1.5 py-0.5 rounded ${filters.has(r) ? "bg-acc/12 text-acc" : "bg-surf2 text-dim"}`}
                     >
                       {REASON_LABELS[r]}
                     </span>
                   ))}
-                  {handover && <span className="text-tertiary">{handover}</span>}
-                  <span className="text-tertiary ml-auto">score {s.score}</span>
+                  {handover && <span className="text-dim">{handover}</span>}
+                  <span className="text-dim ml-auto">score {s.score}</span>
                 </div>
                 <PairView older={s.target} newer={s.source} olderLabel="Into (older, keeps id)" newerLabel="Merge (newer)" />
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="button-accent text-sm px-4 py-2 sm:py-1 flex-1 sm:flex-none"
+                    className="btn-acc text-sm px-4 py-2 sm:py-1 flex-1 sm:flex-none"
                     disabled={busy}
                     onClick={() => void merge(s.source, s.target)}
                   >
@@ -485,7 +530,7 @@ const MergesAdmin: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    className="button-secondary text-sm px-4 py-2 sm:py-1 flex-1 sm:flex-none"
+                    className="btn text-sm px-4 py-2 sm:py-1 flex-1 sm:flex-none"
                     disabled={busy}
                     onClick={() => void dismiss(s)}
                   >
@@ -496,7 +541,7 @@ const MergesAdmin: React.FC = () => {
             );
           })}
           {visibleSuggestions.length > shown && (
-            <button type="button" className="button-secondary text-sm px-4 py-2" onClick={() => setShown((n) => n + PAGE_SIZE)}>
+            <button type="button" className="btn text-sm px-4 py-2" onClick={() => setShown((n) => n + PAGE_SIZE)}>
               Show more ({visibleSuggestions.length - shown} left)
             </button>
           )}
@@ -504,8 +549,8 @@ const MergesAdmin: React.FC = () => {
       )}
 
       {tab === "manual" && (
-        <section className="border border-subtle rounded p-3 sm:p-4 bg-surface-secondary flex flex-col gap-3">
-          <p className="text-xs text-tertiary">
+        <section className="border border-bd rounded p-3 sm:p-4 bg-surf flex flex-col gap-3">
+          <p className="text-xs text-dim">
             Search every tracked server by name, MOTD, host or id, or paste a /server/… URL. The order you pick them in
             doesn't matter: the older one keeps its id.
           </p>
@@ -513,6 +558,8 @@ const MergesAdmin: React.FC = () => {
             <FamilyPicker
               label="Server A"
               families={families}
+              familiesError={familiesError}
+              onRetry={() => void loadFamilies()}
               haystacks={familyHaystacks}
               selected={manualSource}
               onSelect={setManualSource}
@@ -521,63 +568,75 @@ const MergesAdmin: React.FC = () => {
             <FamilyPicker
               label="Server B"
               families={families}
+              familiesError={familiesError}
+              onRetry={() => void loadFamilies()}
               haystacks={familyHaystacks}
               selected={manualTarget}
               onSelect={setManualTarget}
               disabled={busy}
             />
           </div>
-          {sameFamily && <div className="text-sm text-status-offline">Those are already the same server.</div>}
+          {sameFamily && <div className="text-sm text-bad">Those are already the same server.</div>}
           {manualPair && (
-            <div className="flex flex-col gap-2 border-t border-subtle pt-3">
-              <div className="text-xs text-tertiary">Result</div>
+            <div className="flex flex-col gap-2 border-t border-bd pt-3">
+              <div className="text-xs text-dim">Result</div>
               <PairView older={manualPair.older} newer={manualPair.newer} olderLabel="Into (older, keeps id)" newerLabel="Merge (newer)" />
             </div>
           )}
-          <div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <button
               type="button"
-              className="button-accent text-sm px-4 py-2 sm:py-1 w-full sm:w-auto"
+              className="btn-acc text-sm px-4 py-2 sm:py-1 w-full sm:w-auto"
               disabled={busy || !manualPair}
               onClick={() => void handleManualMerge()}
             >
-              Merge
+              {busy ? "Merging…" : "Merge"}
             </button>
+            {!manualPair && !sameFamily && (
+              <span className="text-xs text-dim">
+                {!manualSource && !manualTarget
+                  ? "Pick server A and server B first."
+                  : `Pick server ${manualSource ? "B" : "A"} too.`}
+              </span>
+            )}
           </div>
+          {message && (
+            <div className={`text-sm ${message.kind === "ok" ? "text-good" : "text-bad"}`}>{message.text}</div>
+          )}
         </section>
       )}
 
       {tab === "merged" && (
         <section className="flex flex-col gap-2">
-          {merged === null && !loadError && <div className="text-secondary text-sm">Loading…</div>}
-          {merged?.length === 0 && <div className="text-secondary text-sm">Nothing is merged yet.</div>}
-          {merged && merged.length > 0 && visibleMerged.length === 0 && <div className="text-secondary text-sm">Nothing matches.</div>}
+          {merged === null && !loadError && <div className="text-dim text-sm">Loading…</div>}
+          {merged?.length === 0 && <div className="text-dim text-sm">Nothing is merged yet.</div>}
+          {merged && merged.length > 0 && visibleMerged.length === 0 && <div className="text-dim text-sm">Nothing matches.</div>}
           {visibleMerged.map((family) => (
-            <div key={family.id} className="border border-subtle rounded p-3 bg-surface-secondary flex flex-col gap-2">
-              <Link to="/server/$serverId" params={{ serverId: String(family.id) }} className="text-sm text-primary hover:underline">
-                <ServerName name={family.name} /> <span className="text-tertiary font-mono">#{family.id}</span>
+            <div key={family.id} className="border border-bd rounded p-3 bg-surf flex flex-col gap-2">
+              <Link to="/server/$serverId" params={{ serverId: String(family.id) }} className="text-sm text-tx hover:underline">
+                <ServerName name={family.name} /> <span className="text-dim font-mono">#{family.id}</span>
               </Link>
               <Description text={family.description} />
               {/* Members come oldest first: desktop keeps that, a phone puts the newest on top. */}
               <ul className="flex flex-col-reverse sm:flex-col">
                 {family.members.map((m) => (
-                  <li key={m.id} className="border-t border-subtle py-2 flex items-center gap-2 text-xs text-secondary">
+                  <li key={m.id} className="border-t border-bd py-2 flex items-center gap-2 text-xs text-dim">
                     <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3">
                       <span className="font-mono whitespace-nowrap sm:w-28">
                         #{m.id}
-                        {m.isRoot && <span className="ml-1 text-tertiary">(root)</span>}
+                        {m.isRoot && <span className="ml-1 text-dim">(root)</span>}
                       </span>
                       <span className="font-mono break-all sm:flex-1">
                         {m.host}:{m.port}
-                        {m.retiredAt != null && <span className="ml-1 text-tertiary">(retired)</span>}
+                        {m.retiredAt != null && <span className="ml-1 text-dim">(retired)</span>}
                       </span>
-                      <span className="text-tertiary whitespace-nowrap">
+                      <span className="text-dim whitespace-nowrap">
                         {formatDate(m.createdAt)} → {formatDate(m.lastSeen)}
                       </span>
                     </div>
                     <button
                       type="button"
-                      className="button-secondary px-3 py-2 sm:py-0.5 shrink-0"
+                      className="btn px-3 py-2 sm:py-0.5 shrink-0"
                       disabled={busy}
                       onClick={() => detach(family.id, m.id)}
                     >

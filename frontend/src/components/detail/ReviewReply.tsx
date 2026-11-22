@@ -89,8 +89,8 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
   if (editing) {
     const hasProfanity = containsProfanity(draft);
     return (
-      <form onSubmit={handleSave} className="mt-3 ml-3 sm:ml-6 pl-3 border-l-2 border-accent flex flex-col gap-2">
-        <span className="text-xs font-medium text-secondary">Response from the owner</span>
+      <form onSubmit={handleSave} className="mt-3 ml-3 sm:ml-6 pl-3 border-l-2 border-acc flex flex-col gap-2">
+        <span className="text-xs font-medium text-dim">Response from the owner</span>
         <div>
           <textarea
             value={draft}
@@ -100,27 +100,27 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
             placeholder="Reply publicly to this review"
             disabled={busy}
             autoFocus
-            className="w-full bg-surface-secondary border border-subtle rounded p-2 text-sm text-primary resize-y"
+            className="field text-sm p-2 resize-y"
           />
           <div className="flex justify-between gap-2 mt-0.5">
-            <span className="text-xs text-status-offline">
+            <span className="text-xs text-bad">
               {hasProfanity && "Please remove inappropriate language before submitting."}
             </span>
-            <span className="text-xs text-tertiary shrink-0">{draft.length}/{REPLY_BODY_MAX}</span>
+            <span className="text-xs text-dim shrink-0">{draft.length}/{REPLY_BODY_MAX}</span>
           </div>
         </div>
-        {error && <div className="text-sm text-status-offline">{error}</div>}
+        {error && <div className="text-sm text-bad">{error}</div>}
         <div className="flex gap-2">
           <button
             type="submit"
-            className="button-accent text-xs sm:text-sm px-3 py-1 disabled:opacity-50"
+            className="btn-acc text-xs sm:text-sm px-3 py-1 disabled:opacity-50"
             disabled={busy || !draft.trim() || hasProfanity}
           >
             {reply ? "Update reply" : "Post reply"}
           </button>
           <button
             type="button"
-            className="button-secondary text-xs sm:text-sm px-3 py-1 disabled:opacity-50"
+            className="btn text-xs sm:text-sm px-3 py-1 disabled:opacity-50"
             disabled={busy}
             onClick={() => setEditing(false)}
           >
@@ -136,7 +136,7 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
     return (
       <button
         type="button"
-        className="mt-2 text-xs text-tertiary hover:text-accent underline"
+        className="mt-2 text-xs text-dim hover:text-acc underline"
         onClick={startEditing}
       >
         Reply as owner
@@ -145,7 +145,7 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
   }
 
   return (
-    <div className="mt-3 ml-3 sm:ml-6 pl-3 border-l-2 border-accent">
+    <div className="mt-3 ml-3 sm:ml-6 pl-3 border-l-2 border-acc">
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-2 min-w-0">
           <img
@@ -155,26 +155,26 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
             width={20}
             height={20}
           />
-          <span className="text-xs text-secondary truncate">
+          <span className="text-xs text-dim truncate">
             Response from the owner,{" "}
             <a
               href={reply.author.profileUrl}
               target="_blank"
               rel="noopener noreferrer nofollow"
-              className="font-medium text-primary hover:text-accent"
+              className="font-medium text-tx hover:text-acc"
             >
               {reply.author.name}
             </a>
           </span>
         </div>
-        <span className="text-xs text-tertiary shrink-0">{formatDate(reply.updatedAt)}</span>
+        <span className="text-xs text-dim shrink-0">{formatDate(reply.updatedAt)}</span>
       </div>
-      <p className="text-sm text-secondary whitespace-pre-line wrap-break-word">{reply.body}</p>
+      <p className="text-sm text-dim whitespace-pre-line wrap-break-word">{reply.body}</p>
       {canReply && (
         <div className="flex gap-3 mt-1">
           <button
             type="button"
-            className="text-xs text-tertiary hover:text-accent underline disabled:opacity-50"
+            className="text-xs text-dim hover:text-acc underline disabled:opacity-50"
             disabled={busy}
             onClick={startEditing}
           >
@@ -182,7 +182,7 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
           </button>
           <button
             type="button"
-            className="text-xs text-tertiary hover:text-status-offline underline disabled:opacity-50"
+            className="text-xs text-dim hover:text-bad underline disabled:opacity-50"
             disabled={busy}
             onClick={handleDelete}
           >
@@ -190,7 +190,7 @@ const ReviewReply: React.FC<ReviewReplyProps> = ({ serverId, reviewId, reply, ca
           </button>
         </div>
       )}
-      {error && <div className="text-sm text-status-offline mt-1">{error}</div>}
+      {error && <div className="text-sm text-bad mt-1">{error}</div>}
     </div>
   );
 };

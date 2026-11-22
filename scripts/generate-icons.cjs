@@ -1,6 +1,7 @@
 /**
  * Regenerates every site icon from the animated logo, frontend/src/assets/tower-loader.svg:
  *   frontend/public/favicon.svg           - its first frame, as a static SVG (also the top bar logo)
+ *   frontend/public/favicon-tab.svg       - the same frame tuned for a 16-32px browser tab (see tabVariant)
  *   frontend/public/apple-touch-icon.png  - 180x180 on the theme background
  *   frontend/public/icons/icon-{192,512}.png, icon-maskable-512.png (PWA manifest)
  *
@@ -76,6 +77,30 @@ function bakeFirstFrame() {
     .replace(/\n\s*\n/g, '\n');
 }
 
+/**
+ * Runs in the page on the baked first frame: a browser tab draws the icon at 16-32px on
+ * either a dark or a light tab strip, where the logo's dark grey frame and translucent
+ * radar vanish. So: crop to the frame instead of the logo's 80% inset, lighten the frame,
+ * make the radar backdrop solid, and thicken the rings and crosshair.
+ */
+function tabVariant(baked) {
+  const doc = new DOMParser().parseFromString(baked, 'image/svg+xml');
+  const svg = doc.documentElement;
+  // The frame spans about x 48-464, y 42-470 at full scale: a square just around it.
+  svg.setAttribute('viewBox', '36 36 440 440');
+  const inset = [...svg.querySelectorAll('g[transform]')].find((g) => /scale\(0\.8\)/.test(g.getAttribute('transform')));
+  if (inset) inset.removeAttribute('transform');
+  const frame = svg.querySelector('#frame');
+  if (frame) frame.setAttribute('fill', '#a8a8a8');
+  svg.querySelectorAll('#radar > path[fill-opacity]').forEach((p) => p.setAttribute('fill-opacity', '1'));
+  svg.querySelectorAll('#radar circle[stroke-width], #radar path[stroke-width]').forEach((el) => {
+    if (el.closest('#sweep')) return;
+    el.setAttribute('stroke-width', String(Math.round(Number(el.getAttribute('stroke-width')) * 1.7)));
+    el.setAttribute('stroke-opacity', '1');
+  });
+  return new XMLSerializer().serializeToString(svg);
+}
+
 (async () => {
   const source = fs.readFileSync(SOURCE, 'utf8').replace(/^<\?xml[^>]*>\s*/, '');
   const browser = await chromium.launch();
@@ -85,6 +110,9 @@ function bakeFirstFrame() {
     const favicon = `<?xml version="1.0" encoding="UTF-8"?>\n${await page.evaluate(bakeFirstFrame)}\n`;
     fs.writeFileSync(path.join(pub, 'favicon.svg'), favicon);
     console.log('wrote frontend/public/favicon.svg');
+    const tab = await page.evaluate(tabVariant, favicon.replace(/^<\?xml[^>]*>\s*/, ''));
+    fs.writeFileSync(path.join(pub, 'favicon-tab.svg'), `<?xml version="1.0" encoding="UTF-8"?>\n${tab}\n`);
+    console.log('wrote frontend/public/favicon-tab.svg');
     await page.close();
 
     for (const [file, size, opaque] of PNGS) {

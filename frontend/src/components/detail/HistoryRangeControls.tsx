@@ -1,3 +1,4 @@
+import Segmented from "../ui/Segmented.tsx";
 import { DATE_RANGE_OPTIONS, DateRangeOption } from "../../util/chartHelpers.ts";
 
 interface HistoryRangeControlsProps {
@@ -29,24 +30,18 @@ const HistoryRangeControls = ({
 
   return (
     <>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {DATE_RANGE_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => setSelectedRange(option.value)}
-            className={`px-3 py-1 text-sm ${
-              selectedRange === option.value ? "button-accent" : "button-secondary"
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        aria-label="Range"
+        className="mb-3"
+        options={DATE_RANGE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        value={selectedRange}
+        onChange={setSelectedRange}
+      />
 
       {selectedRange === "custom" && (
-        <div className="flex flex-wrap gap-4 mb-4">
+        <div className="flex flex-wrap gap-4 mb-3">
           <div className="flex items-center gap-2">
-            <label htmlFor={`${idPrefix}-start-date`} className="text-sm text-tertiary">
+            <label htmlFor={`${idPrefix}-start-date`} className="text-xs text-dim">
               From:
             </label>
             <input
@@ -55,11 +50,11 @@ const HistoryRangeControls = ({
               value={customStartDate}
               max={today}
               onChange={(e) => setCustomStartDate(e.target.value)}
-              className="bg-surface-tertiary border border-default rounded px-3 py-1 text-sm text-primary focus:outline-none focus:border-accent"
+              className="field w-auto"
             />
           </div>
           <div className="flex items-center gap-2">
-            <label htmlFor={`${idPrefix}-end-date`} className="text-sm text-tertiary">
+            <label htmlFor={`${idPrefix}-end-date`} className="text-xs text-dim">
               To:
             </label>
             <input
@@ -68,16 +63,16 @@ const HistoryRangeControls = ({
               value={customEndDate}
               max={today}
               onChange={(e) => setCustomEndDate(e.target.value)}
-              className="bg-surface-tertiary border border-default rounded px-3 py-1 text-sm text-primary focus:outline-none focus:border-accent"
+              className="field w-auto"
             />
           </div>
         </div>
       )}
 
-      {dateError && <div className="text-status-offline text-sm mb-4">{dateError}</div>}
+      {dateError && <div className="text-bad text-sm mb-3">{dateError}</div>}
 
       {fetchError && (
-        <div className="text-status-offline text-sm mb-4 bg-status-offline border border-status-offline rounded p-3">
+        <div className="text-bad text-sm mb-3 border border-bad/40 rounded-ui p-3">
           {fetchError}
         </div>
       )}

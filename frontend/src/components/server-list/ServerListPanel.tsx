@@ -98,10 +98,10 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
         </div>
       )}
       <div
-        className={`relative ${visibility} w-full split:w-3/12 split:min-w-sm bg-surface-primary border-r border-default flex-col h-full`}
+        className={`relative ${visibility} w-full split:w-80 shrink-0 bg-bg split:bg-sidebg split:border-r split:border-bd flex-col h-full`}
       >
-        <div className="border-b border-subtle shrink-0">
-          <div className="flex justify-center items-center h-5 split:h-auto split:pt-3 split:pb-0">
+        <div className="shrink-0">
+          <div className="px-3 pt-3 pb-1 split:py-2.5 split:border-b split:border-bd">
             <ServerStatsSummary
               onlineServers={onlineServers}
               totalServers={totalServers}
@@ -125,9 +125,9 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
         </div>
 
         {/* Server List */}
-        <div className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 pb-3 split:pb-0">
           {error && (
-              <div className="bg-red-500/20 border border-red-500 text-red-400 px-3 py-2 text-sm rounded mb-2">
+              <div className="mx-3 my-2 border border-bad text-bad px-3 py-2 text-sm rounded-ui">
                 Failed to load server data. Please try again later.
               </div>
           )}
@@ -139,7 +139,7 @@ const ServerListPanel: React.FC<ServerListPanelProps> = ({ mobileVisible }) => {
                 {renderList(topOfList(processedServerGroups, flatServers))}
               </StaticServerList>
           ) : (
-              <div className="space-y-1.5">
+              <div>
                 {renderList({ groups: processedServerGroups, flat: flatServers })}
               </div>
           )}

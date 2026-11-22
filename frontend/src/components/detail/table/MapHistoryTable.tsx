@@ -70,71 +70,71 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[]; loading?: boolean
   }, [searchTerm]);
 
   return (
-    <div className="w-full overflow-hidden">
+    <div className="w-full">
       <input
         type="text"
         placeholder="Search maps or gamemodes..."
-        className="w-full p-2 sm:p-3 mb-3 sm:mb-4 bg-surface-secondary border border-default rounded text-primary placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-accent transition-all text-sm"
+        className="field mb-2"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
 
       {paginatedHistory.length > 0 ? (
         <>
-          <div className="overflow-x-auto card-base shadow-lg -mx-1 px-1">
-            <table className="w-full divide-y divide-subtle">
-              <thead className="bg-surface-secondary border-default">
+          <div className="overflow-x-auto -mx-3">
+            <table className="w-full divide-y divide-bd">
+              <thead className="bg-surf border-bd">
                 <tr>
                   <th
                     scope="col"
-                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider"
+                    className="px-3 py-1.5 text-left label-caps font-normal"
                   >
                     Map Name
                   </th>
                   <th
                     scope="col"
-                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider"
+                    className="px-3 py-1.5 text-left label-caps font-normal"
                   >
                     Mode
                   </th>
                   <th
                     scope="col"
-                    className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider hidden sm:table-cell"
+                    className="px-3 py-1.5 text-left label-caps font-normal hidden sm:table-cell"
                   >
                     From - To
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-surface-primary divide-y divide-subtle">
+              <tbody className="bg-surf divide-y divide-bd">
                 {paginatedHistory.map((item, index) => (
                   <tr
                     key={item.id}
-                    className="hover:bg-accent-muted transition-colors border-default"
+                    className="hover:bg-surf2 transition-colors"
                   >
                     <td
-                      className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium user-select-text ${
+                      className={`px-3 py-1.5 text-xs sm:text-sm font-medium user-select-text ${
                         hasMapChanged(item, index)
-                          ? "text-accent bg-accent-muted"
-                          : "text-primary"
+                          ? "text-acc bg-acc/12"
+                          : "text-tx"
                       }`}
                     >
                       <div className="wrap-break-word max-w-25 sm:max-w-none">
                         {String(removeColors(item.mapName) + (hasMapChanged(item, index) ? " ●" : ""))}
                       </div>
-                      <div className="text-xs text-tertiary mt-1 sm:hidden">
+                      <div className="text-xs text-dim mt-1 sm:hidden">
                         {formatDateTimeHuman(item.validFrom)}
                       </div>
                     </td>
                     <td
-                      className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm user-select-text ${
+                      className={`px-3 py-1.5 text-xs sm:text-sm user-select-text ${
                         hasModeChanged(item, index)
-                          ? "text-accent bg-accent-muted"
-                          : "text-secondary"
+                          ? "text-acc bg-acc/12"
+                          : "text-dim"
                       }`}
                     >
                       {getModeName(item.modeName, item.gameMode) + (hasModeChanged(item, index) ? " ●" : "")}
                     </td>
-                    <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-tertiary hidden sm:table-cell user-select-text">
+                    <td className="px-3 py-1.5 whitespace-nowrap text-xs sm:text-sm text-dim hidden sm:table-cell user-select-text">
                       {formatDateTimeHuman(item.validFrom)} -{" "}
                       {item.validTo
                         ? formatDateTimeHuman(item.validTo)
@@ -148,7 +148,7 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[]; loading?: boolean
 
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 gap-2">
-              <div className="text-xs text-tertiary text-center sm:text-left">
+              <div className="text-xs text-dim text-center sm:text-left">
                 {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
                 {Math.min(currentPage * ITEMS_PER_PAGE, filteredHistory.length)}{" "}
                 of {filteredHistory.length}
@@ -159,13 +159,13 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[]; loading?: boolean
                   disabled={currentPage === 1}
                   className={`px-2.5 py-1 text-xs ${
                     currentPage === 1
-                      ? "bg-surface-tertiary text-tertiary border border-subtle cursor-not-allowed rounded"
-                      : "button-secondary"
+                      ? "bg-surf2 text-dim border border-bd cursor-not-allowed rounded"
+                      : "btn"
                   }`}
                 >
                   ←
                 </button>
-                <span className="px-2 py-1 text-xs text-tertiary">
+                <span className="px-2 py-1 text-xs text-dim">
                   {currentPage}/{totalPages}
                 </span>
                 <button
@@ -175,8 +175,8 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[]; loading?: boolean
                   disabled={currentPage === totalPages}
                   className={`px-2.5 py-1 text-xs ${
                     currentPage === totalPages
-                      ? "bg-surface-tertiary text-tertiary border border-subtle cursor-not-allowed rounded"
-                      : "button-secondary"
+                      ? "bg-surf2 text-dim border border-bd cursor-not-allowed rounded"
+                      : "btn"
                   }`}
                 >
                   →
@@ -190,7 +190,7 @@ const MapHistoryTable: React.FC<{ mapHistory: ServerMapData[]; loading?: boolean
           <LoadingSpinner showText={false} size="small" />
         </div>
       ) : (
-        <p className="text-tertiary text-center py-6 sm:py-8 text-sm">
+        <p className="text-dim text-center py-6 sm:py-8 text-sm">
           {error ?? "No map history available or matching your search."}
         </p>
       )}

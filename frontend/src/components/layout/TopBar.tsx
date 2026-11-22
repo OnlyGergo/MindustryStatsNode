@@ -23,18 +23,16 @@ const TopBar: React.FC = () => {
   };
 
   // `relative z-40` lifts the bar (and the AccountMenu dropdown overflowing it)
-  // above the content row: backdrop-blur makes this bar its own stacking
-  // context, which would otherwise paint beneath the later, positioned
-  // MasterPanel / DetailShell siblings.
+  // above the content row, which would otherwise paint over it.
   return (
-    <div className="relative z-40 bg-linear-to-r from-surface-primary/60 to-surface-primary/40 backdrop-blur-md border-b border-default shrink-0 flex flex-col">
-      <div className="h-11 split:h-12 px-3 split:px-4 flex items-center justify-between gap-2 split:gap-3 bg-surface-1">
+    <header className="relative z-40 shrink-0 bg-topbg border-b border-bd">
+      <div className="h-[52px] split:h-12 px-3 split:px-4 flex items-center justify-between gap-2.5">
         <Link to="/" className="hidden split:flex items-center gap-2.5 min-w-0" {...logoHandlers}>
-          <TowerLogo active={logoActive} className="w-8 h-8 shrink-0" />
-          <h1 className="text-base font-bold text-primary leading-none whitespace-nowrap">
-            Mindustry <span className="text-accent">Tracker</span>
+          <TowerLogo active={logoActive} className="w-7 h-7 shrink-0" />
+          <h1 className="font-head text-[17px] font-bold text-tx leading-none whitespace-nowrap">
+            Mindustry <span className="text-acc">Tracker</span>
           </h1>
-          <span className="text-xs text-secondary">{VERSION}</span>
+          <span className="text-[11px] text-dim">{VERSION}</span>
         </Link>
 
         <div className="split:hidden flex items-center min-w-0 flex-1 gap-3">
@@ -42,18 +40,18 @@ const TopBar: React.FC = () => {
             <BackButton />
           ) : (
             <Link to="/" aria-label="Home" className="flex items-center shrink-0">
-              <TowerLogo className="w-4 h-4" />
+              <TowerLogo className="w-6 h-6" />
             </Link>
           )}
-          <h1 className="text-base font-semibold text-primary truncate flex-1 min-w-0">{title}</h1>
+          <h1 className="font-head text-[19px] font-bold text-tx truncate flex-1 min-w-0">{title}</h1>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <NavMenu />
           <AccountMenu />
         </div>
       </div>
-    </div>
+    </header>
   );
 };
 

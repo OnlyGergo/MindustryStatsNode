@@ -11,8 +11,8 @@ const NetworkSources: React.FC<{ sources: NetworkDetails["sources"] }> = ({ sour
   if (sources.length === 0) return null;
 
   return (
-    <div className="bg-surface-tertiary border border-subtle p-2 sm:p-3 rounded text-sm text-tertiary">
-      <span className="text-xs sm:text-sm">Listed on: </span>
+    <div className="text-xs text-dim">
+      <span>Listed on </span>
       {sources.map((source, i) => (
         <React.Fragment key={`${source.url}-${i}`}>
           {i > 0 && <span aria-hidden="true"> · </span>}
@@ -21,14 +21,14 @@ const NetworkSources: React.FC<{ sources: NetworkDetails["sources"] }> = ({ sour
               href={source.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent hover:underline"
+              className="text-acc2 font-semibold hover:underline"
             >
               {source.name}
             </a>
           ) : (
-            <span>{source.name}</span>
+            <b className="text-acc2 font-semibold">{source.name}</b>
           )}
-          <span> ({nf.format(source.servers)} {source.servers === 1 ? "server" : "servers"})</span>
+          <span> · {nf.format(source.servers)} {source.servers === 1 ? "server" : "servers"}</span>
         </React.Fragment>
       ))}
     </div>

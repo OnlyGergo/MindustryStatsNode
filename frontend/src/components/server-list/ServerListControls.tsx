@@ -10,7 +10,7 @@ import { BROWSE_SEARCH_DEFAULTS } from "../../routes/-browseSearch.ts";
 export const CollapseToggle: React.FC<{ collapsed: boolean; onClick: () => void; className?: string }> = ({ collapsed, onClick, className }) => (
   <button
     onClick={onClick}
-    className={`bg-accent-muted hover:bg-accent-hover text-accent p-1 rounded transition-colors border border-accent shrink-0 ${className ?? ""}`}
+    className={`ib w-7 h-7 ${className ?? ""}`}
     title={collapsed ? "Expand server list" : "Collapse server list"}
   >
     <svg
@@ -73,7 +73,7 @@ const ServerListControls: React.FC<ServerListControlsProps> = ({
       onClick={onToggleGrouping}
       activeText="Ungroup"
       inactiveText="Group"
-      sizeClassName="px-3 py-2 text-sm"
+      sizeClassName="px-3 py-2 text-sm split:px-1 split:py-[3px] split:text-[11px]"
       className="w-full"
     />
   );
@@ -83,9 +83,9 @@ const ServerListControls: React.FC<ServerListControlsProps> = ({
       onClick={onToggleHideInactive}
       activeText="Show All"
       inactiveText="Hide Inactive"
-      activeColor="bg-orange-500/20 hover:bg-orange-500/40 text-orange-400 border-orange-500/40"
-      inactiveColor="bg-neutral-600/20 hover:bg-neutral-600/40 text-neutral-400 border-neutral-600/40"
-      sizeClassName="px-3 py-2 text-sm"
+      activeColor="text-acc2 border-bd hover:border-acc2"
+      inactiveColor="text-dim border-bd hover:border-acc"
+      sizeClassName="px-3 py-2 text-sm split:px-1 split:py-[3px] split:text-[11px]"
       className="w-full"
     />
   );
@@ -100,9 +100,9 @@ const ServerListControls: React.FC<ServerListControlsProps> = ({
   );
 
   return (
-    <div className="px-3 py-1.5 split:px-4 split:py-3">
+    <div className="px-3 pt-1.5 pb-3 split:py-2 split:border-b split:border-bd">
       {/* Row 1: search + (mobile) filters + (desktop) collapse */}
-      <div className="flex items-center gap-2 split:mb-2.5">
+      <div className="flex items-center gap-2 split:mb-1.5">
         <div className="flex-1 min-w-0 flex [&_input]:py-2 split:[&_input]:py-1 [&_input]:text-sm split:[&_input]:text-xs">
           <SearchBar onSearchValueChange={onSearchChange} value={searchTerm} />
         </div>
@@ -114,21 +114,21 @@ const ServerListControls: React.FC<ServerListControlsProps> = ({
             aria-expanded={filtersOpen}
             aria-label={activeCount > 0 ? `Filters (${activeCount} changed)` : "Filters"}
             onClick={() => setFiltersOpen((o) => !o)}
-            className="button-secondary relative h-9 px-3 rounded text-sm flex items-center gap-1.5"
+            className="btn relative h-9 px-3 text-sm"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6h18M6 12h12M10 18h4" />
             </svg>
             <span>Filters</span>
             {activeCount > 0 && (
-              <span className="min-w-4 h-4 px-1 rounded-full bg-accent text-[10px] leading-4 text-center text-black font-semibold">
+              <span className="min-w-4 h-4 px-1 rounded-full bg-acc text-[10px] leading-4 text-center text-onacc font-semibold">
                 {activeCount}
               </span>
             )}
           </button>
 
           {filtersOpen && (
-            <div className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-1.5rem)] p-2 space-y-2 bg-surface-secondary border border-default rounded shadow-xl">
+            <div className="absolute top-full right-0 mt-1 z-50 w-64 max-w-[calc(100vw-1.5rem)] p-2 space-y-2 bg-surf border border-bd rounded-ui shadow-xl">
               {groupButton}
               {inactiveButton}
               {sortDropdown}
@@ -142,7 +142,7 @@ const ServerListControls: React.FC<ServerListControlsProps> = ({
       {/* Row 2 (desktop): three controls fit one row down to a ~373px panel (the desktop
           floor is 384px); narrower than that the row wraps and the sort
           control takes a full-width second row, rather than truncating. */}
-      <div className="hidden split:flex flex-wrap items-center gap-2">
+      <div className="hidden split:flex flex-wrap items-center gap-1.5">
         <Tooltip content={groupTip} position="top" delay={300} className="flex-1 basis-27 min-w-0">
           {groupButton}
         </Tooltip>

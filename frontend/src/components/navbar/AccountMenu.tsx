@@ -13,12 +13,12 @@ const DiscordGlyph: React.FC = () => (
 
 /** Version / commit / source links, previously in the mobile hamburger menu. */
 const SheetFooter: React.FC = () => (
-  <div className="mt-4 pt-3 border-t border-subtle text-xs text-tertiary flex items-center justify-between gap-2">
+  <div className="mt-4 pt-3 border-t border-bd text-xs text-dim flex items-center justify-between gap-2">
     <span>{VERSION}</span>
     <span>
       Commit:{" "}
       <a
-        className="hover:underline hover:text-accent"
+        className="hover:underline hover:text-acc"
         target="_blank"
         rel="noopener noreferrer"
         href={`${SOURCE}/commit/${COMMIT}`}
@@ -30,7 +30,7 @@ const SheetFooter: React.FC = () => (
       href={SOURCE}
       target="_blank"
       rel="noopener noreferrer"
-      className="hover:text-accent transition-colors"
+      className="hover:text-acc transition-colors"
       title="View source on GitHub"
     >
       Source
@@ -81,7 +81,7 @@ const AccountMenu: React.FC = () => {
       <>
         <a
           href={loginHref}
-          className="hidden split:flex button-secondary items-center gap-1.5 text-sm font-medium px-3 py-2 shrink-0"
+          className="hidden split:flex btn shrink-0"
         >
           <DiscordGlyph />
           Log in with Discord
@@ -91,17 +91,17 @@ const AccountMenu: React.FC = () => {
           type="button"
           aria-haspopup="dialog"
           onClick={() => setSheetOpen(true)}
-          className="split:hidden button-secondary flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 shrink-0"
+          className="split:hidden btn py-1.5 shrink-0"
         >
           <DiscordGlyph />
           Log in
         </button>
 
         <BottomSheet open={sheetOpen} onClose={closeSheet} label="Log in">
-          <p className="text-sm text-secondary mb-4">Sign in to leave reviews</p>
+          <p className="text-sm text-dim mb-4">Sign in to leave reviews</p>
           <a
             href={loginHref}
-            className="flex items-center justify-center gap-2 w-full min-h-11 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-semibold transition-colors"
+            className="flex items-center justify-center gap-2 w-full min-h-11 rounded-lg btn-discord text-sm font-semibold transition-colors"
           >
             <DiscordGlyph />
             Continue with Discord
@@ -124,7 +124,7 @@ const AccountMenu: React.FC = () => {
           aria-expanded={isOpen}
           title={displayName}
           onClick={() => setIsOpen(!isOpen)}
-          className="block rounded-full border border-default hover:border-accent transition-colors"
+          className="block rounded-full border border-bd hover:border-acc transition-colors"
         >
           <img src={me.avatarUrl} alt="" width={28} height={28} className="rounded-full" />
         </button>
@@ -132,17 +132,17 @@ const AccountMenu: React.FC = () => {
         {isOpen && (
           <div
             role="menu"
-            className="absolute top-full right-0 mt-1 z-50 w-48 max-w-[calc(100vw-2rem)] bg-surface-secondary border border-default rounded shadow-xl overflow-hidden"
+            className="absolute top-full right-0 mt-1 z-50 w-48 max-w-[calc(100vw-2rem)] bg-surf border border-bd rounded-ui shadow-xl overflow-hidden"
           >
-            <div className="px-3 py-2 border-b border-subtle">
-              <span className="text-sm font-medium text-primary truncate block">{displayName}</span>
+            <div className="px-3 py-2 border-b border-bd">
+              <span className="text-sm font-medium text-tx truncate block">{displayName}</span>
             </div>
 
             {me.isAdmin && (
               <Link
                 to="/admin"
                 role="menuitem"
-                className="block w-full text-left px-3 py-2 text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
+                className="block w-full text-left px-3 py-2 text-sm text-dim hover:bg-acc/18 hover:text-tx transition-colors"
                 onClick={() => setIsOpen(false)}
               >
                 Admin
@@ -153,7 +153,7 @@ const AccountMenu: React.FC = () => {
               type="button"
               role="menuitem"
               onClick={handleLogout}
-              className="w-full text-left px-3 py-2 text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-dim hover:bg-acc/18 hover:text-tx transition-colors"
             >
               Log out
             </button>
@@ -167,7 +167,7 @@ const AccountMenu: React.FC = () => {
         aria-label="Account"
         title={displayName}
         onClick={() => setSheetOpen(true)}
-        className={`split:hidden ${sheetButton} shrink-0 border border-default`}
+        className={`split:hidden ${sheetButton} shrink-0 border border-bd`}
       >
         <img src={me.avatarUrl} alt="" width={28} height={28} className="rounded-full" />
       </button>
@@ -175,14 +175,14 @@ const AccountMenu: React.FC = () => {
       <BottomSheet open={sheetOpen} onClose={closeSheet} label="Account">
         <div className="flex items-center gap-3 mb-3">
           <img src={me.avatarUrl} alt="" width={40} height={40} className="rounded-full" />
-          <span className="text-base font-semibold text-primary truncate">{displayName}</span>
+          <span className="text-base font-semibold text-tx truncate">{displayName}</span>
         </div>
 
         {me.isAdmin && (
           <Link
             to="/admin"
             onClick={closeSheet}
-            className="flex items-center min-h-11 px-3 rounded-lg text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
+            className="flex items-center min-h-11 px-3 rounded-lg text-sm text-dim hover:bg-acc/18 hover:text-tx transition-colors"
           >
             Admin
           </Link>
@@ -191,7 +191,7 @@ const AccountMenu: React.FC = () => {
         <button
           type="button"
           onClick={handleLogout}
-          className="flex items-center w-full min-h-11 px-3 rounded-lg text-sm text-secondary hover:bg-accent-hover hover:text-primary transition-colors"
+          className="flex items-center w-full min-h-11 px-3 rounded-lg text-sm text-dim hover:bg-acc/18 hover:text-tx transition-colors"
         >
           Log out
         </button>

@@ -6,19 +6,19 @@ interface ServerStatsSummaryProps {
   totalPlayers: number;
 }
 
+/** Sidebar header counts: centred and larger on mobile, spread across the row on desktop. */
 const ServerStatsSummary: React.FC<ServerStatsSummaryProps> = ({
   onlineServers,
   totalServers,
   totalPlayers,
 }) => (
-  <div className="flex items-center gap-2 text-sm text-secondary">
-    <span className="font-semibold text-status-online">{onlineServers}</span>
-    <span>/</span>
-    <span className="font-semibold text-primary">{totalServers}</span>
-    <span className="hidden sm:inline">online</span>
-    <span className="text-tertiary">·</span>
-    <span className="font-semibold text-accent">{totalPlayers}</span>
-    <span className="hidden sm:inline">players</span>
+  <div className="w-full flex items-center justify-center gap-2 text-[15px] font-semibold text-tx split:justify-between split:text-xs split:font-normal split:text-dim">
+    <span>
+      <b className="text-good split:text-sm">{onlineServers}</b> / {totalServers} online
+    </span>
+    <span>
+      <b className="text-acc split:text-sm">{totalPlayers}</b> players
+    </span>
   </div>
 );
 

@@ -1,6 +1,5 @@
 import React from "react";
 import { formatTextLines } from "../../util/mindustry.ts";
-import { countryCodeToFlag } from "../../util/general.ts";
 import { ServerListItem } from "../../../../common/models/serverData.ts";
 import { Link } from "@tanstack/react-router";
 import { CompactStarRatingDisplay } from "../detail/StarRating.tsx";
@@ -11,12 +10,6 @@ const ServerItem: React.FC<{
   isSelected: boolean;
 }> = ({ server, isSelected }) => {
   const serverData = server.currentData;
-  //const serverStatus = server.online ? 'Online' : server.lastSeen ? 'Offline - Last Seen ' + formatDate(server.lastSeen) : 'Offline';
-  const statusClass = server.online
-    ? "bg-status-online text-status-online border-status-online"
-    : "bg-status-offline text-status-offline border-status-offline";
-
-  const flagEmoji = countryCodeToFlag(server.countryCode);
 
   return (
     <Link
@@ -25,24 +18,29 @@ const ServerItem: React.FC<{
       // Read by StaticServerList's search, which only has the markup.
       data-server={`${server.host}:${server.port}`}
       data-network={server.name}
-      className={`p-4 cursor-pointer transition-colors flex [content-visibility:auto] [contain-intrinsic-size:auto_96px] items-start justify-between ${
-        isSelected
-          ? "bg-accent-muted border-l-4 border-default"
-          : "hover:bg-accent-hover border-default"
+      className={`group px-3 py-2.5 flex items-start justify-between gap-3 [content-visibility:auto] [contain-intrinsic-size:auto_88px] transition-colors ${
+        isSelected ? "bg-acc/12 shadow-[inset_3px_0_0_var(--acc)]" : "hover:bg-surf2"
       }`}
     >
-      <div className="flex flex-col flex-1 min-w-0 mr-4">
+      <div className="flex-1 min-w-0">
         {serverData?.serverName && (
-          <div className="text-sm font-bold text-primary truncate mb-1 flex items-center gap-1.5">
-            <span className="text-base" title={server.countryCode || "Unknown"}>
-              {flagEmoji}
+          <div className="flex items-center gap-2 min-w-0">
+            {server.countryCode && (
+              <span
+                className="shrink-0 text-[10px] font-bold text-dim border border-bd rounded-[3px] px-1 leading-[15px]"
+                title={server.countryCode}
+              >
+                {server.countryCode}
+              </span>
+            )}
+            <span className="text-sm font-semibold text-tx truncate group-hover:underline">
+              <MindustryText text={serverData.serverName} />
             </span>
-            <MindustryText text={serverData.serverName} />
           </div>
         )}
 
         {serverData?.description && (
-          <div className="text-xs text-secondary truncate mb-2">
+          <div className="text-xs text-dim mt-0.5 line-clamp-2 break-words">
             {formatTextLines(serverData.description).map((line, i) => (
               <React.Fragment key={i}>
                 {i > 0 && <br />}
@@ -53,29 +51,24 @@ const ServerItem: React.FC<{
         )}
 
         {server.online && serverData && (
-          <div className="text-xs text-tertiary">
-            <MindustryText text={serverData.mapName || "Unknown"}/>
+          <div className="text-xs text-dim mt-0.5 truncate">
+            <MindustryText text={serverData.mapName || "Unknown"} />
           </div>
         )}
       </div>
-      <div className="flex flex-col items-end">
-        <span
-          className={`${statusClass} text-xs px-2 py-1 rounded border mb-1`}
-        >
-          {server.online
-            ? "Online - " + (serverData?.ping ?? "N/A") + "ms"
-            : "Offline"}
+
+      <div className="shrink-0 flex flex-col items-end text-right">
+        <span className={server.online ? "pill-good" : "pill-bad"}>
+          {server.online ? `Online · ${serverData?.ping ?? "N/A"}ms` : "Offline"}
         </span>
         {server.online && serverData && (
-          <div className="text-right">
-            <CompactStarRatingDisplay value={server.ratingScore ?? -1} />
-            <div className="text-lg font-bold text-accent">
-              {String(serverData.players)}
-              <span className="text-tertiary ml-1">
-                / {String(serverData.playerLimit)}
-              </span>
+          <>
+            <CompactStarRatingDisplay value={server.ratingScore ?? -1} className="mt-1" />
+            <div className="font-head font-bold text-lg leading-tight text-acc">
+              {serverData.players}
+              <small className="text-dim font-normal text-[13px] font-sans"> / {serverData.playerLimit}</small>
             </div>
-          </div>
+          </>
         )}
       </div>
     </Link>

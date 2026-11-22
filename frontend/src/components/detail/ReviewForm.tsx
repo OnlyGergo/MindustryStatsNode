@@ -85,20 +85,20 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
 
   if (!me) {
     return (
-      <a href={loginHref} className="button-accent inline-block text-xs sm:text-sm px-3 py-1.5">
+      <a href={loginHref} className="btn-acc inline-block text-xs sm:text-sm px-3 py-1.5">
         Log in with Discord to leave a review
       </a>
     );
   }
 
   if (mineLoading) {
-    return <div className="text-sm text-tertiary">Loading…</div>;
+    return <div className="text-sm text-dim">Loading…</div>;
   }
 
   if (mine?.removed) {
     return (
       <div className="flex flex-col gap-2 items-start">
-        <div className="text-sm text-status-offline">Your review was removed by a moderator.</div>
+        <div className="text-sm text-bad">Your review was removed by a moderator.</div>
       </div>
     );
   }
@@ -133,7 +133,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <StarRatingInput value={rating} onChange={setRating} size={26} disabled={submitting} />
+      <StarRatingInput value={rating} onChange={setRating} size={22} disabled={submitting} />
 
       <div>
         <textarea
@@ -143,37 +143,37 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
           rows={3}
           placeholder="Share your experience with this server (optional)"
           disabled={submitting}
-          className="w-full bg-surface-tertiary border border-subtle rounded p-2 text-sm text-primary resize-y"
+          className="w-full bg-surf2 border border-bd rounded p-2 text-sm text-tx resize-y"
         />
         <div className="flex justify-between gap-2 mt-0.5">
-          <span className="text-xs text-status-offline">
+          <span className="text-xs text-bad">
             {hasProfanity && "Please remove inappropriate language before submitting."}
           </span>
-          <span className="text-xs text-tertiary shrink-0">{body.length}/{REVIEW_BODY_MAX}</span>
+          <span className="text-xs text-dim shrink-0">{body.length}/{REVIEW_BODY_MAX}</span>
         </div>
       </div>
 
-      <details className="border border-subtle rounded" open={savedAnyAspect}>
-        <summary className="cursor-pointer select-none text-xs sm:text-sm text-secondary px-2 py-1.5">
+      <details className="border border-bd rounded" open={savedAnyAspect}>
+        <summary className="cursor-pointer select-none text-xs sm:text-sm text-dim px-2 py-1.5">
           Rate specifics (optional)
         </summary>
         <div className="flex flex-col gap-2 px-2 pb-2 pt-1">
           {REVIEW_ASPECTS.map((a) => (
             <div key={a.key} className="flex flex-wrap items-center gap-2">
               <div className="flex flex-col min-w-28">
-                <span className="text-xs sm:text-sm text-secondary">{a.label}</span>
-                <span className="text-xs text-tertiary">{a.hint}</span>
+                <span className="text-xs sm:text-sm text-dim">{a.label}</span>
+                <span className="text-xs text-dim">{a.hint}</span>
               </div>
               <StarRatingInput
                 value={aspects[a.key] ?? 0}
                 onChange={(value) => setAspects((prev) => ({ ...prev, [a.key]: value }))}
-                size={18}
+                size={16}
                 disabled={submitting}
               />
               {aspects[a.key] != null && (
                 <button
                   type="button"
-                  className="text-xs text-tertiary hover:text-secondary underline"
+                  className="text-xs text-dim hover:text-dim underline"
                   disabled={submitting}
                   onClick={() => setAspects((prev) => ({ ...prev, [a.key]: null }))}
                 >
@@ -185,7 +185,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
         </div>
       </details>
 
-      <label className="flex flex-wrap items-center gap-2 text-sm text-secondary">
+      <label className="flex flex-wrap items-center gap-2 text-sm text-dim">
         <input
           type="checkbox"
           checked={anonymous}
@@ -195,12 +195,12 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
         Post anonymously
       </label>
 
-      {error && <div className="text-sm text-status-offline">{error}</div>}
+      {error && <div className="text-sm text-bad">{error}</div>}
 
       <div className="flex gap-2">
         <button
           type="submit"
-          className="button-accent text-xs sm:text-sm px-3 py-1.5 disabled:opacity-50"
+          className="btn-acc text-xs sm:text-sm px-3 py-1.5 disabled:opacity-50"
           disabled={submitting || rating < 1 || hasProfanity}
         >
           {mine ? "Update" : "Submit"}
@@ -208,7 +208,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ serverId, mine, mineLoading, on
         {mine && (
           <button
             type="button"
-            className="button-secondary text-xs sm:text-sm px-3 py-1.5 disabled:opacity-50"
+            className="btn text-xs sm:text-sm px-3 py-1.5 disabled:opacity-50"
             disabled={deleting}
             onClick={handleDelete}
           >

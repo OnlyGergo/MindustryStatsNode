@@ -20,7 +20,7 @@ const UserChip: React.FC<{ user: AdminUser }> = ({ user }) => (
     href={user.profileUrl}
     target="_blank"
     rel="noopener noreferrer nofollow"
-    className="inline-flex items-center gap-1.5 min-w-0 text-primary hover:text-accent"
+    className="inline-flex items-center gap-1.5 min-w-0 text-tx hover:text-acc"
     title={`Discord ID ${user.discordId}`}
   >
     <img src={user.avatarUrl} alt="" width={20} height={20} className="w-5 h-5 rounded-full shrink-0" />
@@ -80,26 +80,26 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
   };
 
   return (
-    <div className="border border-subtle rounded p-3 sm:p-4 bg-surface-secondary flex flex-col gap-3">
+    <div className="border border-bd rounded p-3 sm:p-4 bg-surf flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <UserChip user={review.author} />
           {review.anonymous && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-surface-tertiary text-tertiary">posted anonymously</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-surf2 text-dim">posted anonymously</span>
           )}
-          <span className="text-tertiary">on</span>
+          <span className="text-dim">on</span>
           <Link
             to="/server/$serverId"
             params={{ serverId: String(review.serverId) }}
-            className="text-primary hover:text-accent truncate"
+            className="text-tx hover:text-acc truncate"
           >
             {review.serverAddress}
           </Link>
         </div>
-        <span className="text-xs text-tertiary">{formatDate(review.updatedAt)}</span>
+        <span className="text-xs text-dim">{formatDate(review.updatedAt)}</span>
       </div>
 
-      <StarRatingDisplay value={review.rating} size={14} />
+      <StarRatingDisplay value={review.rating} size={12} />
 
       {editing ? (
         <div>
@@ -109,18 +109,18 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
             maxLength={REVIEW_BODY_MAX}
             rows={4}
             disabled={busy}
-            className="w-full bg-surface-tertiary border border-subtle rounded p-2 text-sm text-primary resize-y"
+            className="w-full bg-surf2 border border-bd rounded p-2 text-sm text-tx resize-y"
           />
-          <div className="text-xs text-tertiary text-right">{draft.length}/{REVIEW_BODY_MAX}</div>
+          <div className="text-xs text-dim text-right">{draft.length}/{REVIEW_BODY_MAX}</div>
         </div>
       ) : review.body ? (
-        <p className="text-sm text-secondary whitespace-pre-line wrap-break-word">{review.body}</p>
+        <p className="text-sm text-dim whitespace-pre-line wrap-break-word">{review.body}</p>
       ) : (
-        <p className="text-sm text-tertiary italic">No review text</p>
+        <p className="text-sm text-dim italic">No review text</p>
       )}
 
       {review.removedAt != null && (
-        <div className="text-xs text-status-offline">
+        <div className="text-xs text-bad">
           Removed {formatDate(review.removedAt)}
           {review.removedBy && <> by {review.removedBy.name}</>}
           {review.removedReason && <>: <span className="whitespace-pre-line">{review.removedReason}</span></>}
@@ -128,22 +128,22 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
       )}
 
       {review.reply && (
-        <div className="ml-3 sm:ml-6 pl-3 border-l-2 border-accent flex flex-col gap-1 text-xs">
+        <div className="ml-3 sm:ml-6 pl-3 border-l-2 border-acc flex flex-col gap-1 text-xs">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-secondary">Owner reply from</span>
+            <span className="font-medium text-dim">Owner reply from</span>
             <UserChip user={review.reply.author} />
-            <span className="text-tertiary">{formatDate(review.reply.updatedAt)}</span>
+            <span className="text-dim">{formatDate(review.reply.updatedAt)}</span>
           </div>
-          <p className="text-sm text-secondary whitespace-pre-line wrap-break-word">{review.reply.body}</p>
+          <p className="text-sm text-dim whitespace-pre-line wrap-break-word">{review.reply.body}</p>
           {review.reply.removedAt != null ? (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-status-offline">
+              <span className="text-bad">
                 Reply removed {formatDate(review.reply.removedAt)}
                 {review.reply.removedReason && <>: {review.reply.removedReason}</>}
               </span>
               <button
                 type="button"
-                className="underline text-tertiary hover:text-secondary disabled:opacity-50"
+                className="underline text-dim hover:text-dim disabled:opacity-50"
                 disabled={busy}
                 onClick={() => void patchReply({ action: "restore" })}
               >
@@ -153,7 +153,7 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
           ) : (
             <button
               type="button"
-              className="self-start underline text-status-offline disabled:opacity-50"
+              className="self-start underline text-bad disabled:opacity-50"
               disabled={busy}
               onClick={handleRemoveReply}
             >
@@ -164,17 +164,17 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
       )}
 
       {review.reports.length > 0 && (
-        <ul className="flex flex-col gap-2 border-t border-subtle pt-2">
+        <ul className="flex flex-col gap-2 border-t border-bd pt-2">
           {review.reports.map((report) => (
             <li key={report.id} className="text-xs flex flex-col gap-0.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium text-primary">{REPORT_REASON_LABELS[report.reason] ?? report.reason}</span>
-                <span className="text-tertiary">from</span>
+                <span className="font-medium text-tx">{REPORT_REASON_LABELS[report.reason] ?? report.reason}</span>
+                <span className="text-dim">from</span>
                 <UserChip user={report.reporter} />
-                <span className="text-tertiary">{formatDate(report.createdAt)}</span>
-                {report.status !== "open" && <span className="text-tertiary">({report.status})</span>}
+                <span className="text-dim">{formatDate(report.createdAt)}</span>
+                {report.status !== "open" && <span className="text-dim">({report.status})</span>}
               </div>
-              {report.note && <p className="text-secondary whitespace-pre-line wrap-break-word">{report.note}</p>}
+              {report.note && <p className="text-dim whitespace-pre-line wrap-break-word">{report.note}</p>}
             </li>
           ))}
         </ul>
@@ -185,7 +185,7 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
           <>
             <button
               type="button"
-              className="button-accent text-xs px-3 py-1 disabled:opacity-50"
+              className="btn-acc text-xs px-3 py-1 disabled:opacity-50"
               disabled={busy}
               onClick={() => void patch({ action: "edit", body: draft.trim() ? draft : null })}
             >
@@ -193,7 +193,7 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
             </button>
             <button
               type="button"
-              className="button-secondary text-xs px-3 py-1"
+              className="btn text-xs px-3 py-1"
               disabled={busy}
               onClick={() => { setEditing(false); setDraft(review.body ?? ""); }}
             >
@@ -205,7 +205,7 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
             {hasOpenReports && (
               <button
                 type="button"
-                className="button-secondary text-xs px-3 py-1 disabled:opacity-50"
+                className="btn text-xs px-3 py-1 disabled:opacity-50"
                 disabled={busy}
                 onClick={() => void run(() => api.api.admin.reviews({ id: review.id }).reports.dismiss.post())}
               >
@@ -214,7 +214,7 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
             )}
             <button
               type="button"
-              className="button-secondary text-xs px-3 py-1 disabled:opacity-50"
+              className="btn text-xs px-3 py-1 disabled:opacity-50"
               disabled={busy}
               onClick={() => setEditing(true)}
             >
@@ -223,7 +223,7 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
             {review.removedAt != null ? (
               <button
                 type="button"
-                className="button-secondary text-xs px-3 py-1 disabled:opacity-50"
+                className="btn text-xs px-3 py-1 disabled:opacity-50"
                 disabled={busy}
                 onClick={() => void patch({ action: "restore" })}
               >
@@ -232,7 +232,7 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
             ) : (
               <button
                 type="button"
-                className="button-secondary text-xs px-3 py-1 text-status-offline disabled:opacity-50"
+                className="btn text-xs px-3 py-1 text-bad disabled:opacity-50"
                 disabled={busy}
                 onClick={handleRemove}
               >
@@ -243,7 +243,7 @@ const ReviewCard: React.FC<{ review: AdminReview; onChanged: () => void }> = ({ 
         )}
       </div>
 
-      {error && <div className="text-xs text-status-offline">{error}</div>}
+      {error && <div className="text-xs text-bad">{error}</div>}
     </div>
   );
 };
@@ -293,18 +293,18 @@ const ReportsAdmin: React.FC = () => {
             key={v.key}
             type="button"
             onClick={() => { setView(v.key); setPage(1); }}
-            className={`text-xs sm:text-sm px-3 py-1 ${view === v.key ? "button-accent" : "button-secondary"}`}
+            className={`text-xs sm:text-sm px-3 py-1 ${view === v.key ? "btn-acc" : "btn"}`}
           >
             {v.label}
           </button>
         ))}
-        {data && <span className="text-xs text-tertiary ml-auto">{data.total} review{data.total === 1 ? "" : "s"}</span>}
+        {data && <span className="text-xs text-dim ml-auto">{data.total} review{data.total === 1 ? "" : "s"}</span>}
       </div>
 
-      {error && <div className="text-sm text-status-offline">{error}</div>}
-      {loading && !data && <div className="text-sm text-tertiary">Loading…</div>}
+      {error && <div className="text-sm text-bad">{error}</div>}
+      {loading && !data && <div className="text-sm text-dim">Loading…</div>}
       {!loading && data && data.reviews.length === 0 && (
-        <div className="text-sm text-tertiary">Nothing here.</div>
+        <div className="text-sm text-dim">Nothing here.</div>
       )}
 
       {data?.reviews.map((review) => (
@@ -315,16 +315,16 @@ const ReportsAdmin: React.FC = () => {
         <div className="flex items-center justify-center gap-3">
           <button
             type="button"
-            className="button-secondary text-xs sm:text-sm px-2 sm:px-3 py-1 disabled:opacity-50"
+            className="btn text-xs sm:text-sm px-2 sm:px-3 py-1 disabled:opacity-50"
             disabled={page <= 1}
             onClick={() => setPage(page - 1)}
           >
             Prev
           </button>
-          <span className="text-xs sm:text-sm text-tertiary">Page {page} of {totalPages}</span>
+          <span className="text-xs sm:text-sm text-dim">Page {page} of {totalPages}</span>
           <button
             type="button"
-            className="button-secondary text-xs sm:text-sm px-2 sm:px-3 py-1 disabled:opacity-50"
+            className="btn text-xs sm:text-sm px-2 sm:px-3 py-1 disabled:opacity-50"
             disabled={page >= totalPages}
             onClick={() => setPage(page + 1)}
           >

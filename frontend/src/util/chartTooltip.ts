@@ -26,13 +26,12 @@ const safeColor = (value: string): string => /^[#\w\s(),.%-]+$/.test(value) ? va
 
 export const createChartTooltip = (mountNode: HTMLDivElement) => {
     const tooltipEl = document.createElement("div");
+    // Colours come from the .chart-tip rules in index.css, so they follow the theme.
+    tooltipEl.className = "chart-tip";
     tooltipEl.style.cssText = `
         position: absolute; pointer-events: none; display: none; z-index: 100;
-        background: rgba(10, 10, 10, 0.96); border: 1px solid #262626; border-radius: 12px;
-        padding: 10px 12px; font-size: 12px; color: #f5f5f5; white-space: nowrap;
+        border-radius: 5px; padding: 10px 12px; font-size: 12px; white-space: nowrap;
         max-width: min(320px, calc(100% - 8px)); box-sizing: border-box;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(4px);
       `;
     mountNode.style.position = "relative";
     mountNode.appendChild(tooltipEl);
@@ -57,11 +56,11 @@ export const createChartTooltip = (mountNode: HTMLDivElement) => {
                 total += r.value;
                 return `
                   <div style="display: flex; gap: 16px; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <span style="display: flex; align-items: center; gap: 8px; color: #a3a3a3; min-width: 0;">
+                    <span class="tip-label" style="display: flex; align-items: center; gap: 8px; min-width: 0;">
                       <span style="flex-shrink: 0; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background-color: ${safeColor(r.color)};"></span>
                       <span style="overflow: hidden; text-overflow: ellipsis;">${escapeHtml(r.label)}</span>
                     </span>
-                    <span style="flex-shrink: 0; font-weight: 600; color: #f5f5f5;">${escapeHtml(r.display ?? r.value.toLocaleString())}</span>
+                    <span style="flex-shrink: 0; font-weight: 600;">${escapeHtml(r.display ?? r.value.toLocaleString())}</span>
                   </div>
                 `;
             })
@@ -69,16 +68,16 @@ export const createChartTooltip = (mountNode: HTMLDivElement) => {
 
         const footerHtml = (!isAgg && rows.length > 1)
             ? `
-                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #262626;
+                <div class="tip-total" style="margin-top: 8px; padding-top: 8px;
                             display: flex; gap: 24px; justify-content: space-between; font-weight: 700;">
-                  <span style="color: #f97316;">Total</span>
-                  <span style="color: #f97316;">${total.toLocaleString()}</span>
+                  <span>Total</span>
+                  <span>${total.toLocaleString()}</span>
                 </div>
               `
             : "";
 
         tooltipEl.innerHTML = `
-          <div style="color: #f97316; font-weight: 700; margin-bottom: 8px; border-bottom: 1px solid #262626; padding-bottom: 6px;">${escapeHtml(title)}</div>
+          <div class="tip-title" style="font-weight: 700; margin-bottom: 8px; padding-bottom: 6px;">${escapeHtml(title)}</div>
           <div style="max-height: 200px; overflow-y: auto; padding-right: 4px;">
             ${rowsHtml}
           </div>

@@ -64,7 +64,7 @@ const StaticServerList: React.FC<{ searchTerm: string; children?: React.ReactNod
   }, [searchTerm]);
 
   if (typeof window === "undefined") {
-    return <div className="space-y-1.5">{children}</div>;
+    return <div className="">{children}</div>;
   }
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -80,7 +80,7 @@ const StaticServerList: React.FC<{ searchTerm: string; children?: React.ReactNod
   return (
     <div
       ref={ref}
-      className="space-y-1.5"
+      className=""
       onClick={onClick}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{ __html: "" }}

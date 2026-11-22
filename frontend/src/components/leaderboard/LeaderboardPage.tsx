@@ -12,6 +12,7 @@ import { formatRelativeTime } from "../../util/general.ts";
 import HeadlineCards from "./HeadlineCards.tsx";
 import { Delta, RankTable, Section, ServerName } from "./RankTable.tsx";
 import type { Column } from "./RankTable.tsx";
+import PageHead from "../ui/PageHead.tsx";
 import { flagEmoji, formatHours, formatInt, formatUtcDate, formatUtcDateTime, formatUtcTime } from "./format.ts";
 
 const PREVIOUS: Record<LeaderboardWindow, string> = {
@@ -21,18 +22,15 @@ const PREVIOUS: Record<LeaderboardWindow, string> = {
 };
 
 const WindowTabs: React.FC<{ active: LeaderboardWindow }> = ({ active }) => (
-  <nav className="flex gap-1" aria-label="Time window">
+  <nav className="seg" aria-label="Time window">
     {LEADERBOARD_WINDOWS.map((w) => (
       <Link
         key={w}
         to="/leaderboard"
         search={(prev) => ({ ...prev, w })}
         replace
-        className={`px-3 py-1 text-sm rounded border transition-colors ${
-          w === active
-            ? "bg-accent/20 text-accent border-accent/40"
-            : "text-secondary border-subtle hover:text-accent hover:border-accent/50"
-        }`}
+        aria-current={w === active ? "page" : undefined}
+        className={`seg-btn ${w === active ? "relative bg-acc border-acc text-onacc hover:text-onacc" : ""}`}
       >
         {w}
       </Link>
@@ -47,10 +45,12 @@ const moverColumns: Column<MoverRow>[] = [
 ];
 
 const MapName: React.FC<{ row: MapRow }> = ({ row }) => (
-  <div className="flex items-center gap-2 min-w-0">
-    <span className="truncate max-w-[14rem]"><MindustryText text={row.mapName} /></span>
+  // min-w: a narrow column scrolls the table rather than crushing the name a letter per line;
+  // the mode tag wraps under the name when there's no room beside it.
+  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-[9rem]">
+    <span className="block truncate max-w-[14rem]"><MindustryText text={row.mapName} /></span>
     {row.mode && (
-      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-surface-tertiary border border-subtle text-secondary shrink-0">
+      <span className="tag text-[10px] uppercase shrink-0">
         {row.mode}
       </span>
     )}
@@ -66,33 +66,34 @@ const mapColumns: Column<MapRow>[] = [
 const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: LeaderboardWindow }> = ({ report, window: w }) => {
   const s = report.windows[w];
   return (
-    <div className="h-full overflow-y-auto p-3 sm:p-6 bg-surface-primary">
-      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
-        <header className="bg-surface-secondary border border-subtle rounded p-4 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-primary">Leaderboard</h1>
-            <div className="flex flex-wrap items-center gap-3">
+    <div className="page-scroll">
+      <div className="page">
+        <PageHead
+          title="Leaderboard"
+          sub={
+            <>
+              {/* Relative time depends on the clock, so server and browser may differ. */}
+              Updated <span suppressHydrationWarning>{formatRelativeTime(report.generatedAt)}</span> · next refresh{" "}
+              {formatUtcTime(report.nextRefreshAt)} UTC · vs the {PREVIOUS[w]}
+            </>
+          }
+          right={
+            <>
               <Link
                 to="/wrapped/$year"
                 params={{ year: String(new Date(report.generatedAt).getUTCFullYear()) }}
-                className="px-3 py-1 text-sm rounded border bg-accent text-white border-accent hover:opacity-90"
+                className="btn-fill"
               >
                 {new Date(report.generatedAt).getUTCFullYear()} Wrapped →
               </Link>
               <WindowTabs active={w} />
-            </div>
-          </div>
-          <p className="text-xs sm:text-sm text-tertiary mt-2">
-            {/* Relative time depends on the clock, so server and browser may differ. */}
-            Updated <span suppressHydrationWarning>{formatRelativeTime(report.generatedAt)}</span> · next refresh{" "}
-            {formatUtcTime(report.nextRefreshAt)} UTC
-          </p>
-          <p className="text-xs text-tertiary">Compared with the {PREVIOUS[w]}.</p>
-        </header>
+            </>
+          }
+        />
 
         <HeadlineCards headline={s.headline} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="panel-row">
           <Section title="Top servers" description="Most player-hours in this window." empty={!s.topServers.length}>
             <RankTable
               rows={s.topServers}
@@ -106,52 +107,55 @@ const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: Leaderboard
             />
           </Section>
 
-          <div className="space-y-4 sm:space-y-6 min-w-0">
-            <Section title="Top movers" description={`Biggest gain in player-hours vs the ${PREVIOUS[w]}.`} empty={!s.movers.length}>
-              <RankTable rows={s.movers} rowKey={(r) => r.id} columns={moverColumns} />
+          {/* Top + rising maps stack to about Top servers' height, so neither column leaves a hole. */}
+          <div className="panel-md flex flex-col gap-3 min-w-0">
+            <Section title="Top maps" description="Most-played maps by player-hours." empty={!s.topMaps.length}>
+              <RankTable
+                rows={s.topMaps}
+                rowKey={(r) => `${r.mapName}|${r.mode ?? ""}`}
+                rank={(r) => r.rank}
+                movement={(r) => r}
+                columns={mapColumns}
+              />
             </Section>
-            <Section title="Top losers" description={`Biggest drop in player-hours vs the ${PREVIOUS[w]}.`} empty={!s.losers.length}>
-              <RankTable rows={s.losers} rowKey={(r) => r.id} columns={moverColumns} />
+            <Section title="Rising maps" description={`Maps climbing fastest vs the ${PREVIOUS[w]}.`} empty={!s.risingMaps.length}>
+              <RankTable
+                rows={s.risingMaps}
+                rowKey={(r) => `${r.mapName}|${r.mode ?? ""}`}
+                movement={(r) => r}
+                columns={mapColumns}
+              />
             </Section>
           </div>
+        </div>
 
-          <Section title="Top maps" description="Most-played maps by player-hours." empty={!s.topMaps.length}>
-            <RankTable
-              rows={s.topMaps}
-              rowKey={(r) => `${r.mapName}|${r.mode ?? ""}`}
-              rank={(r) => r.rank}
-              movement={(r) => r}
-              columns={mapColumns}
-            />
+        {/* Everything else varies in length day to day, so it packs into columns instead of ragged rows. */}
+        <div className="panel-masonry">
+          <Section title="Top movers" description={`Biggest gain in player-hours vs the ${PREVIOUS[w]}.`} empty={!s.movers.length}>
+            <RankTable rows={s.movers} rowKey={(r) => r.id} columns={moverColumns} />
           </Section>
-
-          <Section title="Rising maps" description={`Maps climbing fastest vs the ${PREVIOUS[w]}.`} empty={!s.risingMaps.length}>
-            <RankTable
-              rows={s.risingMaps}
-              rowKey={(r) => `${r.mapName}|${r.mode ?? ""}`}
-              movement={(r) => r}
-              columns={mapColumns}
-            />
+          <Section title="Top losers" description={`Biggest drop in player-hours vs the ${PREVIOUS[w]}.`} empty={!s.losers.length}>
+            <RankTable rows={s.losers} rowKey={(r) => r.id} columns={moverColumns} />
           </Section>
 
           <Section title="Gamemode share" description="Share of all player-hours, and the change in percentage points." empty={!s.modes.length}>
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {s.modes.map((m) => {
                 const pp = Math.round((m.share - m.prevShare) * 1000) / 10;
                 return (
                   <li key={m.mode}>
-                    <div className="flex justify-between text-sm gap-2">
-                      <span className="truncate text-primary">{m.mode}</span>
+                    <div className="flex justify-between text-xs gap-2">
+                      <b className="truncate font-semibold text-tx">{m.mode}</b>
                       <span className="tabular-nums whitespace-nowrap">
                         {(m.share * 100).toFixed(1)}%{" "}
-                        <span className={`text-xs ${pp >= 0 ? "text-green-400" : "text-red-400"}`}>
+                        <span className={`text-xs ${pp >= 0 ? "text-good" : "text-bad"}`}>
                           {pp >= 0 ? "+" : "−"}
                           {Math.abs(pp).toFixed(1)} pp
                         </span>
                       </span>
                     </div>
-                    <div className="h-2 rounded bg-surface-tertiary overflow-hidden">
-                      <div className="h-full bg-accent" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
+                    <div className="track mt-0.5">
+                      <i className="track-fill" style={{ width: `${Math.min(100, Math.max(0, m.share * 100))}%` }} />
                     </div>
                   </li>
                 );
@@ -171,7 +175,7 @@ const LeaderboardPage: React.FC<{ report: LeaderboardReport; window: Leaderboard
                     <Link
                       to="/network/$networkId"
                       params={{ networkId: String(r.id) }}
-                      className="text-primary hover:underline block truncate max-w-[16rem]"
+                      className="text-tx hover:underline block truncate max-w-[16rem]"
                     >
                       {r.name}
                     </Link>
