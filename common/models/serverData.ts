@@ -97,10 +97,14 @@ export interface ServerDetails {
   // Newest open records; the full history is paginated (/map-history, /motd-history)
   currentMotd: ServerMotdData | null;
   currentMap: ServerMapData | null;
+  /** Whether search engines should index the page (in the sitemap); false = thin, `noindex`. */
+  indexable?: boolean;
 }
 
 export interface NetworkDetails {
   id: number;
+  /** Whether search engines should index the page (in the sitemap); false = thin, `noindex`. */
+  indexable?: boolean;
   name: string;
   /** Players online right now: SUM over member families of the per-family MAX. */
   playersNow: number;

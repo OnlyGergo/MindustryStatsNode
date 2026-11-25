@@ -6,7 +6,7 @@ import { getBaseUrl } from "../../util/getApi.ts";
 import { fetchCustomisation } from "../../util/customisation.ts";
 import { NetworkDetails } from "../../../../common/models/serverData";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
-import { docTitle } from "../../util/pageTitle.ts";
+import { docTitle, noindexUnless } from "../../util/pageTitle.ts";
 import { useBodyCustomisation } from "../../hooks/useBodyCustomisations.ts";
 
 const titleFor = (loaderData: unknown): string =>
@@ -43,7 +43,13 @@ export const Route = createFileRoute("/_browse/network/$networkId")({
   },
   // After `loader`: declared before it, TS can't infer the loader data type.
   staticData: { title: titleFor, back: true },
-  head: ({ loaderData }) => ({ meta: [{ title: docTitle(titleFor(loaderData)) }] }),
+  // Thin networks (see services/seoIndex.ts) and error pages are noindex.
+  head: ({ loaderData }) => ({
+    meta: [
+      { title: docTitle(titleFor(loaderData)) },
+      ...noindexUnless((loaderData as { details?: NetworkDetails } | undefined)?.details?.indexable),
+    ],
+  }),
 });
 
 function NetworkComponent() {

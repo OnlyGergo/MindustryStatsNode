@@ -5,7 +5,7 @@ import { getBaseUrl } from "../../util/getApi.ts";
 import { fetchCustomisation } from "../../util/customisation.ts";
 import { DetailShell } from "../../components/server-list/DetailShell.tsx";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
-import { docTitle } from "../../util/pageTitle.ts";
+import { docTitle, noindexUnless } from "../../util/pageTitle.ts";
 import { removeColors } from "../../util/mindustry.ts";
 import { ServerDetails, ServerElement } from "../../../../common/models/serverData.ts";
 import { useBodyCustomisation } from "../../hooks/useBodyCustomisations.ts";
@@ -60,7 +60,13 @@ export const Route = createFileRoute("/_browse/server/$serverId")({
   },
   // After `loader`: declared before it, TS can't infer the loader data type.
   staticData: { title: titleFor, back: true },
-  head: ({ loaderData }) => ({ meta: [{ title: docTitle(titleFor(loaderData)) }] }),
+  // Thin servers (see services/seoIndex.ts) and not-found/error pages are noindex.
+  head: ({ loaderData }) => ({
+    meta: [
+      { title: docTitle(titleFor(loaderData)) },
+      ...noindexUnless((loaderData as { serverDataElement?: LoadedServer | null } | undefined)?.serverDataElement?.indexable),
+    ],
+  }),
 });
 
 function ServerComponent() {

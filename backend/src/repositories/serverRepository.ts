@@ -7,9 +7,6 @@
 
 import sequelize from '../config/database.js';
 import {
-    ServerGroup,
-} from '../models/index.js';
-import {
     GameMode,
     type NetworkDetails,
     type ServerDetails,
@@ -24,29 +21,53 @@ import { bayesianScore } from './reviewScoring.js';
 
 // ─── Servers ─────────────────────────────────────────────────────────────────
 
-/** Servers unseen for longer than this are left out of the sitemap: a dead page isn't worth a crawl. */
-const SITEMAP_MAX_OFFLINE_DAYS = 14;
+/**
+ * Which pages are worth indexing. A page outside these rules is "thin": the
+ * sitemap leaves it out and the page carries `noindex` (see services/seoIndex.ts).
+ * - A server family must have been seen in the last SEO_MAX_OFFLINE_DAYS days
+ *   and have an all-time peak (MAX over its aliases) of at least SEO_MIN_PEAK
+ *   players: an empty server's page is just blank charts.
+ * - A network must have at least SEO_MIN_NETWORK_FAMILIES member families (one
+ *   server's network page duplicates its server page) and at least one of
+ *   them indexable. Membership is the same rule as getNetworkDetails.
+ */
+export const SEO_MAX_OFFLINE_DAYS = 14;
+export const SEO_MIN_PEAK = 2;
+export const SEO_MIN_NETWORK_FAMILIES = 2;
 
-/** Returns recently seen server IDs and all network/group IDs, for sitemap generation. */
-export async function getSitemapIds(): Promise<{ serverIds: number[]; networkIds: number[] }> {
-    const [servers, serverGroups] = await Promise.all([
-        // One row per real server, not per observation: grouped on canonical_id
-        // so a server is listed once however many address changes it has been
-        // through, and seen recently if any of its addresses was.
+/** Canonical server IDs and network IDs whose pages are indexable, for the sitemap and robots meta. */
+export async function getIndexableIds(): Promise<{ serverIds: number[]; networkIds: number[] }> {
+    // One row per real server, not per observation: grouped on canonical_id so
+    // a server is listed once however many address changes it has been through.
+    const familySql = `
+        SELECT sc.canonical_id,
+               MAX(s.last_seen) >= NOW() - make_interval(days => CAST(:days AS integer))
+                   AND COALESCE(MAX(p.all_time_peak), 0) >= :minPeak AS indexable
+        FROM server_canonical sc
+        JOIN servers s ON s.id = sc.server_id
+        LEFT JOIN server_peaks p ON p.server_id = sc.server_id
+        GROUP BY sc.canonical_id`;
+    const replacements = { days: SEO_MAX_OFFLINE_DAYS, minPeak: SEO_MIN_PEAK, minFamilies: SEO_MIN_NETWORK_FAMILIES };
+
+    const [servers, networks] = await Promise.all([
         sequelize.query(
-            `SELECT sc.canonical_id
-             FROM server_canonical sc
-             JOIN servers s ON s.id = sc.server_id
-             GROUP BY sc.canonical_id
-             HAVING MAX(s.last_seen) >= NOW() - make_interval(days => CAST(:days AS integer))`,
-            { type: QueryTypes.SELECT, replacements: { days: SITEMAP_MAX_OFFLINE_DAYS } }
+            `SELECT canonical_id FROM (${familySql}) fam WHERE indexable`,
+            { type: QueryTypes.SELECT, replacements }
         ),
-        ServerGroup.findAll({ raw: true, attributes: ['id'] }),
+        sequelize.query(
+            `SELECT root.server_group_id AS id
+             FROM (${familySql}) fam
+             JOIN servers root ON root.id = fam.canonical_id
+             WHERE root.server_group_id IS NOT NULL AND ${notExcludedRootSql()}
+             GROUP BY root.server_group_id
+             HAVING COUNT(*) >= :minFamilies AND bool_or(fam.indexable)`,
+            { type: QueryTypes.SELECT, replacements }
+        ),
     ]);
 
     return {
         serverIds: (servers as any[]).map((s) => s.canonical_id),
-        networkIds: serverGroups.map((g: any) => g.id),
+        networkIds: (networks as any[]).map((n) => n.id),
     };
 }
 

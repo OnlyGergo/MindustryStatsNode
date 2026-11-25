@@ -9,6 +9,7 @@ import { parseTimestamp, rangeKey, resolveRange } from '../lib/timeRange.js';
 import { paginationKey, parsePagination } from '../lib/pagination.js';
 import { withCache } from '../middleware/cache.js';
 import { getServerCustomisation } from '../../repositories/customisationReadRepository.js';
+import { seoIndex } from '../../services/seoIndex.js';
 const logger = createLogger('Api');
 
 /**
@@ -28,7 +29,8 @@ const listServers = async () => {
 const serverDetails = async ({ params }: { params: { id: number } }) => {
   const server = await serverRepository.getServer(params.id);
   if (!server) return status(404, { error: 'Server not found' });
-  return server;
+  // server.id is the family root (the canonical ID), whichever alias was asked for.
+  return { ...server, indexable: await seoIndex.isServerIndexable(server.id) };
 };
 
 export const serverRoutes = new Elysia({ prefix: '/api' })

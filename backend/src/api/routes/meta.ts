@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import * as serverRepository from '../../repositories/serverRepository.js';
+import { seoIndex } from '../../services/seoIndex.js';
 import { buildInfo } from '../../../../common/version.js';
 import { apiConfig } from '../context.js';
 import { StrictNoQuery } from '../lib/schemas.js';
@@ -13,7 +13,9 @@ export const metaRoutes = new Elysia()
     build: buildInfo,
   }), { query: StrictNoQuery })
 
-  // /admin is client-rendered and auth-gated anyway. /api stays crawlable: Google's
+  // /admin is client-rendered and auth-gated anyway. Thin pages are kept out of
+  // the index with `noindex` instead of Disallow, which would stop crawlers
+  // from ever seeing that tag. /api stays crawlable: Google's
   // renderer fetches it for the charts, and blocking it would leave them empty.
   .get('/robots.txt', ({ request, set }) => {
     set.headers['Content-Type'] = 'text/plain; charset=utf-8';
@@ -22,13 +24,14 @@ export const metaRoutes = new Elysia()
 
   .get('/sitemap.xml', async ({ request, set }) => {
     const baseUrl = publicOrigin(request);
-    const staticPaths = ['/', '/global', '/inactive'];
-    const { serverIds, networkIds } = await serverRepository.getSitemapIds();
+    // /inactive is left out: a list of dead servers is thin, and is noindex too.
+    const staticPaths = ['/', '/global', '/leaderboard'];
+    const { serverIds, networkIds } = await seoIndex.get();
 
     const paths = [
       ...staticPaths,
-      ...serverIds.map((id) => `/server/${id}`),
-      ...networkIds.map((id) => `/network/${id}`),
+      ...[...serverIds].sort((a, b) => a - b).map((id) => `/server/${id}`),
+      ...[...networkIds].sort((a, b) => a - b).map((id) => `/network/${id}`),
     ];
 
     const urlEntries = paths

@@ -7,6 +7,7 @@ import { IdParam, StrictHistoryQuery, StrictNoQuery } from '../lib/schemas.js';
 import { parseTimestamp, rangeKey, resolveRange } from '../lib/timeRange.js';
 import { withCache } from '../middleware/cache.js';
 import { getNetworkCustomisation } from '../../repositories/customisationReadRepository.js';
+import { seoIndex } from '../../services/seoIndex.js';
 
 export const networkRoutes = new Elysia({ prefix: '/api/networks' })
   .get('/:id/history', async ({ params, query }) => {
@@ -38,7 +39,7 @@ export const networkRoutes = new Elysia({ prefix: '/api/networks' })
   .get('/:id/details', async ({ params }) => {
     const details = await serverRepository.getNetworkDetails(params.id);
     if (!details) return status(404, { error: 'Network not found' });
-    return details;
+    return { ...details, indexable: await seoIndex.isNetworkIndexable(details.id) };
   }, {
     params: IdParam,
     query: StrictNoQuery,

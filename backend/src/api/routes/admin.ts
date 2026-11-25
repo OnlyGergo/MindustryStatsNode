@@ -18,6 +18,7 @@ import { dismissReports, getModerationQueue, moderateReply, moderateReview } fro
 import { normalizeReviewBody } from '../../repositories/user/reviewBody.js';
 import { rebuildLeaderboard, requestLeaderboardRebuild } from '../../services/leaderboardScheduler.js';
 import { invalidateWrapped } from '../../services/wrappedService.js';
+import { seoIndex } from '../../services/seoIndex.js';
 import { clearCaches } from '../middleware/cache.js';
 import { ModerationQuery } from '../lib/schemas.js';
 import { REMOVED_REASON_MAX, REVIEW_BODY_MAX } from '../../../../common/models/reviews.js';
@@ -45,6 +46,7 @@ function mergeResponse(result: MergeResult) {
   if (result.kind === 'not_found') return status(404, { error: 'Server not found' });
   if (result.kind === 'conflict') return status(409, { error: result.message });
   clearCaches();
+  seoIndex.invalidate();
   requestLeaderboardRebuild();
   invalidateWrapped();
   return { rootId: result.rootId };
@@ -53,6 +55,7 @@ function mergeResponse(result: MergeResult) {
 function hubResponse(result: SetHubResult) {
   if (result.kind === 'not_found') return status(404, { error: 'Server not found' });
   clearCaches();
+  seoIndex.invalidate();
   requestLeaderboardRebuild();
   invalidateWrapped();
   return { rootId: result.rootId };

@@ -20,3 +20,11 @@ export const docTitle = (title: string): string => {
   const clean = plainTitle(title);
   return clean ? `${clean} · ${SITE_NAME}` : SITE_NAME;
 };
+
+/**
+ * Robots meta for a thin page: kept out of the index (and out of /sitemap.xml,
+ * which reads the same rules) but its links still followed. Empty when the page
+ * is indexable, so it can be spread into a route's `meta` unconditionally.
+ */
+export const noindexUnless = (indexable: boolean | undefined): { name: string; content: string }[] =>
+  indexable ? [] : [{ name: "robots", content: "noindex, follow" }];

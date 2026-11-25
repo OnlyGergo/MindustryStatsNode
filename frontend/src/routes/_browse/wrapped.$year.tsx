@@ -6,7 +6,7 @@ import { EmptyState } from "../../components/detail/EmptyState.tsx";
 import { LoadingSpinner } from "../../components/LoadingSpinner.tsx";
 import WrappedView from "../../components/wrapped/WrappedView.tsx";
 import { getBaseUrl } from "../../util/getApi.ts";
-import { docTitle } from "../../util/pageTitle.ts";
+import { docTitle, noindexUnless } from "../../util/pageTitle.ts";
 import type { WrappedReport } from "../../../../common/models/leaderboard.ts";
 
 type WrappedLoad =
@@ -43,7 +43,10 @@ export const Route = createFileRoute("/_browse/wrapped/$year")({
   shouldReload: ({ cause }) => (cause === "stay" ? false : undefined),
   loader: ({ params }) => loadWrapped(params.year),
   // After `loader`: declared before it, TS can't infer the loader data type.
-  head: ({ params }) => ({ meta: [{ title: docTitle(`${params.year} Wrapped`) }] }),
+  // Only a built report is content; "building", 404 and error pages are noindex.
+  head: ({ params, loaderData }) => ({
+    meta: [{ title: docTitle(`${params.year} Wrapped`) }, ...noindexUnless(loaderData?.status === "ok")],
+  }),
 });
 
 function WrappedComponent() {
