@@ -1,0 +1,53 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # needed to create the release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Cache Bun packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
+      - name: Build collector (Go + zip)
+        run: |
+          rm -rf ./dist
+          mkdir -p ./dist
+          GOOS=linux GOARCH=arm64 go build -o collector-arm64 ./cmd/collector/main.go
+          mv collector-arm64 ./dist/
+          ./build-collect.sh
+
+      - name: Build app (bun)
+        # build.sh calls `read -p` for the version. Piping the tag in
+        # answers the prompt, so the script runs unattended.
+        run: echo "${GITHUB_REF_NAME#v}" | ./build.sh
+
+      - name: Create GitHub release with artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            ./dist/collector.zip \
+            ./build/build.zip \
+            --generate-notes
