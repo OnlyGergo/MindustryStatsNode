@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 permissions:
-  contents: write   # needed to create the release
+  contents: write
 
 jobs:
   build:
@@ -16,9 +16,9 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: collector/go.mod
           cache: true
-          cache-dependency-path: go.sum
+          cache-dependency-path: collector/go.sum
 
       - uses: oven-sh/setup-bun@v2
 
@@ -31,6 +31,7 @@ jobs:
             bun-${{ runner.os }}-
 
       - name: Build collector (Go + zip)
+        working-directory: collector
         run: |
           rm -rf ./dist
           mkdir -p ./dist
@@ -39,8 +40,6 @@ jobs:
           ./build-collect.sh
 
       - name: Build app (bun)
-        # build.sh calls `read -p` for the version. Piping the tag in
-        # answers the prompt, so the script runs unattended.
         run: echo "${GITHUB_REF_NAME#v}" | ./build.sh
 
       - name: Create GitHub release with artifacts
@@ -48,6 +47,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            ./dist/collector.zip \
+            ./collector/dist/collector.zip \
             ./build/build.zip \
             --generate-notes
